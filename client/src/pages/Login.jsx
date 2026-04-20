@@ -1,98 +1,113 @@
 import React, { useState } from 'react';
-import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { Lock, Mail } from 'lucide-react';
+import { Activity, Mail, Lock, ArrowRight } from 'lucide-react';
+import axios from 'axios';
 
 const Login = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('admin@corp.in');
+  const [password, setPassword] = useState('admin123');
   const [error, setError] = useState('');
+  const [shaking, setShaking] = useState(false);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    setError('');
+    
     try {
-      const res = await axios.post('http://localhost:5005/api/auth/login', { email, password });
-      localStorage.setItem('token', res.data.token);
-      localStorage.setItem('user', JSON.stringify(res.data.user));
-      navigate('/admin');
+      const response = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/login`, { email, password });
+      localStorage.setItem('token', response.data.token);
+      localStorage.setItem('user', JSON.stringify(response.data.user));
+      
+      const role = response.data.user.role;
+      navigate(role === 'admin' ? '/admin' : '/user');
     } catch (err) {
-      setError('Invalid email or password');
+      setError(err.response?.data?.message || 'Login failed. Please try again.');
+      setShaking(true);
+      setTimeout(() => setShaking(false), 500);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-indigo-900 p-4">
-      <div className="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-800">Signage Admin</h1>
-          <p className="text-gray-500 mt-2">Sign in to manage your displays</p>
+    <div className="min-h-screen bg-[var(--bg)] flex items-center justify-center p-6 relative overflow-hidden">
+      {/* Cinematic Grid Background */}
+      <div className="absolute inset-0 grid-bg opacity-30" />
+      <div className="absolute top-[20%] left-[15%] w-96 h-96 bg-[var(--accent)]/5 rounded-full blur-[100px]" />
+      
+      <div className={`relative w-full max-w-md ${shaking ? 'animate-shake' : 'animate-fade-in'}`}>
+        <div className="text-center mb-10">
+          <div className="inline-flex items-center gap-3 mb-4 px-4 py-2 bg-[var(--accent)]/10 border border-[var(--accent)]/20 rounded-full animate-fade-in" style={{ animationDelay: '0.1s' }}>
+            <Activity className="w-4 h-4 text-[var(--accent)]" />
+            <span className="mono text-[var(--accent)] text-[10px] uppercase tracking-[4px] font-bold">NEXUS SIGNAGE OS</span>
+          </div>
+          <h1 className="text-4xl font-light text-[var(--text)] tracking-tight mb-2 animate-fade-in" style={{ animationDelay: '0.2s' }}>Welcome Back</h1>
+          <p className="text-[var(--text-dim)] text-sm animate-fade-in" style={{ animationDelay: '0.3s' }}>
+            Enter your credentials to access HQ Control
+          </p>
         </div>
 
-        {error && (
-          <div className="bg-red-100 text-red-700 p-3 rounded-lg mb-6 text-center text-sm">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleLogin} className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-3 text-gray-400" size={20} />
-              <input 
-                type="email" 
-                className="w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
-                placeholder="admin@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
+        <div className="glass p-10 animate-fade-in shadow-[0_32px_64px_-16px_rgba(0,0,0,0.6)]" style={{ animationDelay: '0.4s' }}>
+          <form onSubmit={handleLogin} className="space-y-6">
+            <div>
+              <label className="mono text-[10px] uppercase tracking-[2px] text-[var(--text-dim)] mb-2 block font-bold">Identity</label>
+              <div className="relative">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-faint)]" />
+                <input 
+                  type="email" 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="nexus-input pl-12" 
+                  placeholder="name@corp.in"
+                  required
+                />
+              </div>
             </div>
-          </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-3 text-gray-400" size={20} />
-              <input 
-                type="password" 
-                className="w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
+            <div>
+              <label className="mono text-[10px] uppercase tracking-[2px] text-[var(--text-dim)] mb-2 block font-bold">Access Key</label>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-faint)]" />
+                <input 
+                  type="password" 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="nexus-input pl-12" 
+                  placeholder="••••••••"
+                  required
+                />
+              </div>
             </div>
+
+            {error && (
+              <p className="text-[var(--red)] text-xs mono animate-fade-in font-medium">{error}</p>
+            )}
+
+            <button 
+              type="submit" 
+              disabled={loading}
+              className="nexus-btn-primary w-full flex items-center justify-center gap-2 group"
+            >
+              {loading ? 'AUTHENTICATING...' : 'LOGIN TO OS'}
+              {!loading && <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />}
+            </button>
+          </form>
+
+          <div className="mt-8 pt-8 border-t border-[var(--border)] text-center">
+            <p className="text-[var(--text-faint)] text-[10px] mono uppercase tracking-wider">
+              Protected by Nexus Security Protocol v4.0
+            </p>
           </div>
-
-          <button className="w-full bg-indigo-600 text-white font-bold py-3 rounded-lg hover:bg-indigo-700 transition transform hover:scale-[1.02]">
-            Login
-          </button>
-        </form>
-
-        <div className="mt-6 border-t pt-6">
-          <p className="text-xs text-center text-gray-500 mb-3 font-medium uppercase tracking-wider">Development Tools</p>
-          <button 
-            onClick={async () => {
-              try {
-                await axios.post('http://localhost:5005/api/auth/setup-admin', {
-                  email: 'admin@test.com',
-                  password: 'password123'
-                });
-                alert('Default Admin Created!\nEmail: admin@test.com\nPass: password123');
-              } catch (err) {
-                alert('Failed. Is your Database connected? Check .env file.');
-              }
-            }}
-            className="w-full bg-gray-100 text-gray-600 text-sm font-bold py-2 rounded-lg hover:bg-gray-200 transition"
-          >
-            Create Default Admin Account
-          </button>
         </div>
 
-        <div className="mt-8 text-center text-sm text-gray-400">
-          Make sure your MSSQL server is running!
+        {/* Tip */}
+        <div className="text-center mt-8 animate-fade-in opacity-50" style={{ animationDelay: '0.6s' }}>
+          <p className="text-[var(--text-dim)] text-[10px] mono uppercase tracking-widest">
+            {email.includes('admin') ? 'ADMIN ACCESS DETECTED' : 'STANDARD OPERATOR MODE'}
+          </p>
         </div>
       </div>
     </div>

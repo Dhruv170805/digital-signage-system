@@ -1,8 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const { login, createFirstUser } = require('../controllers/authController');
+const { login, getAllUsers, toggleUserStatus, createUser } = require('../controllers/authController');
 
 router.post('/login', login);
-router.post('/setup-admin', createFirstUser); // Use once to create your temp id/pass
+router.post('/register', createUser);
+router.get('/users', getAllUsers);
+router.post('/users/:id/status', toggleUserStatus);
 
 module.exports = router;

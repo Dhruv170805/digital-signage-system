@@ -1,19 +1,28 @@
-const { poolPromise, sql } = require('../config/db');
+const { poolPromise } = require('../config/db');
 
 const getActiveSchedule = async (req, res) => {
+    const { screenId } = req.query;
     try {
         const pool = await poolPromise;
-        const result = await pool.request()
-            .query(`
-                SELECT S.*, M.fileName, M.filePath, M.fileType, T.layout
-                FROM Schedules S
-                JOIN Media M ON S.mediaId = M.id
-                LEFT JOIN Templates T ON S.templateId = T.id
-                WHERE GETDATE() BETWEEN S.startTime AND S.endTime
-                AND S.isActive = 1
-                ORDER BY S.startTime ASC
-            `);
-        res.json(result.recordset);
+        let query = `
+            SELECT S.*, M.fileName, M.filePath, M.fileType, T.layout
+            FROM Schedules S
+            JOIN Media M ON S.mediaId = M.id
+            LEFT JOIN Templates T ON S.templateId = T.id
+            WHERE NOW() BETWEEN S.startTime AND S.endTime
+            AND S.isActive = 1
+        `;
+        const params = [];
+        
+        if (screenId) {
+            query += " AND S.screenId = ?";
+            params.push(screenId);
+        }
+
+        query += " ORDER BY S.startTime ASC";
+        
+        const [rows] = await pool.execute(query, params);
+        res.json(rows);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -22,31 +31,28 @@ const getActiveSchedule = async (req, res) => {
 const getAllSchedules = async (req, res) => {
     try {
         const pool = await poolPromise;
-        const result = await pool.request()
-            .query(`
-                SELECT S.*, M.fileName, M.fileType, T.name as templateName
-                FROM Schedules S
-                JOIN Media M ON S.mediaId = M.id
-                LEFT JOIN Templates T ON S.templateId = T.id
-                ORDER BY S.startTime DESC
-            `);
-        res.json(result.recordset);
+        const [rows] = await pool.execute(`
+            SELECT S.*, M.fileName, M.fileType, T.name as templateName, Sc.name as screenName
+            FROM Schedules S
+            JOIN Media M ON S.mediaId = M.id
+            LEFT JOIN Templates T ON S.templateId = T.id
+            LEFT JOIN Screens Sc ON S.screenId = Sc.id
+            ORDER BY S.startTime DESC
+        `);
+        res.json(rows);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 };
 
 const createSchedule = async (req, res) => {
-    const { mediaId, templateId, startTime, endTime, duration } = req.body;
+    const { mediaId, templateId, startTime, endTime, duration, screenId } = req.body;
     try {
         const pool = await poolPromise;
-        await pool.request()
-            .input('mediaId', sql.Int, mediaId)
-            .input('templateId', sql.Int, templateId || null)
-            .input('startTime', sql.DateTime, startTime)
-            .input('endTime', sql.DateTime, endTime)
-            .input('duration', sql.Int, duration)
-            .query('INSERT INTO Schedules (mediaId, templateId, startTime, endTime, duration) VALUES (@mediaId, @templateId, @startTime, @endTime, @duration)');
+        await pool.execute(
+            'INSERT INTO Schedules (mediaId, templateId, startTime, endTime, duration, screenId) VALUES (?, ?, ?, ?, ?, ?)',
+            [mediaId, templateId || null, startTime, endTime, duration, screenId || null]
+        );
         
         // Notify all clients to refresh content
         const io = req.app.get('socketio');

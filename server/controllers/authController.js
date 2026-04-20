@@ -1,4 +1,4 @@
-const { poolPromise, sql } = require('../config/db');
+const { poolPromise } = require('../config/db');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
@@ -7,13 +7,15 @@ const login = async (req, res) => {
     const { email, password } = req.body;
     try {
         const pool = await poolPromise;
-        const result = await pool.request()
-            .input('email', sql.VarChar, email)
-            .query('SELECT * FROM Users WHERE email = @email');
+        const [rows] = await pool.execute('SELECT * FROM Users WHERE email = ?', [email]);
 
-        const user = result.recordset[0];
+        const user = rows[0];
         if (!user) {
             return res.status(401).json({ message: 'Invalid credentials' });
+        }
+
+        if (user.status === 'inactive') {
+            return res.status(403).json({ message: 'Account is deactivated. Contact Admin.' });
         }
 
         const isMatch = await bcrypt.compare(password, user.password);
@@ -22,39 +24,65 @@ const login = async (req, res) => {
         }
 
         const token = jwt.sign(
-            { id: user.id, email: user.email, role: user.role },
-            process.env.JWT_SECRET || 'secret',
+            { id: user.id, email: user.email, role: user.role, name: user.name },
+            process.env.JWT_SECRET,
             { expiresIn: '24h' }
         );
 
         res.json({
             token,
-            user: { id: user.id, email: user.email, role: user.role }
+            user: { id: user.id, email: user.email, role: user.role, name: user.name }
         });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 };
 
-// Temporary helper to create the first user
-const createFirstUser = async (req, res) => {
-    const { email, password } = req.body;
+const getAllUsers = async (req, res) => {
     try {
-        const hashedPassword = await bcrypt.hash(password, 10);
         const pool = await poolPromise;
-        await pool.request()
-            .input('email', sql.VarChar, email)
-            .input('password', sql.VarChar, hashedPassword)
-            .input('role', sql.VarChar, 'admin')
-            .query('INSERT INTO Users (email, password, role) VALUES (@email, @password, @role)');
-        
-        res.status(201).json({ message: 'User created successfully' });
+        const [rows] = await pool.execute('SELECT id, name, email, role, status, createdAt FROM Users ORDER BY createdAt DESC');
+        res.json(rows);
     } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
+const toggleUserStatus = async (req, res) => {
+    const { id } = req.params;
+    const { status } = req.body; // 'active' or 'inactive'
+    try {
+        const pool = await poolPromise;
+        await pool.execute('UPDATE Users SET status = ? WHERE id = ?', [status, id]);
+        res.json({ message: `User status updated to ${status}` });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
+const createUser = async (req, res) => {
+    const { name, email, password, role } = req.body;
+    try {
+        const pool = await poolPromise;
+        const hashedPassword = await bcrypt.hash(password, 10);
+        
+        await pool.execute(
+            'INSERT INTO Users (name, email, password, role, status) VALUES (?, ?, ?, ?, ?)',
+            [name, email, hashedPassword, role || 'user', 'active']
+        );
+        
+        res.status(201).json({ message: 'User provisioned successfully' });
+    } catch (err) {
+        if (err.code === 'ER_DUP_ENTRY') {
+            return res.status(400).json({ message: 'Email already exists' });
+        }
         res.status(500).json({ error: err.message });
     }
 };
 
 module.exports = {
     login,
-    createFirstUser
+    getAllUsers,
+    toggleUserStatus,
+    createUser
 };

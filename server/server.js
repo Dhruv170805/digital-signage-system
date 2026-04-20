@@ -42,6 +42,7 @@ app.use('/api/media', require('./routes/mediaRoutes'));
 app.use('/api/schedule', require('./routes/scheduleRoutes'));
 app.use('/api/ticker', require('./routes/tickerRoutes'));
 app.use('/api/templates', require('./routes/templateRoutes'));
+app.use('/api/screens', require('./routes/screenRoutes'));
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
