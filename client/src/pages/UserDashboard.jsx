@@ -4,7 +4,7 @@ import Shell from '../components/Shell';
 import { 
   Upload, FileText, Play, Image as ImageIcon, 
   CheckCircle2, Clock, XCircle, AlertCircle, 
-  History, Send, Monitor, RefreshCw, Calendar
+  History, Send, Monitor, RefreshCw, Calendar, Tv
 } from 'lucide-react';
 
 const Card = ({ children, className = "" }) => (
@@ -39,12 +39,16 @@ const UserDashboard = () => {
       } catch (err) { console.error(err); }
     };
     fetch();
-    return () => { isMounted = false; };
+    const interval = setInterval(fetch, 30000); // 30s auto-fetch
+    return () => { 
+      isMounted = false; 
+      clearInterval(interval);
+    };
   }, [user.id, refreshKey]);
 
   const handleUpload = async (e) => {
     e.preventDefault();
-    if (!file) return;
+    if (!file || !requestedStartTime || !requestedEndTime) return;
     setUploading(true);
     
     const formData = new FormData();
@@ -85,7 +89,7 @@ const UserDashboard = () => {
     const labels = {
       upload: 'UPLOAD',
       myfiles: 'HISTORY',
-      live: 'PREVIEW'
+      live: 'CURRENT SCREEN'
     };
     return labels[activeTab] || activeTab.toUpperCase();
   };
@@ -94,7 +98,7 @@ const UserDashboard = () => {
     switch (activeTab) {
       case 'upload': return <Upload className="w-5 h-5 text-sky-400" />;
       case 'myfiles': return <History className="w-5 h-5 text-sky-400" />;
-      case 'live': return <Monitor className="w-5 h-5 text-sky-400" />;
+      case 'live': return <Tv className="w-5 h-5 text-sky-400" />;
       default: return <Monitor className="w-5 h-5 text-sky-400" />;
     }
   };
@@ -103,63 +107,54 @@ const UserDashboard = () => {
     switch (activeTab) {
       case 'upload':
         return (
-          <div className="animate-fade-in">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <Card className="relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-8 opacity-5">
-                  <Upload size={120} />
+          <div className="animate-fade-in max-w-2xl mx-auto space-y-4 pb-4">
+            <Card className="relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-8 opacity-5">
+                <Upload size={120} />
+              </div>
+              <h3 className="text-xl font-bold mb-6">Upload</h3>
+              
+              <div 
+                className={`border-2 border-dashed rounded-3xl p-12 text-center transition-all cursor-pointer group ${
+                  file ? 'border-[var(--accent)] bg-[var(--accent)]/5 shadow-[0_0_30px_rgba(56,189,248,0.05)]' : 'border-white/10 hover:border-white/20 hover:bg-white/5'
+                }`}
+                onClick={() => document.getElementById('media-upload').click()}
+              >
+                <input id="media-upload" type="file" className="hidden" onChange={(e) => setFile(e.target.files[0])} />
+                <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 bg-white/5 border border-white/10 group-hover:scale-110 transition-transform">
+                  <Upload className={`w-6 h-6 ${file ? 'text-[var(--accent)]' : 'text-white'}`} />
                 </div>
-                <h3 className="text-xl font-bold mb-2">Upload</h3>
-                <p className="text-[var(--text-dim)] text-sm mb-8 uppercase tracking-widest font-semibold">Select File</p>
-                
-                <div 
-                  className={`border-2 border-dashed rounded-3xl p-16 text-center transition-all cursor-pointer group mb-8 ${
-                    file ? 'border-[var(--accent)] bg-[var(--accent)]/5 shadow-[0_0_30px_rgba(56,189,248,0.05)]' : 'border-white/10 hover:border-white/20 hover:bg-white/5'
-                  }`}
-                  onClick={() => document.getElementById('media-upload').click()}
-                >
-                  <input id="media-upload" type="file" className="hidden" onChange={(e) => setFile(e.target.files[0])} />
-                  <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 bg-white/5 border border-white/10 group-hover:scale-110 transition-transform">
-                    <Upload className={`w-8 h-8 ${file ? 'text-[var(--accent)]' : 'text-white'}`} />
+                {file ? (
+                  <div className="space-y-1">
+                    <p className="text-lg font-bold text-white truncate max-w-xs mx-auto">{file.name}</p>
+                    <p className="text-sky-400 text-[10px] font-black uppercase tracking-[4px]">{(file.size / 1024 / 1024).toFixed(2)} MB • VERIFIED</p>
                   </div>
-                  {file ? (
-                    <div className="space-y-2">
-                      <p className="text-xl font-bold text-white">{file.name}</p>
-                      <p className="text-sky-400 text-xs font-black uppercase tracking-[4px]">{(file.size / 1024 / 1024).toFixed(2)} MB • VERIFIED</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <p className="text-lg font-bold text-white">Select File</p>
-                      <p className="text-slate-500 text-sm font-medium">PDF, MP4, WEBM, or JPG</p>
-                    </div>
-                  )}
-                </div>
-
-                {msg.text && (
-                  <div className={`p-4 rounded-2xl flex items-center gap-4 animate-fade-in border mb-4 ${
-                    msg.type === 'success' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
-                  }`}>
-                    {msg.type === 'success' ? <CheckCircle2 size={20}/> : <AlertCircle size={20}/>}
-                    <p className="text-sm font-bold uppercase tracking-wider">{msg.text}</p>
+                ) : (
+                  <div className="space-y-1">
+                    <p className="text-lg font-bold text-white">Select File</p>
+                    <p className="text-slate-500 text-xs font-medium">PDF, MP4, WEBM, or JPG</p>
                   </div>
                 )}
-              </Card>
+              </div>
+            </Card>
 
-              <Card>
-                <h3 className="text-xl font-bold mb-2 text-sky-400">Schedule file</h3>
-                <p className="text-[var(--text-dim)] text-sm mb-8 uppercase tracking-widest font-semibold">Schedule file</p>
-                
-                <form onSubmit={handleUpload} className="space-y-6">
-                  <div className="p-6 bg-white/5 border border-white/10 rounded-2xl space-y-6">
+            <div className="text-center py-2">
+              <h4 className="text-[10px] font-black uppercase tracking-[8px] text-sky-400 opacity-60">Schedule</h4>
+            </div>
+
+            <Card>
+              <form onSubmit={handleUpload} className="space-y-4">
+                <div className="p-5 bg-white/5 border border-white/10 rounded-2xl">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="text-[10px] font-black uppercase text-slate-500 flex items-center gap-2">
                         <Calendar size={12} className="text-sky-400" />
-                        Activation Timestamp
+                        From Date & Time
                       </label>
                       <input 
                         type="datetime-local" 
                         required 
-                        className="nexus-input" 
+                        className="nexus-input py-3" 
                         value={requestedStartTime} 
                         onChange={(e) => setRequestedStartTime(e.target.value)}
                       />
@@ -167,34 +162,43 @@ const UserDashboard = () => {
                     <div className="space-y-2">
                       <label className="text-[10px] font-black uppercase text-slate-500 flex items-center gap-2">
                         <Clock size={12} className="text-rose-400" />
-                        Deactivation Timestamp
+                        TO Date & Time
                       </label>
                       <input 
                         type="datetime-local" 
                         required 
-                        className="nexus-input" 
+                        className="nexus-input py-3" 
                         value={requestedEndTime} 
                         onChange={(e) => setRequestedEndTime(e.target.value)}
                       />
                     </div>
                   </div>
+                </div>
 
-                  <button type="submit" disabled={!file || uploading} className="nexus-btn-primary w-full py-5 text-lg flex items-center justify-center gap-3 mt-4">
-                    {uploading ? (
-                      <>
-                        <RefreshCw className="w-5 h-5 animate-spin" />
-                        UPLOADING...
-                      </>
-                    ) : (
-                      <>
-                        <Send className="w-5 h-5" />
-                        Upload
-                      </>
-                    )}
-                  </button>
-                </form>
-              </Card>
-            </div>
+                {msg.text && (
+                  <div className={`p-3 rounded-xl flex items-center gap-3 animate-fade-in border ${
+                    msg.type === 'success' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                  }`}>
+                    {msg.type === 'success' ? <CheckCircle2 size={16}/> : <AlertCircle size={16}/>}
+                    <p className="text-[10px] font-bold uppercase tracking-wider">{msg.text}</p>
+                  </div>
+                )}
+
+                <button type="submit" disabled={!file || !requestedStartTime || !requestedEndTime || uploading} className="nexus-btn-primary w-full py-4 text-base flex items-center justify-center gap-3">
+                  {uploading ? (
+                    <>
+                      <RefreshCw className="w-5 h-5 animate-spin" />
+                      UPLOADING...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-5 h-5" />
+                      Upload
+                    </>
+                  )}
+                </button>
+              </form>
+            </Card>
           </div>
         );
 
@@ -256,10 +260,15 @@ const UserDashboard = () => {
                           )}
                         </td>
                         <td className="py-6 px-4 text-center">
-                          <span className={`text-[10px] font-black uppercase px-3 py-1 rounded-full border ${
-                            f.status === 'approved' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
-                            f.status === 'pending' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
-                          }`}>{f.status}</span>
+                          <div className="flex flex-col items-center gap-1">
+                            <span className={`text-[10px] font-black uppercase px-3 py-1 rounded-full border ${
+                              f.status === 'approved' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+                              f.status === 'pending' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                            }`}>{f.status}</span>
+                            {f.status === 'rejected' && f.rejectionReason && (
+                              <p className="text-[8px] font-bold text-rose-400 uppercase max-w-[100px] leading-tight mt-1">{f.rejectionReason}</p>
+                            )}
+                          </div>
                         </td>
                         <td className="py-6 px-4 text-right">
                            <button 
@@ -307,7 +316,7 @@ const UserDashboard = () => {
              <div className="p-2 bg-sky-500/20 rounded-lg">
                 {getTabIcon()}
              </div>
-             <span className="text-[10px] tracking-[6px] font-black uppercase opacity-60">{user.role === 'admin' ? 'Root' : 'User'}</span>
+             <span className="text-[10px] tracking-[6px] font-black uppercase opacity-60">User</span>
           </div>
           <h1 className="text-7xl font-black tracking-tighter text-white leading-none uppercase">{getTabLabel()}</h1>
         </header>

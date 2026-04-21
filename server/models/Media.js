@@ -8,6 +8,7 @@ const MediaSchema = new mongoose.Schema({
     status: { type: String, default: 'pending' },
     requestedStartTime: { type: Date },
     requestedEndTime: { type: Date },
+    rejectionReason: { type: String },
     uploadedAt: { type: Date, default: Date.now }
 });
 

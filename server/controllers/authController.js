@@ -81,6 +81,26 @@ const unlockUser = async (req, res) => {
     }
 };
 
+const lockUser = async (req, res) => {
+    const { id } = req.params;
+    try {
+        await User.findByIdAndUpdate(id, { isLocked: true });
+        res.json({ message: 'User account locked' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
+const deleteUser = async (req, res) => {
+    const { id } = req.params;
+    try {
+        await User.findByIdAndDelete(id);
+        res.json({ message: 'User deleted successfully' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
 const requestPasswordReset = async (req, res) => {
     const { email } = req.body;
     try {
@@ -139,6 +159,8 @@ module.exports = {
     getAllUsers,
     toggleUserStatus,
     unlockUser,
+    lockUser,
+    deleteUser,
     requestPasswordReset,
     approveResetRequest,
     createUser

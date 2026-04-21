@@ -6,7 +6,7 @@ import {
   Users as UsersIcon, CheckCircle, XCircle, Clock, 
   Play, Plus, Trash2, Settings as SettingsIcon, ExternalLink, Activity, 
   FileText, Calendar, LayoutGrid, Type as TypeIcon,
-  Save, AlertCircle, Tv, Monitor, Palette, Info, Eye, CheckSquare, MonitorPlay
+  Save, AlertCircle, Tv, Monitor, Palette, Info, Eye, CheckSquare, MonitorPlay, Lock, Timer
 } from 'lucide-react';
 
 const Card = ({ children, className = "" }) => (
@@ -58,6 +58,93 @@ const Badge = ({ label, type }) => {
   );
 };
 
+const ModerationModal = ({ isOpen, onClose, file, onConfirm }) => {
+  const [action, setAction] = useState('approve');
+  const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
+  const [duration, setDuration] = useState(10);
+  const [reason, setReason] = useState('');
+
+  useEffect(() => {
+    if (file) {
+      setStartTime(file.requestedStartTime ? new Date(file.requestedStartTime).toISOString().slice(0, 16) : '');
+      setEndTime(file.requestedEndTime ? new Date(file.requestedEndTime).toISOString().slice(0, 16) : '');
+    }
+  }, [file]);
+
+  if (!isOpen || !file) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/90 backdrop-blur-xl z-[110] flex items-center justify-center p-6">
+      <div className="glass max-w-lg w-full p-10 space-y-8 animate-fade-in border-white/10">
+        <div className="flex justify-between items-center border-b border-white/5 pb-6">
+          <div>
+            <h3 className="text-xl font-bold uppercase tracking-tighter">Process Application</h3>
+            <p className="text-[10px] font-black text-sky-400 uppercase tracking-[4px] mt-1">{file.fileName}</p>
+          </div>
+          <button onClick={onClose}><XCircle className="text-slate-500 hover:text-white" /></button>
+        </div>
+
+        <div className="flex gap-4 p-1 bg-white/5 rounded-2xl border border-white/5">
+          <button 
+            onClick={() => setAction('approve')}
+            className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${action === 'approve' ? 'bg-emerald-500 text-white shadow-[0_0_20px_rgba(16,185,129,0.3)]' : 'text-slate-500 hover:text-slate-300'}`}
+          >
+            Clearance
+          </button>
+          <button 
+            onClick={() => setAction('reject')}
+            className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${action === 'reject' ? 'bg-rose-500 text-white shadow-[0_0_20px_rgba(244,63,94,0.3)]' : 'text-slate-500 hover:text-slate-300'}`}
+          >
+            Rejection
+          </button>
+        </div>
+
+        <div className="space-y-6">
+          {action === 'approve' ? (
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[8px] font-black uppercase text-slate-500 ml-1">Override From</label>
+                  <input type="datetime-local" className="nexus-input py-3 text-xs" value={startTime} onChange={(e) => setStartTime(e.target.value)}/>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[8px] font-black uppercase text-slate-500 ml-1">Override TO</label>
+                  <input type="datetime-local" className="nexus-input py-3 text-xs" value={endTime} onChange={(e) => setEndTime(e.target.value)}/>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[8px] font-black uppercase text-slate-500 ml-1 flex items-center gap-2">
+                  <Timer size={10} className="text-sky-400" />
+                  Screen Duration (Seconds)
+                </label>
+                <input type="number" min="1" className="nexus-input py-3" value={duration} onChange={(e) => setDuration(e.target.value)}/>
+              </div>
+            </>
+          ) : (
+            <div className="space-y-1">
+              <label className="text-[8px] font-black uppercase text-slate-500 ml-1">Reason for Rejection</label>
+              <textarea 
+                className="nexus-input min-h-[120px] py-4 resize-none" 
+                placeholder="Enter technical reason for non-compliance..."
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+              />
+            </div>
+          )}
+        </div>
+
+        <button 
+          onClick={() => onConfirm(file.id, action, action === 'approve' ? { startTime, endTime, duration } : { reason })}
+          className={`w-full py-5 rounded-2xl font-black uppercase tracking-[4px] shadow-2xl transition-all active:scale-95 ${action === 'approve' ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-rose-500 hover:bg-rose-600'}`}
+        >
+          Execute {action}
+        </button>
+      </div>
+    </div>
+  );
+};
+
 const safeParse = (data, fallback = []) => {
   if (!data) return fallback;
   if (typeof data === 'object') return data;
@@ -81,11 +168,13 @@ const AdminDashboard = () => {
   const [settings, setSettings] = useState({ idleWallpaperId: '' });
   const [previewFile, setPreviewFile] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [modFile, setModFile] = useState(null);
+  const [showModModal, setShowModModal] = useState(false);
   
   const [newScreen, setNewScreen] = useState({ name: '', location: '' });
   const [showUserForm, setShowUserForm] = useState(false);
   const [newUser, setNewUser] = useState({ name: '', email: '', password: '', role: 'user' });
-  const [currentLayout, setCurrentLayout] = useState([{ i: 'zone1', x: 0, y: 0, w: 12, h: 6 }]);
+  const [currentLayout, setCurrentLayout] = useState([{ i: 'Frame1', x: 0, y: 0, w: 12, h: 6 }]);
   const [templateName, setTemplateName] = useState('');
   const [newSchedule, setNewSchedule] = useState({
     mediaId: '', templateId: '', startTime: '', endTime: '', duration: 10, screenId: ''
@@ -154,11 +243,15 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     fetchData();
+    const interval = setInterval(fetchData, 30000); // 30s auto-fetch
+    return () => clearInterval(interval);
   }, [fetchData]);
 
-  const handleModeration = async (id, action) => {
+  const handleModeration = async (id, action, data = {}) => {
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL}/api/media/${id}/${action}`);
+      await axios.post(`${import.meta.env.VITE_API_URL}/api/media/${id}/${action}`, data);
+      setShowModModal(false);
+      setModFile(null);
       fetchData();
     } catch (err) { alert(err.message); }
   };
@@ -171,10 +264,10 @@ const AdminDashboard = () => {
   };
 
   const saveTemplate = async () => {
-    if (!templateName) return alert('Enter template name');
+    if (!templateName) return alert('Enter Layout Name');
     try {
       await axios.post(`${import.meta.env.VITE_API_URL}/api/templates`, { name: templateName, layout: currentLayout });
-      alert('Template Saved');
+      alert('Layout Saved');
       setTemplateName('');
       fetchData();
     } catch (err) { alert(err.message); }
@@ -184,7 +277,7 @@ const AdminDashboard = () => {
     e.preventDefault();
     try {
       await axios.post(`${import.meta.env.VITE_API_URL}/api/schedule`, { ...newSchedule, mediaMapping });
-      alert('Schedule Created');
+      alert('Broadcast Started');
       setNewSchedule({ mediaId: '', templateId: '', startTime: '', endTime: '', duration: 10, screenId: '' });
       setMediaMapping({});
       fetchData();
@@ -216,6 +309,23 @@ const AdminDashboard = () => {
     try {
       await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/users/${id}/unlock`);
       alert('Account Unlocked');
+      fetchData();
+    } catch (err) { alert(err.message); }
+  };
+
+  const lockUser = async (id) => {
+    try {
+      await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/users/${id}/lock`);
+      alert('Account Locked');
+      fetchData();
+    } catch (err) { alert(err.message); }
+  };
+
+  const deleteUser = async (id) => {
+    if (!window.confirm('Permanently delete this user?')) return;
+    try {
+      await axios.delete(`${import.meta.env.VITE_API_URL}/api/auth/users/${id}`);
+      alert('User Deleted');
       fetchData();
     } catch (err) { alert(err.message); }
   };
@@ -347,8 +457,13 @@ const AdminDashboard = () => {
                               >
                                 <Eye size={18}/>
                               </button>
-                              <button onClick={() => handleModeration(m.id, 'approve')} className="p-2 bg-emerald-500/10 text-emerald-500 rounded-lg hover:bg-emerald-500/20"><CheckCircle size={18}/></button>
-                              <button onClick={() => handleModeration(m.id, 'reject')} className="p-2 bg-rose-500/10 text-rose-500 rounded-lg hover:bg-rose-500/20"><XCircle size={18}/></button>
+                              <button 
+                                onClick={() => { setModFile(m); setShowModModal(true); }}
+                                className="p-2 bg-white/5 text-white border border-white/10 rounded-lg hover:bg-emerald-500 hover:border-transparent transition-all"
+                                title="Process Application"
+                              >
+                                <CheckCircle size={18}/>
+                              </button>
                             </div>
                          </td>
                        </tr>
@@ -461,7 +576,7 @@ const AdminDashboard = () => {
                         <input type="datetime-local" required className="nexus-input text-xs" value={newSchedule.endTime} onChange={(e) => setNewSchedule(p => ({ ...p, endTime: e.target.value }))}/>
                       </div>
                    </div>
-                   <button type="submit" className="nexus-btn-primary w-full tracking-[2px]">INITIATE BROADCAST</button>
+                   <button type="submit" className="nexus-btn-primary w-full tracking-[2px]">Broadcast</button>
                 </form>
              </Card>
              <Card className="lg:col-span-2">
@@ -545,7 +660,7 @@ const AdminDashboard = () => {
                      ))}
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-bold uppercase ml-1 opacity-50">Stream Message</label>
+                    <label className="text-[10px] font-bold uppercase ml-1 opacity-50">Message</label>
                     <textarea value={ticker.text} onChange={(e) => setTicker(p => ({ ...p, text: e.target.value }))} className="nexus-input min-h-[120px] resize-none" placeholder="Transmit high-priority alert..."/>
                   </div>
                   {ticker.type === 'link' && (
@@ -563,21 +678,9 @@ const AdminDashboard = () => {
                       </label>
                       <input type="range" min="1" max="10" value={ticker.speed} onChange={(e) => setTicker(p => ({ ...p, speed: parseInt(e.target.value) }))} className="w-full accent-[var(--accent)] h-1 bg-white/10 rounded-full appearance-none cursor-pointer"/>
                     </div>
-                    
-                    <div className="space-y-4">
-                      <label className="text-[10px] font-bold uppercase ml-1 opacity-50">Network Priority</label>
-                      <div className="flex items-center gap-4">
-                        <button 
-                          onClick={() => setTicker(p => ({ ...p, isActive: p.isActive ? 0 : 1 }))}
-                          className={`flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all border ${ticker.isActive ? 'bg-emerald-500 text-white border-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.2)]' : 'bg-slate-800 text-slate-500 border-slate-700'}`}
-                        >
-                          {ticker.isActive ? 'ACTIVE_TRANSMISSION' : 'OFFLINE'}
-                        </button>
-                      </div>
-                    </div>
                   </div>
 
-                  <button onClick={saveTicker} className="nexus-btn-primary w-full py-4 tracking-[4px]">DEPLOY_TO_NETWORK</button>
+                  <button onClick={saveTicker} className="nexus-btn-primary w-full py-4 tracking-[4px]">Broadcast</button>
                </div>
             </Card>
 
@@ -585,9 +688,9 @@ const AdminDashboard = () => {
                <h3 className="text-sm font-bold uppercase tracking-wider mb-8">Visual Formatting</h3>
                <div className="space-y-8">
                   <div className="space-y-4">
-                    <label className="text-[10px] font-bold uppercase ml-1 opacity-50 flex items-center gap-2"><Palette size={14}/> Typography Scale</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {['text-xl', 'text-2xl', 'text-4xl', 'text-6xl'].map(size => (
+                    <label className="text-[10px] font-bold uppercase ml-1 opacity-50 flex items-center gap-2"><Palette size={14}/> Font Size</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {['text-xs', 'text-sm', 'text-base', 'text-lg', 'text-xl', 'text-2xl', 'text-4xl', 'text-6xl', 'text-8xl', 'text-9xl'].map(size => (
                         <button 
                           key={size}
                           onClick={() => setTicker(p => ({ ...p, fontSize: size }))}
@@ -600,12 +703,18 @@ const AdminDashboard = () => {
                   </div>
 
                   <div className="space-y-4">
-                    <label className="text-[10px] font-bold uppercase ml-1 opacity-50 flex items-center gap-2"><TypeIcon size={14}/> Font Weight & Style</label>
+                    <label className="text-[10px] font-bold uppercase ml-1 opacity-50 flex items-center gap-2"><TypeIcon size={14}/> Font Style</label>
                     <div className="grid grid-cols-1 gap-2">
                       {[
-                        { label: 'Standard Protocol', val: 'normal' },
-                        { label: 'High Emphasis (Bold)', val: 'bold' },
-                        { label: 'Technical Alert (Italic)', val: 'italic' }
+                        { label: 'Thin', val: 'font-thin' },
+                        { label: 'Normal', val: 'font-normal' },
+                        { label: 'Medium', val: 'font-medium' },
+                        { label: 'Semibold', val: 'font-semibold' },
+                        { label: 'Bold', val: 'font-bold' },
+                        { label: 'Extra Bold', val: 'font-extrabold' },
+                        { label: 'Black', val: 'font-black' },
+                        { label: 'Italic', val: 'italic' },
+                        { label: 'Bold Italic', val: 'font-bold italic' }
                       ].map(style => (
                         <button 
                           key={style.val}
@@ -620,9 +729,9 @@ const AdminDashboard = () => {
                   </div>
 
                   <div className="p-4 bg-black/40 rounded-2xl border border-white/5 mt-4">
-                    <p className="text-[10px] font-bold uppercase opacity-30 mb-2">Real-time Preview</p>
+                    <p className="text-[10px] font-bold uppercase opacity-30 mb-2">Preview</p>
                     <div className="h-12 flex items-center overflow-hidden">
-                       <p className={`whitespace-nowrap ${ticker.fontSize} ${ticker.fontStyle === 'bold' ? 'font-black' : ''} ${ticker.fontStyle === 'italic' ? 'italic' : ''}`}>
+                       <p className={`whitespace-nowrap ${ticker.fontSize} ${ticker.fontStyle}`}>
                           {ticker.text || 'BROADCASTING...'}
                        </p>
                     </div>
@@ -802,14 +911,14 @@ const AdminDashboard = () => {
                      <h3 className="text-xl font-bold">User</h3>
                      <p className="text-xs text-[var(--text-dim)] uppercase tracking-wider font-semibold mt-1">Total Authorized: {users.length}</p>
                    </div>
-                   <button onClick={() => setShowUserForm(true)} className="nexus-btn-primary text-xs py-2 px-6 shadow-xl">+ NEW PERSONNEL</button>
+                   <button onClick={() => setShowUserForm(true)} className="nexus-btn-primary text-xs py-2 px-6 shadow-xl">+Add User</button>
                 </div>
                 <div className="overflow-hidden rounded-2xl border border-white/10">
                   <table className="w-full text-left">
                     <thead>
                       <tr className="bg-white/5 text-[10px] uppercase font-black text-[var(--text-dim)]">
                         <th className="py-4 px-6">Identity</th>
-                        <th className="py-4 px-6">Clearance</th>
+                        <th className="py-4 px-6">Role</th>
                         <th className="py-4 px-6">System Status</th>
                       </tr>
                     </thead>
@@ -834,13 +943,24 @@ const AdminDashboard = () => {
                                  <span className="text-[10px] font-black uppercase text-slate-400">{u.status}</span>
                               </div>
                               <div className="flex gap-2">
-                                {u.isLocked && (
-                                  <button onClick={() => unlockUser(u.id)} className="p-2 bg-emerald-500/10 text-emerald-500 rounded-lg hover:bg-emerald-500 transition-colors" title="Unlock Account">
-                                    <CheckCircle size={14}/>
-                                  </button>
+                                {u.email !== JSON.parse(localStorage.getItem('user'))?.email && (
+                                  <>
+                                    {u.isLocked ? (
+                                      <button onClick={() => unlockUser(u.id)} className="p-2 bg-emerald-500/10 text-emerald-500 rounded-lg hover:bg-emerald-500 hover:text-white transition-colors" title="Unlock Account">
+                                        <CheckCircle size={14}/>
+                                      </button>
+                                    ) : (
+                                      <button onClick={() => lockUser(u.id)} className="p-2 bg-amber-500/10 text-amber-500 rounded-lg hover:bg-amber-500 hover:text-white transition-colors" title="Lock Account">
+                                        <Lock size={14}/>
+                                      </button>
+                                    )}
+                                    <button onClick={() => deleteUser(u.id)} className="p-2 bg-rose-500/10 text-rose-500 rounded-lg hover:bg-rose-500 hover:text-white transition-colors" title="Delete User">
+                                      <Trash2 size={14}/>
+                                    </button>
+                                  </>
                                 )}
                                 {u.passwordResetRequested && (
-                                  <button onClick={() => approveReset(u.id)} className="p-2 bg-sky-500/10 text-sky-400 rounded-lg hover:bg-sky-500 transition-colors" title="Approve Reset">
+                                  <button onClick={() => approveReset(u.id)} className="p-2 bg-sky-500/10 text-sky-400 rounded-lg hover:bg-sky-500 hover:text-white transition-colors" title="Approve Reset">
                                     <Clock size={14}/>
                                   </button>
                                 )}
@@ -902,6 +1022,19 @@ const AdminDashboard = () => {
             </Card>
           </div>
         );
+      case 'live':
+        return (
+           <div className="animate-fade-in px-4">
+              <div className="flex justify-between items-center mb-8">
+              </div>
+              <div className="aspect-video bg-black rounded-[40px] overflow-hidden border border-white/10 shadow-2xl relative group shadow-sky-500/5">
+                 <iframe src="/display" className="w-full h-full border-none pointer-events-none scale-[1.001]" title="Live Preview" />
+                 <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm">
+                    <p className="text-white text-lg tracking-[12px] font-black animate-pulse uppercase">Monitoring Active</p>
+                 </div>
+              </div>
+           </div>
+        );
       default: return null;
     }
   };
@@ -915,7 +1048,8 @@ const AdminDashboard = () => {
       ticker: 'TICKER',
       screens: 'SCREENS',
       users: 'USERS',
-      settings: 'IDLE'
+      settings: 'IDLE',
+      live: 'CURRENT SCREEN'
     };
     return labels[activeTab] || activeTab.toUpperCase();
   };
@@ -930,6 +1064,7 @@ const AdminDashboard = () => {
       case 'screens': return <Tv className="w-5 h-5 text-sky-400" />;
       case 'users': return <UsersIcon className="w-5 h-5 text-sky-400" />;
       case 'settings': return <MonitorPlay className="w-5 h-5 text-sky-400" />;
+      case 'live': return <Tv className="w-5 h-5 text-sky-400" />;
       default: return <Monitor className="w-5 h-5 text-sky-400" />;
     }
   };
@@ -954,8 +1089,15 @@ const AdminDashboard = () => {
         onClose={() => { setShowPreview(false); setPreviewFile(null); }} 
         file={previewFile} 
       />
+      <ModerationModal
+        isOpen={showModModal}
+        onClose={() => { setShowModModal(false); setModFile(null); }}
+        file={modFile}
+        onConfirm={handleModeration}
+      />
     </Shell>
   );
 };
 
 export default AdminDashboard;
+

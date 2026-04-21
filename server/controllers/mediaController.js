@@ -66,15 +66,23 @@ const uploadMedia = async (req, res) => {
 
 const approveMedia = async (req, res) => {
     const { id } = req.params;
+    const { startTime, endTime, duration } = req.body;
     try {
-        const m = await Media.findByIdAndUpdate(id, { status: 'approved' }, { new: true });
+        const updateData = { status: 'approved' };
+        if (startTime) updateData.requestedStartTime = startTime;
+        if (endTime) updateData.requestedEndTime = endTime;
+
+        const m = await Media.findByIdAndUpdate(id, updateData, { new: true });
         
-        if (m && m.requestedStartTime && m.requestedEndTime) {
+        const finalStartTime = startTime || m.requestedStartTime;
+        const finalEndTime = endTime || m.requestedEndTime;
+
+        if (m && finalStartTime && finalEndTime) {
             await Schedule.create({
                 mediaId: m.id,
-                startTime: m.requestedStartTime,
-                endTime: m.requestedEndTime,
-                duration: 10,
+                startTime: finalStartTime,
+                endTime: finalEndTime,
+                duration: duration || 10,
                 isActive: 1
             });
             
@@ -90,8 +98,12 @@ const approveMedia = async (req, res) => {
 
 const rejectMedia = async (req, res) => {
     const { id } = req.params;
+    const { reason } = req.body;
     try {
-        await Media.findByIdAndUpdate(id, { status: 'rejected' });
+        await Media.findByIdAndUpdate(id, { 
+            status: 'rejected',
+            rejectionReason: reason || 'No reason provided'
+        });
         res.json({ message: 'Media rejected' });
     } catch (err) {
         res.status(500).json({ error: err.message });

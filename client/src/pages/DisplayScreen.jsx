@@ -1,7 +1,40 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import io from 'socket.io-client';
-import { Clock, ShieldCheck, Zap, Activity, Monitor } from 'lucide-react';
+import { Clock, ShieldCheck, Zap, Activity, Monitor, CloudSun, MapPin } from 'lucide-react';
+
+const Weather = () => {
+  const [temp, setTemp] = useState('--');
+  const [loc, setLoc] = useState('Loading...');
+
+  useEffect(() => {
+    const fetchWeather = async () => {
+      try {
+        const res = await axios.get('https://wttr.in/?format=j1');
+        const data = res.data.current_condition[0];
+        setTemp(data.temp_C);
+        setLoc(res.data.nearest_area[0].areaName[0].value);
+      } catch (err) { console.error('Weather error:', err); }
+    };
+    fetchWeather();
+    const interval = setInterval(fetchWeather, 600000); // 10 min
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="flex items-center gap-4 px-6 py-2 bg-white/5 rounded-2xl border border-white/10 backdrop-blur-md">
+      <div className="flex items-center gap-2">
+        <MapPin size={14} className="text-sky-400" />
+        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{loc}</span>
+      </div>
+      <div className="h-4 w-px bg-white/10" />
+      <div className="flex items-center gap-2">
+        <CloudSun size={18} className="text-amber-400" />
+        <span className="text-xl font-black tracking-tighter">{temp}°C</span>
+      </div>
+    </div>
+  );
+};
 
 const quotes = [
   { text: "Safety is not a gadget, but a state of mind.", author: "Factory Protocol" },
@@ -60,6 +93,7 @@ const DisplayScreen = () => {
 
     const t = setInterval(() => setTime(new Date()), 1000);
     const m = setInterval(() => setMotivationIdx(i => (i + 1) % quotes.length), 10000);
+    const f = setInterval(fetchData, 30000); // Auto-fetch fallback every 30s
 
     socket.on('contentUpdate', fetchData);
     socket.on('tickerUpdate', (data) => setTicker(prev => ({ ...prev, ...data })));
@@ -67,6 +101,7 @@ const DisplayScreen = () => {
     return () => {
       clearInterval(t);
       clearInterval(m);
+      clearInterval(f);
       socket.disconnect();
     };
   }, [fetchData]);
@@ -126,24 +161,27 @@ const DisplayScreen = () => {
   return (
     <div className="h-screen w-screen bg-[var(--bg)] overflow-hidden flex flex-col text-[var(--text)] select-none font-sans">
       {/* Header */}
-      <div className="h-20 bg-black/20 backdrop-blur-2xl border-b border-white/5 flex items-center justify-between px-12 z-20">
-        <div className="flex items-center gap-12">
-          <div className="flex items-center gap-4">
-            <div className="p-2.5 bg-sky-500/10 rounded-xl border border-sky-500/20 shadow-[0_0_15px_rgba(14,165,233,0.1)]">
-              <Activity className="w-5 h-5 text-sky-400" />
-            </div>
-            <span className="text-[10px] tracking-[8px] font-black uppercase opacity-60">Operations Feed // Live</span>
+      <div className="h-24 bg-black/20 backdrop-blur-3xl border-b border-white/5 flex items-center justify-between px-12 z-20">
+        <div className="flex items-center gap-6">
+          <div className="p-4 bg-sky-500/10 rounded-2xl border border-sky-500/20 shadow-[0_0_30px_rgba(14,165,233,0.1)]">
+            <Activity className="w-8 h-8 text-sky-400" />
           </div>
-          <div className="h-6 w-px bg-white/10" />
-          <div className="flex items-center gap-3">
-            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
-            <span className="text-[10px] tracking-[2px] font-bold text-emerald-500 uppercase">System Secure</span>
+          <div>
+            <h1 className="text-5xl font-black tracking-tighter leading-none">Live</h1>
+            <p className="text-[12px] tracking-[4px] font-black uppercase text-sky-400/60 mt-2">Broadcast System</p>
           </div>
         </div>
-        <div className="flex items-center gap-10">
+        <div className="flex items-center gap-8">
+          <Weather />
+          <div className="h-12 w-px bg-white/10" />
           <div className="text-right">
-            <p className="text-[8px] font-black uppercase tracking-[4px] text-slate-500 mb-1">Station Chronometer</p>
-            <p className="text-3xl font-extrabold tracking-tighter tabular-nums">{time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</p>
+            <p className="text-4xl font-black tracking-tighter tabular-nums leading-none">
+              {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              <span className="text-xl opacity-40 ml-1">{time.toLocaleTimeString([], { second: '2-digit' })}</span>
+            </p>
+            <p className="text-[10px] font-black uppercase tracking-[4px] text-slate-500 mt-1">
+              {time.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+            </p>
           </div>
         </div>
       </div>
@@ -203,14 +241,6 @@ const DisplayScreen = () => {
 
       {/* Footer / Ticker */}
       <div className="h-24 bg-black/40 backdrop-blur-3xl border-t border-white/5 flex items-center overflow-hidden z-20">
-        <div className="bg-gradient-to-r from-sky-500 to-sky-600 h-full px-10 flex items-center gap-6 z-10 shadow-[20px_0_40px_rgba(0,0,0,0.4)]">
-          <span className="text-white font-black text-sm tracking-[10px] uppercase whitespace-nowrap">Broadcast</span>
-          <div className="h-8 w-px bg-white/20" />
-          <button className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl transition-all group">
-            <Monitor size={16} className="text-white group-hover:scale-110 transition-transform" />
-            <span className="text-[10px] font-black uppercase tracking-[2px] text-white">Terminal</span>
-          </button>
-        </div>
         <div className="flex-1 overflow-hidden relative h-full flex items-center">
           <div className="flex gap-24 whitespace-nowrap animate-ticker" style={{ animationDuration: ticker.isActive ? `${Math.max(5, 100 - ticker.speed * 10)}s` : '0s' }}>
             <div className="flex items-center gap-24">

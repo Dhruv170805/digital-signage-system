@@ -16,6 +16,7 @@ const Shell = ({ children, role, activeTab, setActiveTab }) => {
     { id: 'templates', label: 'Layout', icon: FileText },
     { id: 'ticker', label: 'Ticker', icon: Type },
     { id: 'screens', label: 'Screens', icon: Tv },
+    { id: 'live', label: 'Current Screen', icon: Tv },
     { id: 'users', label: 'Users', icon: Users },
     { id: 'settings', label: 'Idle', icon: MonitorPlay },
   ];
@@ -23,7 +24,7 @@ const Shell = ({ children, role, activeTab, setActiveTab }) => {
   const userMenu = [
     { id: 'upload', label: 'Upload', icon: Upload },
     { id: 'myfiles', label: 'History', icon: History },
-    { id: 'live', label: 'Preview', icon: MonitorPlay },
+    { id: 'live', label: 'Current Screen', icon: Tv },
   ];
 
   const menu = role === 'admin' ? adminMenu : userMenu;
