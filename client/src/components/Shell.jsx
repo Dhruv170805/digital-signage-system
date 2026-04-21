@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   BarChart3, CheckSquare, Calendar, Type, LayoutGrid, Users, 
-  Tv, MonitorPlay, LogOut, Upload, FileText, Activity 
+  Tv, MonitorPlay, LogOut, Upload, FileText, Activity, History 
 } from 'lucide-react';
 
 const Shell = ({ children, role, activeTab, setActiveTab }) => {
@@ -10,19 +10,20 @@ const Shell = ({ children, role, activeTab, setActiveTab }) => {
   const userName = JSON.parse(localStorage.getItem('user'))?.name || 'User';
 
   const adminMenu = [
-    { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
-    { id: 'approve', label: 'Approve Files', icon: CheckSquare },
-    { id: 'screens', label: 'Screens', icon: Tv },
-    { id: 'schedule', label: 'Schedule', icon: Calendar },
-    { id: 'ticker', label: 'Ticker Control', icon: Type },
-    { id: 'templates', label: 'Templates', icon: LayoutGrid },
-    { id: 'users', label: 'Users', icon: Users },
+    { id: 'dashboard', label: 'Command Core', icon: LayoutGrid },
+    { id: 'approve', label: 'Moderation', icon: CheckSquare },
+    { id: 'schedule', label: 'Mission Dispatch', icon: Calendar },
+    { id: 'templates', label: 'Architecture', icon: FileText },
+    { id: 'ticker', label: 'Broadcast', icon: Type },
+    { id: 'screens', label: 'Terminal Fleet', icon: Tv },
+    { id: 'users', label: 'Personnel', icon: Users },
+    { id: 'settings', label: 'Global Systems', icon: MonitorPlay },
   ];
 
   const userMenu = [
-    { id: 'upload', label: 'Upload File', icon: Upload },
-    { id: 'myfiles', label: 'My Files', icon: FileText },
-    { id: 'live', label: 'Live Screen', icon: MonitorPlay },
+    { id: 'upload', label: 'Transmit Asset', icon: Upload },
+    { id: 'myfiles', label: 'Registry History', icon: History },
+    { id: 'live', label: 'Feed Preview', icon: MonitorPlay },
   ];
 
   const menu = role === 'admin' ? adminMenu : userMenu;

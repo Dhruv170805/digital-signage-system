@@ -9,13 +9,13 @@ const getActiveSchedule = async (req, res) => {
             FROM Schedules S
             LEFT JOIN Media M ON S.mediaId = M.id
             LEFT JOIN Templates T ON S.templateId = T.id
-            WHERE NOW() BETWEEN S.startTime AND S.endTime
+            WHERE datetime('now', 'localtime') BETWEEN S.startTime AND S.endTime
             AND S.isActive = 1
         `;
         const params = [];
         
         if (screenId) {
-            query += " AND S.screenId = ?";
+            query += " AND (S.screenId = ? OR S.screenId IS NULL)";
             params.push(screenId);
         }
 
@@ -49,16 +49,35 @@ const createSchedule = async (req, res) => {
     const { mediaId, templateId, startTime, endTime, duration, screenId, mediaMapping } = req.body;
     try {
         const pool = await poolPromise;
+        const start = startTime ? startTime.replace('T', ' ') : '';
+        const end = endTime ? endTime.replace('T', ' ') : '';
+        
         await pool.execute(
             'INSERT INTO Schedules (mediaId, templateId, startTime, endTime, duration, screenId, mediaMapping) VALUES (?, ?, ?, ?, ?, ?, ?)',
-            [mediaId || null, templateId || null, startTime, endTime, duration, screenId || null, JSON.stringify(mediaMapping || {})]
+            [mediaId || null, templateId || null, start, end, duration, screenId || null, JSON.stringify(mediaMapping || {})]
         );
         
         // Notify all clients to refresh content
         const io = req.app.get('socketio');
-        io.emit('contentUpdate');
+        if (io) io.emit('contentUpdate');
 
         res.status(201).json({ message: 'Schedule created' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
+const deleteSchedule = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const pool = await poolPromise;
+        await pool.execute('DELETE FROM Schedules WHERE id = ?', [id]);
+        
+        // Notify all clients to refresh content
+        const io = req.app.get('socketio');
+        if (io) io.emit('contentUpdate');
+
+        res.json({ message: 'Broadcast terminated' });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -67,5 +86,6 @@ const createSchedule = async (req, res) => {
 module.exports = {
     getActiveSchedule,
     getAllSchedules,
-    createSchedule
+    createSchedule,
+    deleteSchedule
 };

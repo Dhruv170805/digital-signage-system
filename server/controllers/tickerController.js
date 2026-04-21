@@ -11,7 +11,7 @@ const getTicker = async (req, res) => {
 };
 
 const updateTicker = async (req, res) => {
-    const { text, speed, type, linkUrl, isActive } = req.body;
+    const { text, speed, type, linkUrl, isActive, fontSize, fontStyle } = req.body;
     try {
         const pool = await poolPromise;
         // Simple logic: if exists update, else insert
@@ -22,19 +22,19 @@ const updateTicker = async (req, res) => {
 
         if (hasRows) {
             await pool.execute(
-                'UPDATE Tickers SET text = ?, speed = ?, type = ?, linkUrl = ?, isActive = ?',
-                [text, speed, type || 'text', linkUrl || null, activeStatus]
+                'UPDATE Tickers SET text = ?, speed = ?, type = ?, linkUrl = ?, isActive = ?, fontSize = ?, fontStyle = ?',
+                [text, speed, type || 'text', linkUrl || null, activeStatus, fontSize || 'text-4xl', fontStyle || 'normal']
             );
         } else {
             await pool.execute(
-                'INSERT INTO Tickers (text, speed, type, linkUrl, isActive) VALUES (?, ?, ?, ?, ?)',
-                [text, speed, type || 'text', linkUrl || null, activeStatus]
+                'INSERT INTO Tickers (text, speed, type, linkUrl, isActive, fontSize, fontStyle) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                [text, speed, type || 'text', linkUrl || null, activeStatus, fontSize || 'text-4xl', fontStyle || 'normal']
             );
         }
 
         // Notify all clients via Socket.IO
         const io = req.app.get('socketio');
-        io.emit('tickerUpdate', { text, speed, type, linkUrl });
+        io.emit('tickerUpdate', { text, speed, type, linkUrl, fontSize, fontStyle });
 
         res.json({ message: 'Ticker updated' });
     } catch (err) {

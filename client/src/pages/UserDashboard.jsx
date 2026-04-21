@@ -3,7 +3,8 @@ import axios from 'axios';
 import Shell from '../components/Shell';
 import { 
   Upload, FileText, Play, Image as ImageIcon, 
-  CheckCircle2, Clock, XCircle, AlertCircle 
+  CheckCircle2, Clock, XCircle, AlertCircle, 
+  History, Send, Monitor, RefreshCw, Calendar
 } from 'lucide-react';
 
 const Card = ({ children, className = "" }) => (
@@ -18,6 +19,9 @@ const UserDashboard = () => {
   const [msg, setMsg] = useState({ text: '', type: '' });
   const [refreshKey, setRefreshKey] = useState(0);
   
+  const [requestedStartTime, setRequestedStartTime] = useState('');
+  const [requestedEndTime, setRequestedEndTime] = useState('');
+  
   const user = React.useMemo(() => JSON.parse(localStorage.getItem('user')), []);
 
   useEffect(() => {
@@ -30,7 +34,7 @@ const UserDashboard = () => {
         ]);
         if (isMounted) {
           const combined = [...pendingRes.data, ...approvedRes.data];
-          setMyFiles(combined.filter(f => f.uploaderId === user.id));
+          setMyFiles(combined.filter(f => f.uploaderId === user.id).sort((a,b) => new Date(b.uploadedAt) - new Date(a.uploadedAt)));
         }
       } catch (err) { console.error(err); }
     };
@@ -46,14 +50,15 @@ const UserDashboard = () => {
     const formData = new FormData();
     formData.append('media', file);
     formData.append('uploaderId', user.id);
+    formData.append('requestedStartTime', requestedStartTime);
+    formData.append('requestedEndTime', requestedEndTime);
 
     try {
       await axios.post(`${import.meta.env.VITE_API_URL}/api/media/upload`, formData);
       setMsg({ text: 'Asset transmitted successfully. Awaiting clearance.', type: 'success' });
       setFile(null);
-      // To refresh, we can just trigger a re-fetch by updating a dummy state if needed,
-      // or we can just call the same logic. Since we moved it to useEffect, 
-      // let's just use a simple state to trigger it.
+      setRequestedStartTime('');
+      setRequestedEndTime('');
       setRefreshKey(prev => prev + 1);
     } catch (err) {
       setMsg({ text: 'Transmission failed: ' + err.message, type: 'error' });
@@ -63,92 +68,196 @@ const UserDashboard = () => {
     }
   };
 
+  const handleResubmit = async (id) => {
+    try {
+      await axios.post(`${import.meta.env.VITE_API_URL}/api/media/${id}/resubmit`);
+      setMsg({ text: 'Legacy asset re-submitted for approval.', type: 'success' });
+      setRefreshKey(prev => prev + 1);
+      setActiveTab('myfiles');
+    } catch (err) {
+      setMsg({ text: 'Re-submission failed: ' + err.message, type: 'error' });
+    } finally {
+      setTimeout(() => setMsg({ text: '', type: '' }), 5000);
+    }
+  };
+
   const renderView = () => {
     switch (activeTab) {
       case 'upload':
         return (
-          <div className="max-w-3xl animate-fade-in">
-            <Card>
-              <h3 className="mono text-xs font-bold uppercase tracking-[2px] mb-8 text-[var(--accent)]">Asset Submission</h3>
-              <form onSubmit={handleUpload} className="space-y-8">
+          <div className="animate-fade-in">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <Card className="relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-8 opacity-5">
+                  <Upload size={120} />
+                </div>
+                <h3 className="text-xl font-bold mb-2">Asset Transmission</h3>
+                <p className="text-[var(--text-dim)] text-sm mb-8 uppercase tracking-widest font-semibold">Step 1: Select Mission Data</p>
+                
                 <div 
-                  className={`border-2 border-dashed rounded-2xl p-12 text-center transition-all cursor-pointer ${
-                    file ? 'border-[var(--accent)] bg-[var(--accent)]/5' : 'border-[var(--border)] hover:border-[var(--accent)]/40'
+                  className={`border-2 border-dashed rounded-3xl p-16 text-center transition-all cursor-pointer group mb-8 ${
+                    file ? 'border-[var(--accent)] bg-[var(--accent)]/5 shadow-[0_0_30px_rgba(56,189,248,0.05)]' : 'border-white/10 hover:border-white/20 hover:bg-white/5'
                   }`}
                   onClick={() => document.getElementById('media-upload').click()}
                 >
                   <input id="media-upload" type="file" className="hidden" onChange={(e) => setFile(e.target.files[0])} />
-                  <div className="bg-[var(--surface)] w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-[var(--border)]">
-                    <Upload className={`w-8 h-8 ${file ? 'text-[var(--accent)]' : 'text-[var(--text-dim)]'}`} />
+                  <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 bg-white/5 border border-white/10 group-hover:scale-110 transition-transform">
+                    <Upload className={`w-8 h-8 ${file ? 'text-[var(--accent)]' : 'text-white'}`} />
                   </div>
                   {file ? (
-                    <div className="space-y-1">
-                      <p className="text-[var(--text)] font-semibold">{file.name}</p>
-                      <p className="text-[var(--text-dim)] text-xs mono uppercase">{(file.size / 1024 / 1024).toFixed(2)} MB • READY</p>
+                    <div className="space-y-2">
+                      <p className="text-xl font-bold text-white">{file.name}</p>
+                      <p className="text-sky-400 text-xs font-black uppercase tracking-[4px]">{(file.size / 1024 / 1024).toFixed(2)} MB • VERIFIED</p>
                     </div>
                   ) : (
-                    <div className="space-y-1">
-                      <p className="text-[var(--text)] font-medium">Select safety assets</p>
-                      <p className="text-[var(--text-dim)] text-xs">PDF, MP4, WEBM, or JPG</p>
+                    <div className="space-y-2">
+                      <p className="text-lg font-bold text-white">Select File</p>
+                      <p className="text-slate-500 text-sm font-medium">PDF, MP4, WEBM, or JPG</p>
                     </div>
                   )}
                 </div>
 
                 {msg.text && (
-                   <div className={`p-4 rounded-xl flex items-center gap-3 animate-fade-in ${
-                     msg.type === 'success' ? 'bg-[var(--green)]/10 text-[var(--green)]' : 'bg-[var(--red)]/10 text-[var(--red)]'
-                   }`}>
-                     {msg.type === 'success' ? <CheckCircle2 size={18}/> : <AlertCircle size={18}/>}
-                     <p className="text-sm font-medium">{msg.text}</p>
-                   </div>
+                  <div className={`p-4 rounded-2xl flex items-center gap-4 animate-fade-in border mb-4 ${
+                    msg.type === 'success' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                  }`}>
+                    {msg.type === 'success' ? <CheckCircle2 size={20}/> : <AlertCircle size={20}/>}
+                    <p className="text-sm font-bold uppercase tracking-wider">{msg.text}</p>
+                  </div>
                 )}
+              </Card>
 
-                <button type="submit" disabled={!file || uploading} className="nexus-btn-primary w-full">
-                  {uploading ? 'TRANSMITTING...' : 'START UPLOAD'}
-                </button>
-              </form>
-            </Card>
+              <Card>
+                <h3 className="text-xl font-bold mb-2 text-sky-400">Mission Schedule</h3>
+                <p className="text-[var(--text-dim)] text-sm mb-8 uppercase tracking-widest font-semibold">Step 2: Define Broadcast Window</p>
+                
+                <form onSubmit={handleUpload} className="space-y-6">
+                  <div className="p-6 bg-white/5 border border-white/10 rounded-2xl space-y-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase text-slate-500 flex items-center gap-2">
+                        <Calendar size={12} className="text-sky-400" />
+                        Activation Timestamp
+                      </label>
+                      <input 
+                        type="datetime-local" 
+                        required 
+                        className="nexus-input" 
+                        value={requestedStartTime} 
+                        onChange={(e) => setRequestedStartTime(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase text-slate-500 flex items-center gap-2">
+                        <Clock size={12} className="text-rose-400" />
+                        Deactivation Timestamp
+                      </label>
+                      <input 
+                        type="datetime-local" 
+                        required 
+                        className="nexus-input" 
+                        value={requestedEndTime} 
+                        onChange={(e) => setRequestedEndTime(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="px-4 py-3 bg-sky-500/10 border border-sky-500/20 rounded-xl flex items-start gap-3">
+                    <Info size={16} className="text-sky-400 shrink-0 mt-0.5" />
+                    <p className="text-[10px] font-bold text-sky-400/80 uppercase leading-relaxed">
+                      Submission will be automatically scheduled upon clearance by HQ Control.
+                    </p>
+                  </div>
+
+                  <button type="submit" disabled={!file || uploading} className="nexus-btn-primary w-full py-5 text-lg flex items-center justify-center gap-3 mt-4">
+                    {uploading ? (
+                      <>
+                        <RefreshCw className="w-5 h-5 animate-spin" />
+                        UPLOADING...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-5 h-5" />
+                        INITIATE TRANSMISSION
+                      </>
+                    )}
+                  </button>
+                </form>
+              </Card>
+            </div>
           </div>
         );
 
       case 'myfiles':
         return (
           <Card className="animate-fade-in">
-            <h3 className="mono text-xs font-bold uppercase tracking-[2px] mb-8">Submission Records</h3>
+            <div className="flex justify-between items-center mb-10 border-b border-white/10 pb-6">
+              <div>
+                <h3 className="text-xl font-bold">Submission Registry</h3>
+                <p className="text-xs text-[var(--text-dim)] uppercase tracking-[4px] font-bold mt-1">Personnel ID: {user.name}</p>
+              </div>
+              <History className="text-sky-400 opacity-20" size={32} />
+            </div>
             {myFiles.length === 0 ? (
-              <div className="text-center py-16 opacity-30 px-4">
-                 <p className="mono uppercase tracking-widest text-xs">No assets detected</p>
+              <div className="text-center py-20 opacity-20">
+                 <History className="w-16 h-16 mx-auto mb-4" />
+                 <p className="font-bold uppercase tracking-widest text-sm">No historical data found</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left">
                   <thead>
-                    <tr className="border-b border-[var(--border)]">
-                      <th className="pb-4 mono text-[10px] uppercase text-[var(--text-dim)] px-4">Asset</th>
-                      <th className="pb-4 mono text-[10px] uppercase text-[var(--text-dim)] px-4">Status</th>
+                    <tr className="border-b border-white/5 text-[10px] uppercase font-black text-slate-500">
+                      <th className="pb-4 px-4">Asset Manifest</th>
+                      <th className="pb-4 px-4">Transmission</th>
+                      <th className="pb-4 px-4">Requested Window</th>
+                      <th className="pb-4 px-4 text-center">Status</th>
+                      <th className="pb-4 px-4 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="divide-y divide-white/5">
                     {myFiles.map(f => (
-                      <tr key={f.id} className="border-b border-[var(--border)]/30">
+                      <tr key={f.id} className="group hover:bg-white/5 transition-colors">
                         <td className="py-6 px-4">
                           <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 bg-[var(--surface)] rounded-xl flex items-center justify-center border border-[var(--border)]">
-                               {f.fileType === 'pdf' && <FileText className="text-[var(--blue)]" size={18}/>}
-                               {f.fileType === 'video' && <Play className="text-[var(--accent)]" size={18}/>}
-                               {f.fileType === 'image' && <ImageIcon className="text-[var(--green)]" size={18}/>}
+                            <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center border border-white/10 group-hover:border-[var(--accent)]/30 transition-colors">
+                               {f.fileType === 'pdf' && <FileText className="text-sky-400" size={20}/>}
+                               {f.fileType === 'video' && <Play className="text-emerald-400" size={20}/>}
+                               {f.fileType === 'image' && <ImageIcon className="text-indigo-400" size={20}/>}
                             </div>
                             <div>
-                               <p className="text-sm font-medium">{f.fileName}</p>
-                               <p className="text-[10px] mono uppercase text-[var(--text-dim)]">{f.fileType}</p>
+                               <p className="text-sm font-bold text-white">{f.fileName}</p>
+                               <p className="text-[10px] font-black uppercase text-slate-500 tracking-tighter">{f.fileType}</p>
                             </div>
                           </div>
                         </td>
                         <td className="py-6 px-4">
-                          <span className={`text-[10px] mono font-bold uppercase ${
-                            f.status === 'approved' ? 'text-[var(--green)]' :
-                            f.status === 'pending' ? 'text-[var(--orange)]' : 'text-[var(--red)]'
+                          <p className="text-[10px] font-bold text-white uppercase">{new Date(f.uploadedAt).toLocaleDateString()}</p>
+                          <p className="text-[10px] font-bold text-slate-500 uppercase">{new Date(f.uploadedAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</p>
+                        </td>
+                        <td className="py-6 px-4">
+                          {f.requestedStartTime ? (
+                            <div className="space-y-1">
+                               <p className="text-[9px] font-black text-sky-400 uppercase">FROM: {new Date(f.requestedStartTime).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'})}</p>
+                               <p className="text-[9px] font-black text-rose-400 uppercase">TO: {new Date(f.requestedEndTime).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'})}</p>
+                            </div>
+                          ) : (
+                            <span className="text-[10px] font-bold text-slate-600 italic">No Window Requested</span>
+                          )}
+                        </td>
+                        <td className="py-6 px-4 text-center">
+                          <span className={`text-[10px] font-black uppercase px-3 py-1 rounded-full border ${
+                            f.status === 'approved' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+                            f.status === 'pending' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
                           }`}>{f.status}</span>
+                        </td>
+                        <td className="py-6 px-4 text-right">
+                           <button 
+                             onClick={() => handleResubmit(f.id)}
+                             title="Re-submit Legacy Asset"
+                             className="p-2.5 bg-white/5 border border-white/10 text-white rounded-xl hover:bg-[var(--accent)] hover:border-transparent hover:text-white transition-all active:scale-95"
+                           >
+                             <RefreshCw size={18} />
+                           </button>
                         </td>
                       </tr>
                     ))}
@@ -162,11 +271,20 @@ const UserDashboard = () => {
       case 'live':
         return (
            <div className="animate-fade-in px-4">
-              <h3 className="mono text-xs font-bold uppercase tracking-[2px] mb-6">Live System Preview</h3>
-              <div className="aspect-video bg-black rounded-3xl overflow-hidden border border-[var(--border)] shadow-2xl relative group">
-                 <iframe src="/display" className="w-full h-full border-none pointer-events-none" title="Live Preview" />
-                 <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <p className="mono text-[var(--accent)] text-lg tracking-[8px] animate-pulse">MONITORING FEED</p>
+              <div className="flex justify-between items-center mb-8">
+                 <div>
+                    <h3 className="text-xl font-bold">Terminal Preview</h3>
+                    <p className="text-xs text-[var(--text-dim)] uppercase tracking-[4px] font-bold mt-1">Real-time Station Monitoring</p>
+                 </div>
+                 <div className="flex items-center gap-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-[10px] font-bold text-emerald-400 uppercase">
+                    <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                    LIVE_FEED_ACTIVE
+                 </div>
+              </div>
+              <div className="aspect-video bg-black rounded-[40px] overflow-hidden border border-white/10 shadow-2xl relative group shadow-sky-500/5">
+                 <iframe src="/display" className="w-full h-full border-none pointer-events-none scale-[1.001]" title="Live Preview" />
+                 <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm">
+                    <p className="text-white text-lg tracking-[12px] font-black animate-pulse uppercase">Monitoring Active</p>
                  </div>
               </div>
            </div>
@@ -176,12 +294,20 @@ const UserDashboard = () => {
     }
   };
 
+  const Info = ({ size, className }) => <AlertCircle size={size} className={className} />;
+
   return (
     <Shell role="user" activeTab={activeTab} setActiveTab={setActiveTab}>
-      <div className="p-10">
-        <header className="mb-12">
-          <h1 className="text-6xl font-light tracking-tighter text-[var(--text)]">Nexus Station</h1>
-          <p className="text-[var(--text-dim)] mt-4 max-w-lg text-lg">Broadcast safety assets and factory updates.</p>
+      <div className="p-10 max-w-6xl mx-auto">
+        <header className="mb-16 relative">
+          <div className="flex items-center gap-3 mb-6">
+             <div className="p-2 bg-sky-500/20 rounded-lg">
+                <Monitor className="w-5 h-5 text-sky-400" />
+             </div>
+             <span className="text-[10px] tracking-[6px] font-black uppercase opacity-60">Operations Terminal // {user.role === 'admin' ? 'Root' : 'Operator'}</span>
+          </div>
+          <h1 className="text-7xl font-black tracking-tighter text-white leading-none">NEXUS STATION</h1>
+          <p className="text-lg text-slate-400 mt-6 max-w-lg leading-relaxed font-medium">Transmit safety protocols and high-priority factory assets directly to the central broadcast core.</p>
         </header>
         {renderView()}
       </div>

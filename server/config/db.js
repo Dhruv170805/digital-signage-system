@@ -1,130 +1,108 @@
-const mysql = require('mysql2/promise');
+const sqlite3 = require('sqlite3').verbose();
+const path = require('path');
+const fs = require('fs');
 require('dotenv').config();
 
-const dbConfig = {
-    host: process.env.DB_SERVER || 'localhost',
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_DATABASE,
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0
-};
+const dbPath = path.resolve(__dirname, '../../database.sqlite');
+const db = new sqlite3.Database(dbPath);
 
 // Verified Hash for 'admin123'
 const ADMIN_HASH = '$2b$10$jIz84g7ajsbO4QK3C3Qmb.vsjV6o4yFFTYCaFexHeLP20rr22c8VC';
 
-// Simulation Mode Implementation
-const mockPool = {
-    execute: async (q, params) => {
-        console.log('🛠️ [SIMULATION] Query:', q, '| Params:', params);
-        if (q.includes('SELECT * FROM Users WHERE email = ?')) {
-            if (params[0] === 'admin@corp.in') {
-                return [[{ id: 1, name: 'Admin', email: 'admin@corp.in', password: ADMIN_HASH, role: 'admin', status: 'active' }], []];
-            }
-        }
-        if (q.includes('SELECT') && q.includes('FROM Users')) return [[{ id: 1, name: 'Admin', email: 'admin@corp.in', role: 'admin', status: 'active' }], []];
-        if (q.includes('SELECT COUNT(*)')) return [[{ count: 0 }], []];
-        if (q.includes('SELECT * FROM Screens')) return [[{ id: 1, name: 'Demo Screen', location: 'Lobby', status: 'online' }], []];
-        if (q.includes('SELECT * FROM Tickers')) return [[], []];
-        return [[], []];
-    },
-    query: async (q, params) => [[], []],
-    getConnection: async () => ({ release: () => {}, execute: async () => [[], []] })
-};
-
-const pool = mysql.createPool(dbConfig);
-
-let seedingPromise = null;
-
-const seedDatabase = async (conn) => {
-    if (seedingPromise) return seedingPromise;
-    
-    seedingPromise = (async () => {
-        try {
-            console.log('💎 NEXUS CORE: Initializing Database Schema...');
-            
-            // 1. Users Table
-            await conn.execute(`CREATE TABLE IF NOT EXISTS Users (
-                id INT PRIMARY KEY AUTO_INCREMENT,
-                name VARCHAR(255) NOT NULL,
-                email VARCHAR(255) NOT NULL UNIQUE,
-                password VARCHAR(255) NOT NULL,
-                role VARCHAR(50) DEFAULT 'admin',
-                status VARCHAR(50) DEFAULT 'active',
-                createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
-            )`);
-
-            // Check columns for existing table
-            const [cols] = await conn.execute("SHOW COLUMNS FROM Users");
-            if (!cols.find(c => c.Field === 'name')) {
-                console.log('🩹 Repairing Users table schema...');
-                await conn.execute("ALTER TABLE Users ADD COLUMN name VARCHAR(255) NOT NULL AFTER id");
-            }
-
-            // 2. Admin User
-            const [users] = await conn.execute('SELECT * FROM Users WHERE email = ?', ['admin@corp.in']);
-            if (users.length === 0) {
-                console.log('👤 Provisioning Root Admin...');
-                await conn.execute('INSERT INTO Users (name, email, password, role) VALUES (?, ?, ?, ?)', ['Root Admin', 'admin@corp.in', ADMIN_HASH, 'admin']);
+// Wrapper to mimic mysql2 promise-based [rows, fields] interface
+const pool = {
+    execute: (sql, params = []) => {
+        return new Promise((resolve, reject) => {
+            const trimmedSql = sql.trim().toLowerCase();
+            if (trimmedSql.startsWith('select')) {
+                db.all(sql, params, (err, rows) => {
+                    if (err) reject(err);
+                    else resolve([rows, null]);
+                });
             } else {
-                // Update admin password to match current ADMIN_HASH to ensure login works
-                console.log('👤 Updating Root Admin credentials...');
-                await conn.execute('UPDATE Users SET password = ? WHERE email = ?', [ADMIN_HASH, 'admin@corp.in']);
+                db.run(sql, params, function(err) {
+                    if (err) reject(err);
+                    else resolve([{ insertId: this.lastID, affectedRows: this.changes }, null]);
+                });
             }
-
-            // 3. System Tables
-            await conn.execute('CREATE TABLE IF NOT EXISTS Screens (id INT PRIMARY KEY AUTO_INCREMENT, name VARCHAR(255) NOT NULL, location VARCHAR(255), status VARCHAR(50) DEFAULT "offline", lastPing DATETIME, createdAt DATETIME DEFAULT CURRENT_TIMESTAMP)');
-            await conn.execute('CREATE TABLE IF NOT EXISTS Media (id INT PRIMARY KEY AUTO_INCREMENT, fileName VARCHAR(255) NOT NULL, filePath VARCHAR(500) NOT NULL, fileType VARCHAR(50) NOT NULL, uploaderId INT, status VARCHAR(50) DEFAULT "pending", uploadedAt DATETIME DEFAULT CURRENT_TIMESTAMP)');
-            await conn.execute('CREATE TABLE IF NOT EXISTS Templates (id INT PRIMARY KEY AUTO_INCREMENT, name VARCHAR(100) NOT NULL, layout JSON)');
-            
-            // 4. Schedules with screenId and mediaMapping support
-            await conn.execute(`CREATE TABLE IF NOT EXISTS Schedules (
-                id INT PRIMARY KEY AUTO_INCREMENT, 
-                mediaId INT, 
-                templateId INT, 
-                screenId INT,
-                mediaMapping JSON,
-                startTime DATETIME NOT NULL, 
-                endTime DATETIME NOT NULL, 
-                duration INT NOT NULL, 
-                isActive TINYINT(1) DEFAULT 1
-            )`);
-
-            // Ensure screenId and mediaMapping columns exist
-            const [schedCols] = await conn.execute("SHOW COLUMNS FROM Schedules");
-            if (!schedCols.find(c => c.Field === 'screenId')) {
-                console.log('🩹 Repairing Schedules table (adding screenId)...');
-                await conn.execute("ALTER TABLE Schedules ADD COLUMN screenId INT AFTER templateId");
-            }
-            if (!schedCols.find(c => c.Field === 'mediaMapping')) {
-                console.log('🩹 Repairing Schedules table (adding mediaMapping)...');
-                await conn.execute("ALTER TABLE Schedules ADD COLUMN mediaMapping JSON AFTER screenId");
-            }
-
-            await conn.execute('CREATE TABLE IF NOT EXISTS Tickers (id INT PRIMARY KEY AUTO_INCREMENT, text LONGTEXT NOT NULL, type VARCHAR(50) DEFAULT "text", linkUrl VARCHAR(500), speed INT DEFAULT 5, isActive TINYINT(1) DEFAULT 1)');
-
-            console.log('✅ NEXUS CORE: System ready.');
-        } catch (err) {
-            console.error('❌ NEXUS CORE: Schema Error ->', err.message);
-            seedingPromise = null; // Allow retry on failure
-            throw err;
-        }
-    })();
-
-    return seedingPromise;
+        });
+    },
+    query: (sql, params = []) => pool.execute(sql, params)
 };
 
-const getPool = async () => {
+const seedDatabase = async () => {
     try {
-        const conn = await pool.getConnection();
-        await seedDatabase(conn);
-        conn.release();
-        return pool;
+        console.log('💎 NEXUS CORE: Initializing SQLite Schema...');
+
+        // 1. Users Table
+        await pool.execute(`CREATE TABLE IF NOT EXISTS Users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            email TEXT NOT NULL UNIQUE,
+            password TEXT NOT NULL,
+            role TEXT DEFAULT 'admin',
+            status TEXT DEFAULT 'active',
+            createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`);
+
+        // 2. Admin User
+        const [users] = await pool.execute('SELECT * FROM Users WHERE email = ?', ['admin@corp.in']);
+        if (users.length === 0) {
+            console.log('👤 Provisioning Root Admin...');
+            await pool.execute('INSERT INTO Users (name, email, password, role) VALUES (?, ?, ?, ?)', ['Root Admin', 'admin@corp.in', ADMIN_HASH, 'admin']);
+        }
+
+        // 3. System Tables
+        await pool.execute('CREATE TABLE IF NOT EXISTS Screens (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, location TEXT, status TEXT DEFAULT "offline", lastPing DATETIME, createdAt DATETIME DEFAULT CURRENT_TIMESTAMP)');
+        await pool.execute('CREATE TABLE IF NOT EXISTS Media (id INTEGER PRIMARY KEY AUTOINCREMENT, fileName TEXT NOT NULL, filePath TEXT NOT NULL, fileType TEXT NOT NULL, uploaderId INTEGER, status TEXT DEFAULT "pending", requestedStartTime DATETIME, requestedEndTime DATETIME, uploadedAt DATETIME DEFAULT CURRENT_TIMESTAMP)');
+        
+        // Repair Media table if columns missing
+        try {
+            await pool.execute('ALTER TABLE Media ADD COLUMN requestedStartTime DATETIME');
+        } catch (e) {}
+        try {
+            await pool.execute('ALTER TABLE Media ADD COLUMN requestedEndTime DATETIME');
+        } catch (e) {}
+
+        await pool.execute('CREATE TABLE IF NOT EXISTS Templates (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, layout TEXT)');
+        
+        // 4. Schedules
+        await pool.execute(`CREATE TABLE IF NOT EXISTS Schedules (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, 
+            mediaId INTEGER, 
+            templateId INTEGER, 
+            screenId INTEGER,
+            mediaMapping TEXT,
+            startTime DATETIME NOT NULL, 
+            endTime DATETIME NOT NULL, 
+            duration INTEGER NOT NULL, 
+            isActive INTEGER DEFAULT 1
+        )`);
+
+        // 5. Tickers
+        await pool.execute('CREATE TABLE IF NOT EXISTS Tickers (id INTEGER PRIMARY KEY AUTOINCREMENT, text TEXT NOT NULL, type TEXT DEFAULT "text", linkUrl TEXT, speed INTEGER DEFAULT 5, fontSize TEXT DEFAULT "text-4xl", fontStyle TEXT DEFAULT "normal", isActive INTEGER DEFAULT 1)');
+        
+        // Repair Tickers if columns missing (from older version)
+        try {
+            await pool.execute('ALTER TABLE Tickers ADD COLUMN fontSize TEXT DEFAULT "text-4xl"');
+        } catch (e) {}
+        try {
+            await pool.execute('ALTER TABLE Tickers ADD COLUMN fontStyle TEXT DEFAULT "normal"');
+        } catch (e) {}
+
+        // 6. Settings Table
+        await pool.execute('CREATE TABLE IF NOT EXISTS Settings (id INTEGER PRIMARY KEY AUTOINCREMENT, key TEXT UNIQUE, value TEXT)');
+
+        console.log('✅ NEXUS CORE: SQLite System ready.');
     } catch (err) {
-        console.warn('⚠️ NEXUS CORE: Local MySQL unreachable. Engaging Simulation Protocol.');
-        return mockPool;
+        console.error('❌ NEXUS CORE: SQLite Schema Error ->', err.message);
+        throw err;
     }
 };
 
-module.exports = { poolPromise: getPool() };
+module.exports = { 
+    poolPromise: (async () => {
+        await seedDatabase();
+        return pool;
+    })() 
+};

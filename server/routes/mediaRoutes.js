@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
-const { getAllMedia, uploadMedia, approveMedia, rejectMedia, getPendingMedia } = require('../controllers/mediaController');
+const { getAllMedia, uploadMedia, approveMedia, rejectMedia, getPendingMedia, resubmitMedia } = require('../controllers/mediaController');
 
 // Multer storage config
 const storage = multer.diskStorage({
@@ -32,5 +32,6 @@ router.get('/pending', getPendingMedia);
 router.post('/upload', upload.single('media'), uploadMedia);
 router.post('/:id/approve', approveMedia);
 router.post('/:id/reject', rejectMedia);
+router.post('/:id/resubmit', resubmitMedia);
 
 module.exports = router;

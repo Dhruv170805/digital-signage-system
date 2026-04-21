@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Activity, Mail, Lock, ArrowRight } from 'lucide-react';
+import { Monitor, Mail, Lock, ArrowRight, ShieldCheck, Activity } from 'lucide-react';
 import axios from 'axios';
 
 const Login = () => {
@@ -24,7 +24,7 @@ const Login = () => {
       const role = response.data.user.role;
       navigate(role === 'admin' ? '/admin' : '/user');
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed. Please try again.');
+      setError(err.response?.data?.message || 'Authentication failed. Please check credentials.');
       setShaking(true);
       setTimeout(() => setShaking(false), 500);
     } finally {
@@ -33,49 +33,53 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--bg)] flex items-center justify-center p-6 relative overflow-hidden">
-      {/* Cinematic Grid Background */}
+    <div className="min-h-screen bg-[var(--bg)] flex items-center justify-center p-6 relative overflow-hidden font-sans">
+      {/* Dynamic Background */}
       <div className="absolute inset-0 grid-bg opacity-30" />
-      <div className="absolute top-[20%] left-[15%] w-96 h-96 bg-[var(--accent)]/5 rounded-full blur-[100px]" />
+      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-sky-500/10 rounded-full blur-[120px] animate-pulse" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-indigo-500/10 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '2s' }} />
       
-      <div className={`relative w-full max-w-md ${shaking ? 'animate-shake' : 'animate-fade-in'}`}>
-        <div className="text-center mb-10">
-          <div className="inline-flex items-center gap-3 mb-4 px-4 py-2 bg-[var(--accent)]/10 border border-[var(--accent)]/20 rounded-full animate-fade-in" style={{ animationDelay: '0.1s' }}>
-            <Activity className="w-4 h-4 text-[var(--accent)]" />
-            <span className="mono text-[var(--accent)] text-[10px] uppercase tracking-[4px] font-bold">NEXUS SIGNAGE OS</span>
+      <div className={`relative w-full max-w-[440px] ${shaking ? 'animate-shake' : 'animate-fade-in'}`}>
+        <div className="text-center mb-12">
+          <div className="inline-flex items-center gap-3 mb-6 px-5 py-2 bg-white/5 border border-white/10 rounded-full backdrop-blur-md shadow-2xl">
+            <Activity className="w-4 h-4 text-sky-400" />
+            <span className="text-[10px] uppercase tracking-[4px] font-black text-white/80">Nexus Intelligence OS</span>
           </div>
-          <h1 className="text-4xl font-light text-[var(--text)] tracking-tight mb-2 animate-fade-in" style={{ animationDelay: '0.2s' }}>Welcome Back</h1>
-          <p className="text-[var(--text-dim)] text-sm animate-fade-in" style={{ animationDelay: '0.3s' }}>
-            Enter your credentials to access HQ Control
+          <h1 className="text-5xl font-black text-white tracking-tighter mb-3">Welcome</h1>
+          <p className="text-slate-400 font-medium text-sm tracking-wide">
+            Authenticate to access terminal control systems
           </p>
         </div>
 
-        <div className="glass p-10 animate-fade-in shadow-[0_32px_64px_-16px_rgba(0,0,0,0.6)]" style={{ animationDelay: '0.4s' }}>
-          <form onSubmit={handleLogin} className="space-y-6">
-            <div>
-              <label className="mono text-[10px] uppercase tracking-[2px] text-[var(--text-dim)] mb-2 block font-bold">Identity</label>
-              <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-faint)]" />
+        <div className="glass p-10 shadow-[0_32px_120px_-20px_rgba(0,0,0,0.8)] border-white/10 relative group">
+          {/* Subtle Shine Effect */}
+          <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/5 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none rounded-2xl" />
+          
+          <form onSubmit={handleLogin} className="space-y-6 relative z-10">
+            <div className="space-y-2">
+              <label className="text-[10px] uppercase tracking-[2px] text-slate-500 font-black ml-1">Identity Provider</label>
+              <div className="relative group/input">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within/input:text-sky-400 transition-colors" />
                 <input 
                   type="email" 
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="nexus-input pl-12" 
+                  className="nexus-input pl-12 bg-black/40 hover:bg-black/60 transition-colors" 
                   placeholder="name@corp.in"
                   required
                 />
               </div>
             </div>
 
-            <div>
-              <label className="mono text-[10px] uppercase tracking-[2px] text-[var(--text-dim)] mb-2 block font-bold">Access Key</label>
-              <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-faint)]" />
+            <div className="space-y-2">
+              <label className="text-[10px] uppercase tracking-[2px] text-slate-500 font-black ml-1">Encryption Key</label>
+              <div className="relative group/input">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within/input:text-sky-400 transition-colors" />
                 <input 
                   type="password" 
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="nexus-input pl-12" 
+                  className="nexus-input pl-12 bg-black/40 hover:bg-black/60 transition-colors" 
                   placeholder="••••••••"
                   required
                 />
@@ -83,30 +87,36 @@ const Login = () => {
             </div>
 
             {error && (
-              <p className="text-[var(--red)] text-xs mono animate-fade-in font-medium">{error}</p>
+              <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl flex items-center gap-3">
+                 <ShieldCheck className="w-4 h-4 text-rose-400 shrink-0" />
+                 <p className="text-rose-400 text-[10px] font-black uppercase leading-tight tracking-wider">{error}</p>
+              </div>
             )}
 
             <button 
               type="submit" 
               disabled={loading}
-              className="nexus-btn-primary w-full flex items-center justify-center gap-2 group"
+              className="nexus-btn-primary w-full flex items-center justify-center gap-3 py-4 group/btn relative overflow-hidden"
             >
-              {loading ? 'AUTHENTICATING...' : 'LOGIN TO OS'}
-              {!loading && <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />}
+              <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover/btn:translate-x-[100%] transition-transform duration-700 pointer-events-none" />
+              <span className="tracking-[2px] font-black uppercase text-sm">
+                {loading ? 'Decrypting...' : 'Initiate Session'}
+              </span>
+              {!loading && <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />}
             </button>
           </form>
 
-          <div className="mt-8 pt-8 border-t border-[var(--border)] text-center">
-            <p className="text-[var(--text-faint)] text-[10px] mono uppercase tracking-wider">
-              Protected by Nexus Security Protocol v4.0
-            </p>
+          <div className="mt-10 pt-8 border-t border-white/5 text-center">
+            <div className="flex items-center justify-center gap-2 text-emerald-400 font-black text-[9px] uppercase tracking-widest">
+               <ShieldCheck size={12} />
+               Secure Environment Protocol v4.0.2
+            </div>
           </div>
         </div>
 
-        {/* Tip */}
-        <div className="text-center mt-8 animate-fade-in opacity-50" style={{ animationDelay: '0.6s' }}>
-          <p className="text-[var(--text-dim)] text-[10px] mono uppercase tracking-widest">
-            {email.includes('admin') ? 'ADMIN ACCESS DETECTED' : 'STANDARD OPERATOR MODE'}
+        <div className="text-center mt-12 animate-fade-in opacity-40">
+          <p className="text-slate-500 text-[10px] font-black uppercase tracking-[4px]">
+             Authorized Access Only // Factory Operations Command
           </p>
         </div>
       </div>
