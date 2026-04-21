@@ -6,12 +6,40 @@ import {
   Users as UsersIcon, CheckCircle, XCircle, Clock, 
   Play, Plus, Trash2, Settings as SettingsIcon, ExternalLink, Activity, 
   FileText, Calendar, LayoutGrid, Type as TypeIcon,
-  Save, AlertCircle, Tv, Monitor, Palette, Info
+  Save, AlertCircle, Tv, Monitor, Palette, Info, Eye, CheckSquare, MonitorPlay
 } from 'lucide-react';
 
 const Card = ({ children, className = "" }) => (
   <div className={`glass p-6 ${className}`}>{children}</div>
 );
+
+const PreviewModal = ({ isOpen, onClose, file }) => {
+  if (!isOpen || !file) return null;
+  const src = `${import.meta.env.VITE_API_URL}/${file.filePath}`;
+  
+  return (
+    <div className="fixed inset-0 bg-black/90 backdrop-blur-xl z-[100] flex items-center justify-center p-6 md:p-12">
+      <div className="absolute top-8 right-8 flex items-center gap-6 z-10">
+        <div className="text-right">
+          <p className="text-white font-black uppercase text-xl tracking-tighter">{file.fileName}</p>
+          <p className="text-sky-400 font-bold uppercase text-[10px] tracking-[4px]">{file.fileType}</p>
+        </div>
+        <button 
+          onClick={onClose}
+          className="p-4 bg-white/5 border border-white/10 rounded-2xl hover:bg-rose-500 transition-all group"
+        >
+          <XCircle className="w-8 h-8 group-hover:scale-110 transition-transform" />
+        </button>
+      </div>
+
+      <div className="w-full h-full max-w-6xl max-h-[80vh] flex items-center justify-center bg-black/40 rounded-[40px] border border-white/10 overflow-hidden shadow-[0_0_120px_rgba(0,0,0,0.5)]">
+        {file.fileType === 'video' && <video src={src} autoPlay controls className="max-w-full max-h-full" />}
+        {file.fileType === 'image' && <img src={src} alt="" className="max-w-full max-h-full object-contain" />}
+        {file.fileType === 'pdf' && <iframe src={`${src}#toolbar=0`} className="w-full h-full border-none" />}
+      </div>
+    </div>
+  );
+};
 
 const Badge = ({ label, type }) => {
   const colors = {
@@ -20,6 +48,8 @@ const Badge = ({ label, type }) => {
     rejected: 'bg-[var(--red)]/10 text-[var(--red)] border-[var(--red)]/20',
     admin: 'bg-[var(--accent)]/10 text-[var(--accent)] border-[var(--accent)]/20',
     user: 'bg-[var(--blue)]/10 text-[var(--blue)] border-[var(--blue)]/20',
+    locked: 'bg-rose-500/10 text-rose-500 border-rose-500/20',
+    reset: 'bg-sky-500/10 text-sky-400 border-sky-500/20',
   };
   return (
     <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${colors[type] || ''}`}>
@@ -49,6 +79,8 @@ const AdminDashboard = () => {
   const [approvedMedia, setApprovedMedia] = useState([]);
   const [screens, setScreens] = useState([]);
   const [settings, setSettings] = useState({ idleWallpaperId: '' });
+  const [previewFile, setPreviewFile] = useState(null);
+  const [showPreview, setShowPreview] = useState(false);
   
   const [newScreen, setNewScreen] = useState({ name: '', location: '' });
   const [showUserForm, setShowUserForm] = useState(false);
@@ -180,6 +212,24 @@ const AdminDashboard = () => {
     } catch (err) { alert(err.response?.data?.message || err.message); }
   };
 
+  const unlockUser = async (id) => {
+    try {
+      await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/users/${id}/unlock`);
+      alert('Account Unlocked');
+      fetchData();
+    } catch (err) { alert(err.message); }
+  };
+
+  const approveReset = async (id) => {
+    const newPassword = prompt('Enter new password for user:');
+    if (!newPassword) return;
+    try {
+      await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/users/${id}/approve-reset`, { newPassword });
+      alert('Password Reset Successful');
+      fetchData();
+    } catch (err) { alert(err.message); }
+  };
+
   const renderView = () => {
     switch (activeTab) {
       case 'dashboard':
@@ -290,6 +340,13 @@ const AdminDashboard = () => {
                          <td className="py-4 px-4"><span className="text-[10px] font-bold uppercase px-2 py-0.5 bg-white/5 rounded">{m.fileType}</span></td>
                          <td className="py-4 px-4 text-right">
                             <div className="flex justify-end gap-2">
+                              <button 
+                                onClick={() => { setPreviewFile(m); setShowPreview(true); }}
+                                className="p-2 bg-sky-500/10 text-sky-400 rounded-lg hover:bg-sky-500/20"
+                                title="Preview Asset"
+                              >
+                                <Eye size={18}/>
+                              </button>
                               <button onClick={() => handleModeration(m.id, 'approve')} className="p-2 bg-emerald-500/10 text-emerald-500 rounded-lg hover:bg-emerald-500/20"><CheckCircle size={18}/></button>
                               <button onClick={() => handleModeration(m.id, 'reject')} className="p-2 bg-rose-500/10 text-rose-500 rounded-lg hover:bg-rose-500/20"><XCircle size={18}/></button>
                             </div>
@@ -445,13 +502,24 @@ const AdminDashboard = () => {
                                   <span className={`px-3 py-1 text-[9px] font-black rounded-full border ${isLive ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.1)]' : 'bg-slate-500/10 text-slate-500 border-slate-500/20'}`}>
                                     {isLive ? 'LIVE' : 'SCHEDULED'}
                                   </span>
-                                  <button 
-                                    onClick={() => terminateBroadcast(s.id)}
-                                    className="p-1.5 bg-rose-500/10 text-rose-500 rounded-lg hover:bg-rose-500 hover:text-white transition-all group"
-                                    title="Terminate Broadcast"
-                                  >
-                                    <XCircle size={14} />
-                                  </button>
+                                  <div className="flex gap-2">
+                                    {s.filePath && (
+                                      <button 
+                                        onClick={() => { setPreviewFile(s); setShowPreview(true); }}
+                                        className="p-1.5 bg-sky-500/10 text-sky-400 rounded-lg hover:bg-sky-500 hover:text-white transition-all"
+                                        title="Preview Content"
+                                      >
+                                        <Eye size={14} />
+                                      </button>
+                                    )}
+                                    <button 
+                                      onClick={() => terminateBroadcast(s.id)}
+                                      className="p-1.5 bg-rose-500/10 text-rose-500 rounded-lg hover:bg-rose-500 hover:text-white transition-all group"
+                                      title="Terminate Broadcast"
+                                    >
+                                      <XCircle size={14} />
+                                    </button>
+                                  </div>
                                 </div>
                               </td>
                             </tr>
@@ -720,7 +788,7 @@ const AdminDashboard = () => {
                   <div className="space-y-1">
                     <label className="text-[10px] font-black uppercase opacity-40 ml-1">Clearance Level</label>
                     <select className="nexus-input" value={newUser.role} onChange={(e) => setNewUser(p => ({ ...p, role: e.target.value }))}>
-                      <option value="user">Operational Officer</option>
+                      <option value="user">Standard User</option>
                       <option value="admin">Root Administrator</option>
                     </select>
                   </div>
@@ -752,11 +820,31 @@ const AdminDashboard = () => {
                              <p className="font-bold text-lg leading-none">{u.name}</p>
                              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter mt-1">{u.email}</p>
                           </td>
-                          <td className="py-6 px-6"><Badge label={u.role} type={u.role}/></td>
                           <td className="py-6 px-6">
-                            <div className="flex items-center gap-2">
-                               <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                               <span className="text-[10px] font-black uppercase text-slate-400">{u.status || 'ACTIVE'}</span>
+                            <div className="flex flex-col gap-2">
+                              <Badge label={u.role} type={u.role}/>
+                              {u.isLocked && <Badge label="Locked" type="locked"/>}
+                              {u.passwordResetRequested && <Badge label="Reset Requested" type="reset"/>}
+                            </div>
+                          </td>
+                          <td className="py-6 px-6">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                 <div className={`w-1.5 h-1.5 rounded-full ${u.status === 'active' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                                 <span className="text-[10px] font-black uppercase text-slate-400">{u.status}</span>
+                              </div>
+                              <div className="flex gap-2">
+                                {u.isLocked && (
+                                  <button onClick={() => unlockUser(u.id)} className="p-2 bg-emerald-500/10 text-emerald-500 rounded-lg hover:bg-emerald-500 transition-colors" title="Unlock Account">
+                                    <CheckCircle size={14}/>
+                                  </button>
+                                )}
+                                {u.passwordResetRequested && (
+                                  <button onClick={() => approveReset(u.id)} className="p-2 bg-sky-500/10 text-sky-400 rounded-lg hover:bg-sky-500 transition-colors" title="Approve Reset">
+                                    <Clock size={14}/>
+                                  </button>
+                                )}
+                              </div>
                             </div>
                           </td>
                         </tr>
@@ -818,6 +906,34 @@ const AdminDashboard = () => {
     }
   };
 
+  const getTabLabel = () => {
+    const labels = {
+      dashboard: 'DASHBOARD',
+      approve: 'APPLICATION',
+      schedule: 'BROADCAST',
+      templates: 'LAYOUT',
+      ticker: 'TICKER',
+      screens: 'SCREENS',
+      users: 'USERS',
+      settings: 'IDLE'
+    };
+    return labels[activeTab] || activeTab.toUpperCase();
+  };
+
+  const getTabIcon = () => {
+    switch (activeTab) {
+      case 'dashboard': return <LayoutGrid className="w-5 h-5 text-sky-400" />;
+      case 'approve': return <CheckSquare className="w-5 h-5 text-sky-400" />;
+      case 'schedule': return <Calendar className="w-5 h-5 text-sky-400" />;
+      case 'templates': return <FileText className="w-5 h-5 text-sky-400" />;
+      case 'ticker': return <TypeIcon className="w-5 h-5 text-sky-400" />;
+      case 'screens': return <Tv className="w-5 h-5 text-sky-400" />;
+      case 'users': return <UsersIcon className="w-5 h-5 text-sky-400" />;
+      case 'settings': return <MonitorPlay className="w-5 h-5 text-sky-400" />;
+      default: return <Monitor className="w-5 h-5 text-sky-400" />;
+    }
+  };
+
   return (
     <Shell role="admin" activeTab={activeTab} setActiveTab={setActiveTab}>
       <div className="p-10 max-w-7xl mx-auto">
@@ -825,14 +941,19 @@ const AdminDashboard = () => {
           <div>
             <div className="flex items-center gap-3 mb-4">
               <div className="p-2 bg-sky-500/20 rounded-lg">
-                <Monitor className="w-5 h-5 text-sky-400" />
+                {getTabIcon()}
               </div>
             </div>
-            <h1 className="text-8xl font-black tracking-tighter leading-none text-white">DASHBOARD</h1>
+            <h1 className="text-8xl font-black tracking-tighter leading-none text-white uppercase">{getTabLabel()}</h1>
           </div>
         </header>
         {renderView()}
       </div>
+      <PreviewModal 
+        isOpen={showPreview} 
+        onClose={() => { setShowPreview(false); setPreviewFile(null); }} 
+        file={previewFile} 
+      />
     </Shell>
   );
 };

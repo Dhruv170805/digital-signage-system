@@ -9,7 +9,24 @@ const Login = () => {
   const [error, setError] = useState('');
   const [shaking, setShaking] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetMessage, setResetMessage] = useState('');
   const navigate = useNavigate();
+
+  const handleResetRequest = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/request-reset`, { email: resetEmail });
+      setResetMessage('Reset request sent to administrator.');
+      setTimeout(() => {
+        setShowResetModal(false);
+        setResetMessage('');
+      }, 3000);
+    } catch (err) {
+      setResetMessage(err.response?.data?.message || 'Failed to send request.');
+    }
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -97,12 +114,46 @@ const Login = () => {
             >
               <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover/btn:translate-x-[100%] transition-transform duration-700 pointer-events-none" />
               <span className="tracking-[2px] font-black uppercase text-sm">
-                {loading ? 'Decrypting...' : 'Initiate Session'}
+                {loading ? 'Decrypting...' : 'Log In'}
               </span>
               {!loading && <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />}
             </button>
           </form>
+
+          <div className="mt-6 text-center">
+            <button 
+              onClick={() => setShowResetModal(true)}
+              className="text-[10px] uppercase tracking-[2px] text-slate-500 font-black hover:text-sky-400 transition-colors"
+            >
+              Forgot Password?
+            </button>
+          </div>
         </div>
+
+        {showResetModal && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-6">
+            <div className="glass max-w-md w-full p-10 space-y-6 animate-fade-in relative">
+              <div className="flex justify-between items-center">
+                <h3 className="text-xl font-bold">Password Reset</h3>
+                <button onClick={() => setShowResetModal(false)}><XCircle className="text-slate-500 hover:text-white" /></button>
+              </div>
+              <p className="text-xs text-slate-400 uppercase font-bold tracking-wider">Enter your email to request a manual password reset by the system administrator.</p>
+              
+              <form onSubmit={handleResetRequest} className="space-y-4">
+                <input 
+                  type="email" 
+                  value={resetEmail}
+                  onChange={(e) => setResetEmail(e.target.value)}
+                  className="nexus-input" 
+                  placeholder="admin@corp.in"
+                  required
+                />
+                {resetMessage && <p className="text-[10px] font-black text-sky-400 uppercase">{resetMessage}</p>}
+                <button type="submit" className="nexus-btn-primary w-full py-4 uppercase font-black tracking-widest text-xs">Send Request</button>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

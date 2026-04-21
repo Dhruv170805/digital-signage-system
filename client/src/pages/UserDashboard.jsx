@@ -81,6 +81,24 @@ const UserDashboard = () => {
     }
   };
 
+  const getTabLabel = () => {
+    const labels = {
+      upload: 'UPLOAD',
+      myfiles: 'HISTORY',
+      live: 'PREVIEW'
+    };
+    return labels[activeTab] || activeTab.toUpperCase();
+  };
+
+  const getTabIcon = () => {
+    switch (activeTab) {
+      case 'upload': return <Upload className="w-5 h-5 text-sky-400" />;
+      case 'myfiles': return <History className="w-5 h-5 text-sky-400" />;
+      case 'live': return <Monitor className="w-5 h-5 text-sky-400" />;
+      default: return <Monitor className="w-5 h-5 text-sky-400" />;
+    }
+  };
+
   const renderView = () => {
     switch (activeTab) {
       case 'upload':
@@ -91,8 +109,8 @@ const UserDashboard = () => {
                 <div className="absolute top-0 right-0 p-8 opacity-5">
                   <Upload size={120} />
                 </div>
-                <h3 className="text-xl font-bold mb-2">Asset Transmission</h3>
-                <p className="text-[var(--text-dim)] text-sm mb-8 uppercase tracking-widest font-semibold">Step 1: Select Mission Data</p>
+                <h3 className="text-xl font-bold mb-2">Upload</h3>
+                <p className="text-[var(--text-dim)] text-sm mb-8 uppercase tracking-widest font-semibold">Select File</p>
                 
                 <div 
                   className={`border-2 border-dashed rounded-3xl p-16 text-center transition-all cursor-pointer group mb-8 ${
@@ -128,8 +146,8 @@ const UserDashboard = () => {
               </Card>
 
               <Card>
-                <h3 className="text-xl font-bold mb-2 text-sky-400">Mission Schedule</h3>
-                <p className="text-[var(--text-dim)] text-sm mb-8 uppercase tracking-widest font-semibold">Step 2: Define Broadcast Window</p>
+                <h3 className="text-xl font-bold mb-2 text-sky-400">Schedule file</h3>
+                <p className="text-[var(--text-dim)] text-sm mb-8 uppercase tracking-widest font-semibold">Schedule file</p>
                 
                 <form onSubmit={handleUpload} className="space-y-6">
                   <div className="p-6 bg-white/5 border border-white/10 rounded-2xl space-y-6">
@@ -161,13 +179,6 @@ const UserDashboard = () => {
                     </div>
                   </div>
 
-                  <div className="px-4 py-3 bg-sky-500/10 border border-sky-500/20 rounded-xl flex items-start gap-3">
-                    <Info size={16} className="text-sky-400 shrink-0 mt-0.5" />
-                    <p className="text-[10px] font-bold text-sky-400/80 uppercase leading-relaxed">
-                      Submission will be automatically scheduled upon clearance by Digital Screen.
-                    </p>
-                  </div>
-
                   <button type="submit" disabled={!file || uploading} className="nexus-btn-primary w-full py-5 text-lg flex items-center justify-center gap-3 mt-4">
                     {uploading ? (
                       <>
@@ -177,7 +188,7 @@ const UserDashboard = () => {
                     ) : (
                       <>
                         <Send className="w-5 h-5" />
-                        INITIATE TRANSMISSION
+                        Upload
                       </>
                     )}
                   </button>
@@ -192,8 +203,8 @@ const UserDashboard = () => {
           <Card className="animate-fade-in">
             <div className="flex justify-between items-center mb-10 border-b border-white/10 pb-6">
               <div>
-                <h3 className="text-xl font-bold">Submission Registry</h3>
-                <p className="text-xs text-[var(--text-dim)] uppercase tracking-[4px] font-bold mt-1">Personnel ID: {user.name}</p>
+                <h3 className="text-xl font-bold">History</h3>
+                <p className="text-xs text-[var(--text-dim)] uppercase tracking-[4px] font-bold mt-1">History</p>
               </div>
               <History className="text-sky-400 opacity-20" size={32} />
             </div>
@@ -272,14 +283,6 @@ const UserDashboard = () => {
         return (
            <div className="animate-fade-in px-4">
               <div className="flex justify-between items-center mb-8">
-                 <div>
-                    <h3 className="text-xl font-bold">Terminal Preview</h3>
-                    <p className="text-xs text-[var(--text-dim)] uppercase tracking-[4px] font-bold mt-1">Real-time Station Monitoring</p>
-                 </div>
-                 <div className="flex items-center gap-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-[10px] font-bold text-emerald-400 uppercase">
-                    <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                    LIVE_FEED_ACTIVE
-                 </div>
               </div>
               <div className="aspect-video bg-black rounded-[40px] overflow-hidden border border-white/10 shadow-2xl relative group shadow-sky-500/5">
                  <iframe src="/display" className="w-full h-full border-none pointer-events-none scale-[1.001]" title="Live Preview" />
@@ -302,12 +305,11 @@ const UserDashboard = () => {
         <header className="mb-16 relative">
           <div className="flex items-center gap-3 mb-6">
              <div className="p-2 bg-sky-500/20 rounded-lg">
-                <Monitor className="w-5 h-5 text-sky-400" />
+                {getTabIcon()}
              </div>
-             <span className="text-[10px] tracking-[6px] font-black uppercase opacity-60">Operations Terminal // {user.role === 'admin' ? 'Root' : 'Operator'}</span>
+             <span className="text-[10px] tracking-[6px] font-black uppercase opacity-60">{user.role === 'admin' ? 'Root' : 'User'}</span>
           </div>
-          <h1 className="text-7xl font-black tracking-tighter text-white leading-none">Digital Station</h1>
-          <p className="text-lg text-slate-400 mt-6 max-w-lg leading-relaxed font-medium">Transmit safety protocols and high-priority factory assets directly to the central broadcast core.</p>
+          <h1 className="text-7xl font-black tracking-tighter text-white leading-none uppercase">{getTabLabel()}</h1>
         </header>
         {renderView()}
       </div>

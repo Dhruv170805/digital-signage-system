@@ -21,9 +21,9 @@ const Shell = ({ children, role, activeTab, setActiveTab }) => {
   ];
 
   const userMenu = [
-    { id: 'upload', label: 'Transmit Asset', icon: Upload },
-    { id: 'myfiles', label: 'Registry History', icon: History },
-    { id: 'live', label: 'Feed Preview', icon: MonitorPlay },
+    { id: 'upload', label: 'Upload', icon: Upload },
+    { id: 'myfiles', label: 'History', icon: History },
+    { id: 'live', label: 'Preview', icon: MonitorPlay },
   ];
 
   const menu = role === 'admin' ? adminMenu : userMenu;
@@ -45,7 +45,7 @@ const Shell = ({ children, role, activeTab, setActiveTab }) => {
             <span className="mono text-[var(--accent)] tracking-[1px] text-xs font-bold uppercase">Digital Screen</span>
           </div>
           <p className="text-[var(--text-dim)] text-[10px] font-medium uppercase tracking-widest pl-11">
-            {role === 'admin' ? '' : 'Operator'}
+            {role === 'admin' ? '' : 'User'}
           </p>
         </div>
 

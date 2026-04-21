@@ -6,6 +6,9 @@ const UserSchema = new mongoose.Schema({
     password: { type: String, required: true },
     role: { type: String, default: 'admin' },
     status: { type: String, default: 'active' },
+    loginAttempts: { type: Number, default: 0 },
+    isLocked: { type: Boolean, default: false },
+    passwordResetRequested: { type: Boolean, default: false },
     createdAt: { type: Date, default: Date.now }
 });
 

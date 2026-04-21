@@ -56,6 +56,8 @@ const getAllSchedules = async (req, res) => {
                 ...data,
                 fileName: s.mediaId ? s.mediaId.fileName : 'N/A',
                 fileType: s.mediaId ? s.mediaId.fileType : 'N/A',
+                filePath: s.mediaId ? s.mediaId.filePath : null,
+                mediaMapping: s.mediaMapping,
                 templateName: s.templateId ? s.templateId.name : 'Fullscreen',
                 screenName: s.screenId ? s.screenId.name : 'Global Feed'
             };

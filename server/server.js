@@ -42,12 +42,7 @@ io.on('connection', (socket) => {
 // Make io accessible to our routes
 app.set('socketio', io);
 
-// Health check route
-app.get('/', (req, res) => {
-    res.json({ status: 'Nexus Server is running', version: '1.0.0' });
-});
-
-// Routes (to be implemented)
+// API Routes
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/media', require('./routes/mediaRoutes'));
 app.use('/api/schedule', require('./routes/scheduleRoutes'));
@@ -55,6 +50,19 @@ app.use('/api/ticker', require('./routes/tickerRoutes'));
 app.use('/api/templates', require('./routes/templateRoutes'));
 app.use('/api/screens', require('./routes/screenRoutes'));
 app.use('/api/settings', require('./routes/settingsRoutes'));
+
+// Serve frontend
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, '../client/dist')));
+
+  app.get('*', (req, res) =>
+    res.sendFile(
+      path.resolve(__dirname, '../', 'client', 'dist', 'index.html')
+    )
+  );
+} else {
+  app.get('/', (req, res) => res.send('Please set to production'));
+}
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
