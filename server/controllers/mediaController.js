@@ -66,31 +66,18 @@ const uploadMedia = async (req, res) => {
 
 const approveMedia = async (req, res) => {
     const { id } = req.params;
-    const { startTime, endTime, duration } = req.body;
+    const { startTime, endTime } = req.body;
     try {
         const updateData = { status: 'approved' };
         if (startTime) updateData.requestedStartTime = startTime;
         if (endTime) updateData.requestedEndTime = endTime;
 
-        const m = await Media.findByIdAndUpdate(id, updateData, { new: true });
+        await Media.findByIdAndUpdate(id, updateData);
         
-        const finalStartTime = startTime || m.requestedStartTime;
-        const finalEndTime = endTime || m.requestedEndTime;
+        const io = req.app.get('socketio');
+        if (io) io.emit('contentUpdate');
 
-        if (m && finalStartTime && finalEndTime) {
-            await Schedule.create({
-                mediaId: m.id,
-                startTime: finalStartTime,
-                endTime: finalEndTime,
-                duration: duration || 10,
-                isActive: 1
-            });
-            
-            const io = req.app.get('socketio');
-            if (io) io.emit('contentUpdate');
-        }
-
-        res.json({ message: 'Media approved and scheduled' });
+        res.json({ message: 'Media approved. It is now available in the Broadcast System.' });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

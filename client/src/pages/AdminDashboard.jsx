@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
 import GridLayout from 'react-grid-layout';
+import 'react-grid-layout/css/styles.css';
+import 'react-resizable/css/styles.css';
 import Shell from '../components/Shell';
 import { 
   Users as UsersIcon, CheckCircle, XCircle, Clock, 
@@ -60,17 +62,10 @@ const Badge = ({ label, type }) => {
 
 const ModerationModal = ({ isOpen, onClose, file, onConfirm }) => {
   const [action, setAction] = useState('approve');
-  const [startTime, setStartTime] = useState('');
-  const [endTime, setEndTime] = useState('');
+  const [startTime, setStartTime] = useState(file?.requestedStartTime ? new Date(file.requestedStartTime).toISOString().slice(0, 16) : '');
+  const [endTime, setEndTime] = useState(file?.requestedEndTime ? new Date(file.requestedEndTime).toISOString().slice(0, 16) : '');
   const [duration, setDuration] = useState(10);
   const [reason, setReason] = useState('');
-
-  useEffect(() => {
-    if (file) {
-      setStartTime(file.requestedStartTime ? new Date(file.requestedStartTime).toISOString().slice(0, 16) : '');
-      setEndTime(file.requestedEndTime ? new Date(file.requestedEndTime).toISOString().slice(0, 16) : '');
-    }
-  }, [file]);
 
   if (!isOpen || !file) return null;
 
@@ -113,12 +108,8 @@ const ModerationModal = ({ isOpen, onClose, file, onConfirm }) => {
                   <input type="datetime-local" className="nexus-input py-3 text-xs" value={endTime} onChange={(e) => setEndTime(e.target.value)}/>
                 </div>
               </div>
-              <div className="space-y-1">
-                <label className="text-[8px] font-black uppercase text-slate-500 ml-1 flex items-center gap-2">
-                  <Timer size={10} className="text-sky-400" />
-                  Screen Duration (Seconds)
-                </label>
-                <input type="number" min="1" className="nexus-input py-3" value={duration} onChange={(e) => setDuration(e.target.value)}/>
+              <div className="p-4 bg-sky-500/10 border border-sky-500/20 rounded-xl">
+                <p className="text-[10px] font-bold text-sky-400 uppercase leading-tight">Approving will make this asset available in the Broadcast System for deployment.</p>
               </div>
             </>
           ) : (
@@ -135,10 +126,10 @@ const ModerationModal = ({ isOpen, onClose, file, onConfirm }) => {
         </div>
 
         <button 
-          onClick={() => onConfirm(file.id, action, action === 'approve' ? { startTime, endTime, duration } : { reason })}
+          onClick={() => onConfirm(file.id, action, action === 'approve' ? { startTime, endTime } : { reason })}
           className={`w-full py-5 rounded-2xl font-black uppercase tracking-[4px] shadow-2xl transition-all active:scale-95 ${action === 'approve' ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-rose-500 hover:bg-rose-600'}`}
         >
-          Execute {action}
+          {action === 'approve' ? 'Authorize Asset' : 'Execute Rejection'}
         </button>
       </div>
     </div>
@@ -188,7 +179,8 @@ const AdminDashboard = () => {
     const observer = new ResizeObserver((entries) => {
       for (let entry of entries) {
         if (entry.contentRect.width > 0) {
-          setArchitectWidth(entry.contentRect.width - 16);
+          // Use full width of container for precision
+          setArchitectWidth(entry.contentRect.width);
         }
       }
     });
@@ -242,7 +234,7 @@ const AdminDashboard = () => {
   };
 
   useEffect(() => {
-    fetchData();
+    setTimeout(() => fetchData(), 0);
     const interval = setInterval(fetchData, 30000); // 30s auto-fetch
     return () => clearInterval(interval);
   }, [fetchData]);
@@ -265,8 +257,15 @@ const AdminDashboard = () => {
 
   const saveTemplate = async () => {
     if (!templateName) return alert('Enter Layout Name');
+    
+    // Check for duplicate name
+    const isDuplicate = templates.some(t => t.name.toLowerCase() === templateName.trim().toLowerCase());
+    if (isDuplicate) {
+      return alert('A layout with this name already exists. Please choose a unique name.');
+    }
+
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL}/api/templates`, { name: templateName, layout: currentLayout });
+      await axios.post(`${import.meta.env.VITE_API_URL}/api/templates`, { name: templateName.trim(), layout: currentLayout });
       alert('Layout Saved');
       setTemplateName('');
       fetchData();
@@ -525,7 +524,7 @@ const AdminDashboard = () => {
                 </div>
                 <form onSubmit={createSchedule} className="space-y-6">
                    <div className="space-y-2">
-                     <label className="text-[10px] font-bold uppercase ml-1 opacity-50">Target Deployment</label>
+                     <label className="text-[10px] font-bold uppercase ml-1 opacity-50">Screen</label>
                      <select className="nexus-input" value={newSchedule.screenId} onChange={(e) => setNewSchedule(p => ({ ...p, screenId: e.target.value }))}>
                         <option value="">Broadcast to All</option>
                         {screens.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -533,7 +532,7 @@ const AdminDashboard = () => {
                    </div>
 
                    <div className="space-y-2">
-                     <label className="text-[10px] font-bold uppercase ml-1 opacity-50">Layout Architecture</label>
+                     <label className="text-[10px] font-bold uppercase ml-1 opacity-50">Layout</label>
                      <select className="nexus-input" value={newSchedule.templateId} onChange={(e) => {
                        setNewSchedule(p => ({ ...p, templateId: e.target.value }));
                        setMediaMapping({});
@@ -545,7 +544,7 @@ const AdminDashboard = () => {
 
                    {!newSchedule.templateId ? (
                      <div className="space-y-2">
-                       <label className="text-[10px] font-bold uppercase ml-1 opacity-50">Primary Asset</label>
+                       <label className="text-[10px] font-bold uppercase ml-1 opacity-50">Files</label>
                        <select required className="nexus-input" value={newSchedule.mediaId} onChange={(e) => setNewSchedule(p => ({ ...p, mediaId: e.target.value }))}>
                           <option value="">Select Asset</option>
                           {approvedMedia.map(m => <option key={m.id} value={m.id}>{m.fileName}</option>)}
@@ -568,11 +567,11 @@ const AdminDashboard = () => {
 
                    <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <label className="text-[10px] font-bold uppercase ml-1 opacity-50">Activation Time</label>
+                        <label className="text-[10px] font-bold uppercase ml-1 opacity-50">From Date & Time</label>
                         <input type="datetime-local" required className="nexus-input text-xs" value={newSchedule.startTime} onChange={(e) => setNewSchedule(p => ({ ...p, startTime: e.target.value }))}/>
                       </div>
                       <div className="space-y-2">
-                        <label className="text-[10px] font-bold uppercase ml-1 opacity-50">Deactivation Time</label>
+                        <label className="text-[10px] font-bold uppercase ml-1 opacity-50">To Date & Time</label>
                         <input type="datetime-local" required className="nexus-input text-xs" value={newSchedule.endTime} onChange={(e) => setNewSchedule(p => ({ ...p, endTime: e.target.value }))}/>
                       </div>
                    </div>
@@ -670,13 +669,30 @@ const AdminDashboard = () => {
                     </div>
                   )}
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-[var(--border)]">
-                    <div className="space-y-4">
-                      <label className="text-[10px] font-bold uppercase ml-1 opacity-50 flex justify-between">
-                        <span>Transmission Speed</span>
-                        <span className="text-sky-400">{ticker.speed}X</span>
-                      </label>
-                      <input type="range" min="1" max="10" value={ticker.speed} onChange={(e) => setTicker(p => ({ ...p, speed: parseInt(e.target.value) }))} className="w-full accent-[var(--accent)] h-1 bg-white/10 rounded-full appearance-none cursor-pointer"/>
+                  <div className="pt-4 border-t border-[var(--border)] space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      <div className="space-y-4">
+                        <label className="text-[10px] font-bold uppercase ml-1 opacity-50 flex justify-between">
+                          <span>Transmission Speed</span>
+                          <span className="text-sky-400">{ticker.speed}X</span>
+                        </label>
+                        <input type="range" min="1" max="10" value={ticker.speed} onChange={(e) => setTicker(p => ({ ...p, speed: parseInt(e.target.value) }))} className="w-full accent-[var(--accent)] h-1 bg-white/10 rounded-full appearance-none cursor-pointer"/>
+                      </div>
+                    </div>
+
+                    <div className="p-4 bg-black/40 rounded-2xl border border-white/5 mt-4">
+                      <p className="text-[10px] font-bold uppercase opacity-30 mb-2">Preview</p>
+                      <div className="h-12 flex items-center overflow-hidden">
+                        <div className="flex gap-12 whitespace-nowrap animate-ticker" style={{ animationDuration: ticker.isActive ? `${Math.max(5, 60 - ticker.speed * 5)}s` : '0s' }}>
+                            <p className={`${ticker.fontSize} ${ticker.fontStyle}`}>
+                                {ticker.text || 'BROADCAST ACTIVE // READY FOR DATA TRANSMISSION...'}
+                            </p>
+                            {/* Duplicated for loop */}
+                            <p className={`${ticker.fontSize} ${ticker.fontStyle}`}>
+                                {ticker.text || 'BROADCAST ACTIVE // READY FOR DATA TRANSMISSION...'}
+                            </p>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
@@ -727,21 +743,6 @@ const AdminDashboard = () => {
                       ))}
                     </div>
                   </div>
-
-                  <div className="p-4 bg-black/40 rounded-2xl border border-white/5 mt-4">
-                    <p className="text-[10px] font-bold uppercase opacity-30 mb-2">Preview</p>
-                    <div className="h-12 flex items-center overflow-hidden">
-                       <div className="flex gap-12 whitespace-nowrap animate-ticker" style={{ animationDuration: ticker.isActive ? `${Math.max(5, 60 - ticker.speed * 5)}s` : '0s' }}>
-                          <p className={`${ticker.fontSize} ${ticker.fontStyle}`}>
-                             {ticker.text || 'BROADCAST ACTIVE // READY FOR DATA TRANSMISSION...'}
-                          </p>
-                          {/* Duplicated for loop */}
-                          <p className={`${ticker.fontSize} ${ticker.fontStyle}`}>
-                             {ticker.text || 'BROADCAST ACTIVE // READY FOR DATA TRANSMISSION...'}
-                          </p>
-                       </div>
-                    </div>
-                  </div>
                </div>
             </Card>
           </div>
@@ -756,9 +757,22 @@ const AdminDashboard = () => {
                      <h3 className="text-sm font-bold uppercase tracking-wider">Layout</h3>
                      <p className="text-[10px] font-bold text-sky-400 uppercase tracking-widest mt-1">Grid System: 12 x 12 Logic</p>
                    </div>
-                   <button onClick={() => setCurrentLayout([...currentLayout, { i: `Frame${currentLayout.length+1}`, x: 0, y: 0, w: 4, h: 4 }])} className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-[10px] font-bold uppercase hover:bg-[var(--accent)] hover:text-white transition-all">+ Add Frame</button>
+                   <div className="flex flex-wrap gap-2">
+                     <button onClick={() => setCurrentLayout([{ i: 'Left', x: 0, y: 0, w: 6, h: 12 }, { i: 'Right', x: 6, y: 0, w: 6, h: 12 }])} className="px-3 py-1.5 bg-sky-500/10 border border-sky-500/20 rounded-lg text-[9px] font-bold uppercase text-sky-400 hover:bg-sky-500 hover:text-white transition-all">50/50 V</button>
+                     <button onClick={() => setCurrentLayout([{ i: 'Top', x: 0, y: 0, w: 12, h: 6 }, { i: 'Bottom', x: 0, y: 6, w: 12, h: 6 }])} className="px-3 py-1.5 bg-sky-500/10 border border-sky-500/20 rounded-lg text-[9px] font-bold uppercase text-sky-400 hover:bg-sky-500 hover:text-white transition-all">50/50 H</button>
+                     <button onClick={() => setCurrentLayout([{ i: 'TL', x: 0, y: 0, w: 6, h: 6 }, { i: 'TR', x: 6, y: 0, w: 6, h: 6 }, { i: 'BL', x: 0, y: 6, w: 6, h: 6 }, { i: 'BR', x: 6, y: 6, w: 6, h: 6 }])} className="px-3 py-1.5 bg-indigo-500/10 border border-indigo-500/20 rounded-lg text-[9px] font-bold uppercase text-indigo-400 hover:bg-indigo-500 hover:text-white transition-all">Quad</button>
+                     <button onClick={() => setCurrentLayout([{ i: 'Main', x: 0, y: 0, w: 9, h: 12 }, { i: 'Side', x: 9, y: 0, w: 3, h: 12 }])} className="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-[9px] font-bold uppercase text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all">Sidebar</button>
+                     <button onClick={() => setCurrentLayout([...currentLayout, { i: `Frame${currentLayout.length+1}`, x: 0, y: 0, w: 4, h: 4 }])} className="px-3 py-1.5 bg-[var(--accent)] text-white rounded-lg text-[9px] font-bold uppercase hover:brightness-110 transition-all">+ Frame</button>
+                   </div>
                 </div>
-                <div ref={architectRef} className="bg-black/60 border border-white/10 rounded-3xl aspect-video relative overflow-hidden grid-bg p-2 shadow-inner">
+                <div ref={architectRef} className="bg-slate-950 border-2 border-white/20 rounded-[32px] aspect-video relative overflow-hidden grid-bg shadow-[0_0_100px_rgba(0,0,0,0.5)] p-0">
+                   {/* Grid Overlay for visual aid */}
+                   <div className="absolute inset-0 grid grid-cols-12 grid-rows-12 pointer-events-none opacity-20">
+                      {[...Array(144)].map((_, i) => (
+                        <div key={i} className="border-[0.5px] border-white/10" />
+                      ))}
+                   </div>
+
                    <GridLayout 
                     className="layout" 
                     layout={currentLayout} 
@@ -767,38 +781,60 @@ const AdminDashboard = () => {
                     width={architectWidth} 
                     maxRows={12}
                     onLayoutChange={(newLayout) => {
-                      setCurrentLayout(newLayout.map(item => ({
-                        ...item,
-                        x: Math.round(item.x),
-                        y: Math.round(item.y),
-                        w: Math.round(item.w),
-                        h: Math.round(item.h)
-                      })));
+                      const validatedLayout = newLayout.map(item => {
+                        let { x, y, w, h } = item;
+                        // Clamp values to 12x12 grid
+                        w = Math.min(w, 12);
+                        h = Math.min(h, 12);
+                        if (x + w > 12) x = 12 - w;
+                        if (y + h > 12) y = 12 - h;
+                        return { ...item, x, y, w, h };
+                      });
+                      setCurrentLayout(validatedLayout);
                     }} 
-                    margin={[4, 4]}
-                    resizeHandles={['s', 'e', 'se', 'sw', 'nw', 'ne', 'w', 'n']}
+                    margin={[0, 0]} 
+                    draggableHandle=".drag-handle"
+                    resizeHandles={['se', 'sw', 'ne', 'nw', 'e', 'w', 's', 'n']}
                     compactType={null}
-                    preventCollision={true}
+                    preventCollision={false}
                     isDraggable={true}
                     isResizable={true}
                   >
                       {currentLayout.map(z => (
-                        <div key={z.i} className="bg-white/95 border border-white flex flex-col items-center justify-center text-[var(--bg)] group overflow-hidden rounded-lg shadow-2xl cursor-move">
-                           <div className="bg-slate-900 text-white w-full flex justify-between items-center px-2 py-1 font-bold uppercase tracking-tighter text-[9px]">
-                              <span>{z.i}</span>
+                        <div key={z.i} className="bg-slate-900/90 border border-sky-500/30 backdrop-blur-md flex flex-col items-center justify-center text-white group overflow-hidden rounded-xl shadow-2xl transition-all hover:border-sky-400">
+                           <div className="drag-handle w-full bg-sky-500/20 backdrop-blur-md text-sky-200 flex justify-between items-center px-3 py-1.5 font-black uppercase tracking-widest text-[9px] border-b border-sky-500/20 cursor-grab active:cursor-grabbing">
+                              <div className="flex items-center gap-2">
+                                <div className="grid grid-cols-2 gap-0.5 opacity-40">
+                                  {[...Array(4)].map((_, i) => <div key={i} className="w-0.5 h-0.5 bg-white rounded-full" />)}
+                                </div>
+                                <span>{z.i}</span>
+                              </div>
                               <button 
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setCurrentLayout(currentLayout.filter(item => item.i !== z.i));
                                 }}
-                                className="hover:text-rose-400 transition-colors"
+                                className="hover:text-rose-400 transition-colors p-1"
                               >
-                                <XCircle size={12} />
+                                <XCircle size={14} />
                               </button>
                            </div>
-                           <div className="flex-1 flex flex-col items-center justify-center leading-none pointer-events-none">
-                              <span className="font-extrabold text-lg">{z.w}x{z.h}</span>
-                              <span className="text-[9px] font-bold opacity-40 uppercase mt-1">{z.x},{z.y}</span>
+                           
+                           <div className="flex-1 flex flex-col items-center justify-center leading-none pointer-events-none p-4 w-full">
+                              <div className="relative">
+                                <span className="font-black text-3xl tracking-tighter text-white drop-shadow-2xl">{z.w} : {z.h}</span>
+                                <div className="absolute -inset-2 bg-sky-500/10 blur-xl rounded-full -z-10" />
+                              </div>
+                              <div className="mt-2 flex items-center gap-3">
+                                <div className="h-px w-4 bg-sky-500/30" />
+                                <span className="text-[8px] font-black text-sky-400/60 uppercase tracking-widest">{z.x}, {z.y}</span>
+                                <div className="h-px w-4 bg-sky-500/30" />
+                              </div>
+                           </div>
+                           
+                           {/* Decorative Corner Handles */}
+                           <div className="absolute bottom-0 right-0 w-4 h-4 p-1 pointer-events-none opacity-40 group-hover:opacity-100">
+                              <div className="w-full h-full border-r-2 border-b-2 border-sky-400 rounded-br-sm" />
                            </div>
                         </div>
                       ))}
@@ -1096,6 +1132,7 @@ const AdminDashboard = () => {
         file={previewFile} 
       />
       <ModerationModal
+        key={modFile?.id}
         isOpen={showModModal}
         onClose={() => { setShowModModal(false); setModFile(null); }}
         file={modFile}

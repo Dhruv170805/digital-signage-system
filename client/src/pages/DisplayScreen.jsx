@@ -80,6 +80,14 @@ const safeParse = (data, fallback = []) => {
   }
 };
 
+const MediaItem = ({ item }) => {
+  if (!item) return null;
+  const src = `${import.meta.env.VITE_API_URL}/${item.filePath}`;
+  if (item.fileType === 'video') return <video src={src} autoPlay muted loop className="w-full h-full object-contain bg-black/50" />;
+  if (item.fileType === 'pdf') return <iframe src={`${src}#toolbar=0`} className="w-full h-full border-none bg-black/50" title={item.fileName} />;
+  return <img src={src} alt={item.fileName} className="w-full h-full object-contain bg-black/50" />;
+};
+
 const DisplayScreen = () => {
   const [activeMedia, setActiveMedia] = useState([]);
   const [allMedia, setAllMedia] = useState([]);
@@ -122,7 +130,7 @@ const DisplayScreen = () => {
   useEffect(() => {
     const socket = io(import.meta.env.VITE_API_URL);
 
-    fetchData();
+    setTimeout(() => fetchData(), 0);
 
     const t = setInterval(() => setTime(new Date()), 1000);
     const m = setInterval(() => setMotivationIdx(i => (i + 1) % quotes.length), 10000);
@@ -149,30 +157,21 @@ const DisplayScreen = () => {
     }
   }, [currentIdx, activeMedia]);
 
-  const MediaItem = ({ item }) => {
-    if (!item) return null;
-    const src = `${import.meta.env.VITE_API_URL}/${item.filePath}`;
-    if (item.fileType === 'video') return <video src={src} autoPlay muted loop className="w-full h-full object-cover" />;
-    if (item.fileType === 'pdf') return <iframe src={`${src}#toolbar=0`} className="w-full h-full border-none" title={item.fileName} />;
-    return <img src={src} alt={item.fileName} className="w-full h-full object-cover" />;
-  };
-
   const renderMedia = (media) => {
     const layout = media.layout ? safeParse(media.layout) : null;
     const mapping = media.mediaMapping ? safeParse(media.mediaMapping, {}) : {};
 
     if (layout && layout.length > 0) {
       return (
-        <div className="w-full h-full grid grid-cols-12 grid-rows-12 gap-6 p-6">
+        <div className="w-full h-full grid" style={{ gridTemplateColumns: 'repeat(12, 1fr)', gridTemplateRows: 'repeat(12, 1fr)' }}>
           {layout.map((zone) => {
             const mappedMediaId = mapping[zone.i];
             const mappedMedia = allMedia.find(m => m.id === mappedMediaId);
 
             return (
-              <div key={zone.i} className="relative glass overflow-hidden shadow-2xl"
-                style={{ gridColumn: `span ${zone.w}`, gridRow: `span ${zone.h}`, gridColumnStart: zone.x + 1, gridRowStart: zone.y + 1 }}>
+              <div key={zone.i} className="relative overflow-hidden"
+                style={{ gridColumn: `${zone.x + 1} / span ${zone.w}`, gridRow: `${zone.y + 1} / span ${zone.h}` }}>
                 <MediaItem item={mappedMedia} />
-                <div className="absolute top-4 left-4 px-3 py-1 bg-black/60 backdrop-blur-md rounded-full text-[10px] font-black tracking-widest text-white border border-white/10 uppercase">{zone.i}</div>
               </div>
             );
           })}
@@ -233,12 +232,6 @@ const DisplayScreen = () => {
         {activeMedia.length > 0 ? (
           <div className="w-full h-full animate-fade-in relative z-10">
             {renderMedia(activeMedia[currentIdx])}
-            <div className="absolute bottom-12 right-12 flex flex-col items-end gap-3 z-30">
-              <div className="bg-white/5 backdrop-blur-xl border border-white/10 px-6 py-2 rounded-2xl shadow-2xl">
-                <p className="text-[9px] font-black uppercase tracking-[6px] text-sky-400 mb-1">Manifest</p>
-                <p className="text-xl font-extrabold uppercase tracking-tight">{activeMedia[currentIdx].templateName || activeMedia[currentIdx].fileName}</p>
-              </div>
-            </div>
           </div>
         ) : (
           <div className="w-full h-full relative z-10 animate-fade-in">
@@ -285,7 +278,7 @@ const DisplayScreen = () => {
           <div className="flex gap-24 whitespace-nowrap animate-ticker" style={{ animationDuration: ticker.isActive ? `${Math.max(5, 60 - ticker.speed * 5)}s` : '0s' }}>
             <div className="flex items-center gap-24">
               <div className="flex items-center gap-12">
-                <span className={`text-white font-bold tracking-tight ${ticker.fontSize} ${ticker.fontStyle === 'bold' ? 'font-black' : ticker.fontStyle === 'bold-italic' ? 'font-black italic' : ticker.fontStyle}`}>
+                <span className={`text-white tracking-tight ${ticker.fontSize} ${ticker.fontStyle}`}>
                   {ticker.text || 'BROADCAST ACTIVE // READY FOR DATA TRANSMISSION...'}
                 </span>
                 {ticker.type === 'link' && ticker.linkUrl && (
@@ -298,7 +291,7 @@ const DisplayScreen = () => {
             {/* Duplicated for seamless loop */}
             <div className="flex items-center gap-24">
               <div className="flex items-center gap-12">
-                <span className={`text-white font-bold tracking-tight ${ticker.fontSize} ${ticker.fontStyle === 'bold' ? 'font-black' : ticker.fontStyle === 'bold-italic' ? 'font-black italic' : ticker.fontStyle}`}>
+                <span className={`text-white tracking-tight ${ticker.fontSize} ${ticker.fontStyle}`}>
                   {ticker.text || 'BROADCAST ACTIVE // READY FOR DATA TRANSMISSION...'}
                 </span>
               </div>

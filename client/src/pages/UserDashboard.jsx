@@ -59,7 +59,7 @@ const UserDashboard = () => {
 
     try {
       await axios.post(`${import.meta.env.VITE_API_URL}/api/media/upload`, formData);
-      setMsg({ text: 'Asset transmitted successfully. Awaiting clearance.', type: 'success' });
+      setMsg({ text: 'Wait for Admin Approval', type: 'success' });
       setFile(null);
       setRequestedStartTime('');
       setRequestedEndTime('');
@@ -107,97 +107,98 @@ const UserDashboard = () => {
     switch (activeTab) {
       case 'upload':
         return (
-          <div className="animate-fade-in max-w-2xl mx-auto space-y-4 pb-4">
+          <div className="animate-fade-in max-w-2xl mx-auto pb-4">
             <Card className="relative overflow-hidden">
               <div className="absolute top-0 right-0 p-8 opacity-5">
                 <Upload size={120} />
               </div>
-              <h3 className="text-xl font-bold mb-6">Upload</h3>
               
-              <div 
-                className={`border-2 border-dashed rounded-3xl p-12 text-center transition-all cursor-pointer group ${
-                  file ? 'border-[var(--accent)] bg-[var(--accent)]/5 shadow-[0_0_30px_rgba(56,189,248,0.05)]' : 'border-white/10 hover:border-white/20 hover:bg-white/5'
-                }`}
-                onClick={() => document.getElementById('media-upload').click()}
-              >
-                <input id="media-upload" type="file" className="hidden" onChange={(e) => setFile(e.target.files[0])} />
-                <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 bg-white/5 border border-white/10 group-hover:scale-110 transition-transform">
-                  <Upload className={`w-6 h-6 ${file ? 'text-[var(--accent)]' : 'text-white'}`} />
+              <div className="space-y-8">
+                <div>
+                  <h3 className="text-xl font-bold mb-4">Upload</h3>
+                  <div 
+                    className={`border-2 border-dashed rounded-3xl p-8 text-center transition-all cursor-pointer group ${
+                      file ? 'border-[var(--accent)] bg-[var(--accent)]/5 shadow-[0_0_30px_rgba(56,189,248,0.05)]' : 'border-white/10 hover:border-white/20 hover:bg-white/5'
+                    }`}
+                    onClick={() => document.getElementById('media-upload').click()}
+                  >
+                    <input id="media-upload" type="file" className="hidden" onChange={(e) => setFile(e.target.files[0])} />
+                    <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 bg-white/5 border border-white/10 group-hover:scale-110 transition-transform">
+                      <Upload className={`w-5 h-5 ${file ? 'text-[var(--accent)]' : 'text-white'}`} />
+                    </div>
+                    {file ? (
+                      <div className="space-y-1">
+                        <p className="text-base font-bold text-white truncate max-w-xs mx-auto">{file.name}</p>
+                        <p className="text-sky-400 text-[9px] font-black uppercase tracking-[4px]">{(file.size / 1024 / 1024).toFixed(2)} MB • VERIFIED</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        <p className="text-base font-bold text-white">Select File</p>
+                        <p className="text-slate-500 text-[10px] font-medium">PDF, MP4, WEBM, or JPG</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                {file ? (
-                  <div className="space-y-1">
-                    <p className="text-lg font-bold text-white truncate max-w-xs mx-auto">{file.name}</p>
-                    <p className="text-sky-400 text-[10px] font-black uppercase tracking-[4px]">{(file.size / 1024 / 1024).toFixed(2)} MB • VERIFIED</p>
-                  </div>
-                ) : (
-                  <div className="space-y-1">
-                    <p className="text-lg font-bold text-white">Select File</p>
-                    <p className="text-slate-500 text-xs font-medium">PDF, MP4, WEBM, or JPG</p>
-                  </div>
-                )}
+
+                <div>
+                  <h3 className="text-xl font-bold mb-4">Schedule</h3>
+                  <form onSubmit={handleUpload} className="space-y-6">
+                    <div className="p-5 bg-white/5 border border-white/10 rounded-2xl">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black uppercase text-slate-500 flex items-center gap-2">
+                            <Calendar size={12} className="text-sky-400" />
+                            From Date & Time
+                          </label>
+                          <input 
+                            type="datetime-local" 
+                            required 
+                            className="nexus-input py-3" 
+                            value={requestedStartTime} 
+                            onChange={(e) => setRequestedStartTime(e.target.value)}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black uppercase text-slate-500 flex items-center gap-2">
+                            <Clock size={12} className="text-rose-400" />
+                            To Date & Time
+                          </label>
+                          <input 
+                            type="datetime-local" 
+                            required 
+                            className="nexus-input py-3" 
+                            value={requestedEndTime} 
+                            onChange={(e) => setRequestedEndTime(e.target.value)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {msg.text && (
+                      <div className={`p-3 rounded-xl flex items-center gap-3 animate-fade-in border ${
+                        msg.type === 'success' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                      }`}>
+                        {msg.type === 'success' ? <CheckCircle2 size={16}/> : <AlertCircle size={16}/>}
+                        <p className="text-[10px] font-bold uppercase tracking-wider">{msg.text}</p>
+                      </div>
+                    )}
+
+                    <button type="submit" disabled={!file || !requestedStartTime || !requestedEndTime || uploading} className="nexus-btn-primary w-full py-4 text-base flex items-center justify-center gap-3">
+                      {uploading ? (
+                        <>
+                          <RefreshCw className="w-5 h-5 animate-spin" />
+                          UPLOADING...
+                        </>
+                      ) : (
+                        <>
+                          <Send className="w-5 h-5" />
+                          Upload
+                        </>
+                      )}
+                    </button>
+                  </form>
+                </div>
               </div>
-            </Card>
-
-            <div className="text-center py-2">
-              <h4 className="text-[10px] font-black uppercase tracking-[8px] text-sky-400 opacity-60">Schedule</h4>
-            </div>
-
-            <Card>
-              <form onSubmit={handleUpload} className="space-y-4">
-                <div className="p-5 bg-white/5 border border-white/10 rounded-2xl">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase text-slate-500 flex items-center gap-2">
-                        <Calendar size={12} className="text-sky-400" />
-                        From Date & Time
-                      </label>
-                      <input 
-                        type="datetime-local" 
-                        required 
-                        className="nexus-input py-3" 
-                        value={requestedStartTime} 
-                        onChange={(e) => setRequestedStartTime(e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase text-slate-500 flex items-center gap-2">
-                        <Clock size={12} className="text-rose-400" />
-                        TO Date & Time
-                      </label>
-                      <input 
-                        type="datetime-local" 
-                        required 
-                        className="nexus-input py-3" 
-                        value={requestedEndTime} 
-                        onChange={(e) => setRequestedEndTime(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {msg.text && (
-                  <div className={`p-3 rounded-xl flex items-center gap-3 animate-fade-in border ${
-                    msg.type === 'success' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
-                  }`}>
-                    {msg.type === 'success' ? <CheckCircle2 size={16}/> : <AlertCircle size={16}/>}
-                    <p className="text-[10px] font-bold uppercase tracking-wider">{msg.text}</p>
-                  </div>
-                )}
-
-                <button type="submit" disabled={!file || !requestedStartTime || !requestedEndTime || uploading} className="nexus-btn-primary w-full py-4 text-base flex items-center justify-center gap-3">
-                  {uploading ? (
-                    <>
-                      <RefreshCw className="w-5 h-5 animate-spin" />
-                      UPLOADING...
-                    </>
-                  ) : (
-                    <>
-                      <Send className="w-5 h-5" />
-                      Upload
-                    </>
-                  )}
-                </button>
-              </form>
             </Card>
           </div>
         );
@@ -311,8 +312,8 @@ const UserDashboard = () => {
   return (
     <Shell role="user" activeTab={activeTab} setActiveTab={setActiveTab}>
       <div className="p-10 max-w-6xl mx-auto">
-        <header className="mb-16 relative">
-          <div className="flex items-center gap-3 mb-6">
+        <header className="mb-8 relative">
+          <div className="flex items-center gap-3 mb-4">
              <div className="p-2 bg-sky-500/20 rounded-lg">
                 {getTabIcon()}
              </div>
