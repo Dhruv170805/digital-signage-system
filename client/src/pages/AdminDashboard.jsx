@@ -8,55 +8,55 @@ import {
   Users as UsersIcon, CheckCircle, XCircle, Clock, 
   Play, Plus, Trash2, Settings as SettingsIcon, ExternalLink, Activity, 
   FileText, Calendar, LayoutGrid, Type as TypeIcon,
-  Save, AlertCircle, Tv, Monitor, Palette, Info, Eye, CheckSquare, MonitorPlay, Lock, Timer
+  Save, AlertCircle, Tv, Monitor, Palette, Info, Eye, CheckSquare, MonitorPlay, Lock, Timer, Send, RefreshCw
 } from 'lucide-react';
 
 const Card = ({ children, className = "" }) => (
   <div className={`glass p-6 ${className}`}>{children}</div>
 );
 
+const Badge = ({ label, type }) => {
+  const colors = {
+    admin: 'bg-sky-500/10 text-sky-400 border-sky-500/20',
+    user: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+    locked: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
+    reset: 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+  };
+  return (
+    <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase border ${colors[type] || 'bg-white/5 text-white/40 border-white/10'}`}>
+      {label}
+    </span>
+  );
+};
+
 const PreviewModal = ({ isOpen, onClose, file }) => {
   if (!isOpen || !file) return null;
   const src = `${import.meta.env.VITE_API_URL}/${file.filePath}`;
   
   return (
-    <div className="fixed inset-0 bg-black/90 backdrop-blur-xl z-[100] flex items-center justify-center p-6 md:p-12">
-      <div className="absolute top-8 right-8 flex items-center gap-6 z-10">
-        <div className="text-right">
-          <p className="text-white font-black uppercase text-xl tracking-tighter">{file.fileName}</p>
-          <p className="text-sky-400 font-bold uppercase text-[10px] tracking-[4px]">{file.fileType}</p>
+    <div className="fixed inset-0 bg-black/95 backdrop-blur-xl z-[200] flex items-center justify-center p-12">
+      <div className="relative w-full h-full flex flex-col gap-6 animate-fade-in">
+        <div className="flex justify-between items-center bg-white/5 p-4 rounded-2xl border border-white/10">
+          <div>
+            <h3 className="text-xl font-black uppercase tracking-tighter">{file.fileName}</h3>
+            <p className="text-[10px] font-bold text-sky-400 uppercase tracking-widest">{file.fileType} • {new Date(file.uploadedAt).toLocaleString()}</p>
+          </div>
+          <button onClick={onClose} className="p-3 bg-white/10 rounded-xl hover:bg-rose-500 hover:text-white transition-all">
+            <XCircle size={24} />
+          </button>
         </div>
-        <button 
-          onClick={onClose}
-          className="p-4 bg-white/5 border border-white/10 rounded-2xl hover:bg-rose-500 transition-all group"
-        >
-          <XCircle className="w-8 h-8 group-hover:scale-110 transition-transform" />
-        </button>
-      </div>
-
-      <div className="w-full h-full max-w-6xl max-h-[80vh] flex items-center justify-center bg-black/40 rounded-[40px] border border-white/10 overflow-hidden shadow-[0_0_120px_rgba(0,0,0,0.5)]">
-        {file.fileType === 'video' && <video src={src} autoPlay controls className="max-w-full max-h-full" />}
-        {file.fileType === 'image' && <img src={src} alt="" className="max-w-full max-h-full object-contain" />}
-        {file.fileType === 'pdf' && <iframe src={`${src}#toolbar=0`} className="w-full h-full border-none" />}
+        
+        <div className="flex-1 bg-black/40 rounded-[32px] border border-white/5 overflow-hidden shadow-2xl relative">
+          {file.fileType === 'video' ? (
+            <video src={src} autoPlay controls className="w-full h-full object-contain" />
+          ) : file.fileType === 'pdf' ? (
+            <iframe src={`${src}#toolbar=0`} className="w-full h-full border-none" title={file.fileName} />
+          ) : (
+            <img src={src} alt="Preview" className="w-full h-full object-contain" />
+          )}
+        </div>
       </div>
     </div>
-  );
-};
-
-const Badge = ({ label, type }) => {
-  const colors = {
-    approved: 'bg-[var(--green)]/10 text-[var(--green)] border-[var(--green)]/20',
-    pending: 'bg-[var(--orange)]/10 text-[var(--orange)] border-[var(--orange)]/20',
-    rejected: 'bg-[var(--red)]/10 text-[var(--red)] border-[var(--red)]/20',
-    admin: 'bg-[var(--accent)]/10 text-[var(--accent)] border-[var(--accent)]/20',
-    user: 'bg-[var(--blue)]/10 text-[var(--blue)] border-[var(--blue)]/20',
-    locked: 'bg-rose-500/10 text-rose-500 border-rose-500/20',
-    reset: 'bg-sky-500/10 text-sky-400 border-sky-500/20',
-  };
-  return (
-    <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${colors[type] || ''}`}>
-      {label}
-    </span>
   );
 };
 
@@ -64,7 +64,6 @@ const ModerationModal = ({ isOpen, onClose, file, onConfirm }) => {
   const [action, setAction] = useState('approve');
   const [startTime, setStartTime] = useState(file?.requestedStartTime ? new Date(file.requestedStartTime).toISOString().slice(0, 16) : '');
   const [endTime, setEndTime] = useState(file?.requestedEndTime ? new Date(file.requestedEndTime).toISOString().slice(0, 16) : '');
-  const [duration, setDuration] = useState(10);
   const [reason, setReason] = useState('');
 
   if (!isOpen || !file) return null;
@@ -72,27 +71,14 @@ const ModerationModal = ({ isOpen, onClose, file, onConfirm }) => {
   return (
     <div className="fixed inset-0 bg-black/90 backdrop-blur-xl z-[110] flex items-center justify-center p-6">
       <div className="glass max-w-lg w-full p-10 space-y-8 animate-fade-in border-white/10">
-        <div className="flex justify-between items-center border-b border-white/5 pb-6">
-          <div>
-            <h3 className="text-xl font-bold uppercase tracking-tighter">Process Application</h3>
-            <p className="text-[10px] font-black text-sky-400 uppercase tracking-[4px] mt-1">{file.fileName}</p>
-          </div>
-          <button onClick={onClose}><XCircle className="text-slate-500 hover:text-white" /></button>
+        <div className="flex justify-between items-center pb-6 border-b border-white/5">
+          <h3 className="text-2xl font-black uppercase tracking-tighter">Asset Moderation</h3>
+          <button onClick={onClose} className="text-slate-500 hover:text-white"><XCircle /></button>
         </div>
 
-        <div className="flex gap-4 p-1 bg-white/5 rounded-2xl border border-white/5">
-          <button 
-            onClick={() => setAction('approve')}
-            className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${action === 'approve' ? 'bg-emerald-500 text-white shadow-[0_0_20px_rgba(16,185,129,0.3)]' : 'text-slate-500 hover:text-slate-300'}`}
-          >
-            Clearance
-          </button>
-          <button 
-            onClick={() => setAction('reject')}
-            className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${action === 'reject' ? 'bg-rose-500 text-white shadow-[0_0_20px_rgba(244,63,94,0.3)]' : 'text-slate-500 hover:text-slate-300'}`}
-          >
-            Rejection
-          </button>
+        <div className="flex gap-2 p-1 bg-black/40 rounded-2xl border border-white/5">
+          <button onClick={() => setAction('approve')} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${action === 'approve' ? 'bg-emerald-500 text-white' : 'text-slate-500 hover:text-slate-300'}`}>Approve</button>
+          <button onClick={() => setAction('reject')} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${action === 'reject' ? 'bg-rose-500 text-white' : 'text-slate-500 hover:text-slate-300'}`}>Reject</button>
         </div>
 
         <div className="space-y-6">
@@ -136,50 +122,64 @@ const ModerationModal = ({ isOpen, onClose, file, onConfirm }) => {
   );
 };
 
-const safeParse = (data, fallback = []) => {
-  if (!data) return fallback;
-  if (typeof data === 'object') return data;
-  try {
-    return JSON.parse(data);
-  } catch {
-    return fallback;
-  }
-};
-
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [stats, setStats] = useState({ media: 0, pending: 0, users: 0, screens: 0 });
-  const [pendingMedia, setPendingMedia] = useState([]);
   const [users, setUsers] = useState([]);
-  const [ticker, setTicker] = useState({ text: '', speed: 5, type: 'text', linkUrl: '', isActive: 1, fontSize: 'text-4xl', fontStyle: 'normal' });
-  const [schedules, setSchedules] = useState([]);
+  const [media, setMedia] = useState([]);
+  const [pendingMedia, setPendingMedia] = useState([]);
   const [templates, setTemplates] = useState([]);
-  const [approvedMedia, setApprovedMedia] = useState([]);
   const [screens, setScreens] = useState([]);
-  const [settings, setSettings] = useState({ idleWallpaperId: '' });
+  const [ticker, setTicker] = useState({ text: '', speed: 5, isActive: 1, fontSize: 'text-4xl', fontStyle: 'font-normal' });
+  const [settings, setSettings] = useState({});
+  const [schedules, setSchedules] = useState([]);
+  
+  const [showUserForm, setShowUserForm] = useState(false);
+  const [newUser, setNewUser] = useState({ name: '', email: '', password: '', role: 'user' });
+  const [templateName, setTemplateName] = useState('');
+  const [currentLayout, setCurrentLayout] = useState([]);
+  const [newSchedule, setNewSchedule] = useState({ screenId: '', templateId: '', mediaId: '', startTime: '', endTime: '' });
+  const [mediaMapping, setMediaMapping] = useState({});
+  const [architectWidth, setArchitectWidth] = useState(0);
+  const architectRef = useRef(null);
   const [previewFile, setPreviewFile] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
   const [modFile, setModFile] = useState(null);
   const [showModModal, setShowModModal] = useState(false);
-  
-  const [newScreen, setNewScreen] = useState({ name: '', location: '' });
-  const [showUserForm, setShowUserForm] = useState(false);
-  const [newUser, setNewUser] = useState({ name: '', email: '', password: '', role: 'user' });
-  const [currentLayout, setCurrentLayout] = useState([{ i: 'Frame1', x: 0, y: 0, w: 12, h: 6 }]);
-  const [templateName, setTemplateName] = useState('');
-  const [newSchedule, setNewSchedule] = useState({
-    mediaId: '', templateId: '', startTime: '', endTime: '', duration: 10, screenId: ''
-  });
-  const [mediaMapping, setMediaMapping] = useState({});
-  const architectRef = useRef(null);
-  const [architectWidth, setArchitectWidth] = useState(800);
+
+  const fetchData = useCallback(async () => {
+    try {
+      const [u, m, p, t, s, tk, st, sch] = await Promise.all([
+        axios.get(`${import.meta.env.VITE_API_URL}/api/auth/users`),
+        axios.get(`${import.meta.env.VITE_API_URL}/api/media`),
+        axios.get(`${import.meta.env.VITE_API_URL}/api/media/pending`),
+        axios.get(`${import.meta.env.VITE_API_URL}/api/templates`),
+        axios.get(`${import.meta.env.VITE_API_URL}/api/screens`),
+        axios.get(`${import.meta.env.VITE_API_URL}/api/ticker`),
+        axios.get(`${import.meta.env.VITE_API_URL}/api/settings`),
+        axios.get(`${import.meta.env.VITE_API_URL}/api/schedule`)
+      ]);
+      setUsers(u.data);
+      setMedia(m.data);
+      setPendingMedia(p.data);
+      setTemplates(t.data);
+      setScreens(s.data);
+      setTicker(tk.data);
+      setSettings(st.data);
+      setSchedules(sch.data);
+    } catch (err) { console.error(err); }
+  }, []);
+
+  useEffect(() => {
+    setTimeout(() => fetchData(), 0);
+    const interval = setInterval(fetchData, 30000); // 30s auto-fetch
+    return () => clearInterval(interval);
+  }, [fetchData]);
 
   useEffect(() => {
     if (!architectRef.current) return;
     const observer = new ResizeObserver((entries) => {
       for (let entry of entries) {
         if (entry.contentRect.width > 0) {
-          // Use full width of container for precision
           setArchitectWidth(entry.contentRect.width);
         }
       }
@@ -187,57 +187,6 @@ const AdminDashboard = () => {
     observer.observe(architectRef.current);
     return () => observer.disconnect();
   }, [activeTab]);
-
-  const fetchData = useCallback(async () => {
-    try {
-      const [mediaRes, usersRes, screensRes, tickerRes, templatesRes, schedulesRes, pendingRes, settingsRes] = await Promise.all([
-        axios.get(`${import.meta.env.VITE_API_URL}/api/media`),
-        axios.get(`${import.meta.env.VITE_API_URL}/api/auth/users`),
-        axios.get(`${import.meta.env.VITE_API_URL}/api/screens`),
-        axios.get(`${import.meta.env.VITE_API_URL}/api/ticker`),
-        axios.get(`${import.meta.env.VITE_API_URL}/api/templates`),
-        axios.get(`${import.meta.env.VITE_API_URL}/api/schedule`),
-        axios.get(`${import.meta.env.VITE_API_URL}/api/media/pending`),
-        axios.get(`${import.meta.env.VITE_API_URL}/api/settings`)
-      ]);
-
-      setApprovedMedia(mediaRes.data);
-      setUsers(usersRes.data);
-      setScreens(screensRes.data);
-      setTicker(prev => ({ ...prev, ...tickerRes.data }));
-      setTemplates(templatesRes.data);
-      setSchedules(schedulesRes.data);
-      setPendingMedia(pendingRes.data);
-      setSettings(settingsRes.data);
-      setStats({ 
-        media: mediaRes.data.length, 
-        pending: pendingRes.data.length, 
-        users: usersRes.data.length, 
-        screens: screensRes.data.length 
-      });
-    } catch (err) { console.error(err); }
-  }, []);
-
-  const saveSettings = async (key, value) => {
-    try {
-      await axios.post(`${import.meta.env.VITE_API_URL}/api/settings`, { key, value });
-      fetchData();
-    } catch (err) { alert(err.message); }
-  };
-
-  const terminateBroadcast = async (id) => {
-    if (!window.confirm('Terminate this broadcast mission?')) return;
-    try {
-      await axios.delete(`${import.meta.env.VITE_API_URL}/api/schedule/${id}`);
-      fetchData();
-    } catch (err) { alert(err.message); }
-  };
-
-  useEffect(() => {
-    setTimeout(() => fetchData(), 0);
-    const interval = setInterval(fetchData, 30000); // 30s auto-fetch
-    return () => clearInterval(interval);
-  }, [fetchData]);
 
   const handleModeration = async (id, action, data = {}) => {
     try {
@@ -272,27 +221,6 @@ const AdminDashboard = () => {
     } catch (err) { alert(err.message); }
   };
 
-  const createSchedule = async (e) => {
-    e.preventDefault();
-    try {
-      await axios.post(`${import.meta.env.VITE_API_URL}/api/schedule`, { ...newSchedule, mediaMapping });
-      alert('Broadcast Started');
-      setNewSchedule({ mediaId: '', templateId: '', startTime: '', endTime: '', duration: 10, screenId: '' });
-      setMediaMapping({});
-      fetchData();
-    } catch (err) { alert(err.message); }
-  };
-
-  const registerScreen = async (e) => {
-    e.preventDefault();
-    try {
-      await axios.post(`${import.meta.env.VITE_API_URL}/api/screens/register`, newScreen);
-      alert('Screen Registered');
-      setNewScreen({ name: '', location: '' });
-      fetchData();
-    } catch (err) { alert(err.message); }
-  };
-
   const provisionUser = async (e) => {
     e.preventDefault();
     try {
@@ -304,10 +232,36 @@ const AdminDashboard = () => {
     } catch (err) { alert(err.response?.data?.message || err.message); }
   };
 
+  const createSchedule = async (e) => {
+    e.preventDefault();
+    const data = { ...newSchedule, mediaMapping: JSON.stringify(mediaMapping) };
+    try {
+      await axios.post(`${import.meta.env.VITE_API_URL}/api/schedule`, data);
+      alert('Broadcast Scheduled');
+      setNewSchedule({ screenId: '', templateId: '', mediaId: '', startTime: '', endTime: '' });
+      setMediaMapping({});
+      fetchData();
+    } catch (err) { alert(err.message); }
+  };
+
+  const deleteSchedule = async (id) => {
+    if (!window.confirm('Terminate Broadcast?')) return;
+    try {
+      await axios.delete(`${import.meta.env.VITE_API_URL}/api/schedule/${id}`);
+      fetchData();
+    } catch (err) { alert(err.message); }
+  };
+
+  const saveSettings = async (key, val) => {
+    try {
+      await axios.post(`${import.meta.env.VITE_API_URL}/api/settings`, { [key]: val });
+      fetchData();
+    } catch (err) { alert(err.message); }
+  };
+
   const unlockUser = async (id) => {
     try {
       await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/users/${id}/unlock`);
-      alert('Account Unlocked');
       fetchData();
     } catch (err) { alert(err.message); }
   };
@@ -315,210 +269,142 @@ const AdminDashboard = () => {
   const lockUser = async (id) => {
     try {
       await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/users/${id}/lock`);
-      alert('Account Locked');
       fetchData();
     } catch (err) { alert(err.message); }
   };
 
   const deleteUser = async (id) => {
-    if (!window.confirm('Permanently delete this user?')) return;
+    if (!window.confirm('Purge personnel records?')) return;
     try {
       await axios.delete(`${import.meta.env.VITE_API_URL}/api/auth/users/${id}`);
-      alert('User Deleted');
       fetchData();
     } catch (err) { alert(err.message); }
   };
 
   const approveReset = async (id) => {
-    const newPassword = prompt('Enter new password for user:');
-    if (!newPassword) return;
+    const pw = prompt('Set Temporary Password:');
+    if (!pw) return;
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/users/${id}/approve-reset`, { newPassword });
-      alert('Password Reset Successful');
+      await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/users/${id}/approve-reset`, { newPassword: pw });
+      alert('Password Updated');
       fetchData();
     } catch (err) { alert(err.message); }
   };
+
+  const safeParse = (data, fallback = []) => {
+    if (!data) return fallback;
+    if (typeof data === 'object') return data;
+    try {
+      return JSON.parse(data);
+    } catch { return fallback; }
+  };
+
+  const approvedMedia = media.filter(m => m.status === 'approved');
 
   const renderView = () => {
     switch (activeTab) {
       case 'dashboard':
         return (
-          <div className="space-y-12 animate-fade-in">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              {[
-                { label: 'total file', value: stats.media, icon: FileText, color: 'text-sky-400' },
-                { label: 'Pending', value: stats.pending, icon: Clock, color: 'text-amber-400' },
-                { label: 'Users', value: stats.users, icon: UsersIcon, color: 'text-indigo-400' },
-                { label: 'Screens', value: stats.screens, icon: Tv, color: 'text-emerald-400' },
-              ].map((s, i) => (
-                <Card key={i} className="flex justify-between items-center glass-hover">
-                  <div>
-                    <p className="text-4xl font-extrabold mb-1">{s.value}</p>
-                    <p className="text-[var(--text-dim)] text-[10px] uppercase font-bold tracking-wider">{s.label}</p>
-                  </div>
-                  <div className={`p-3 rounded-xl bg-white/5 ${s.color}`}>
-                    <s.icon className="w-6 h-6" />
-                  </div>
-                </Card>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <Card>
-                <div className="flex items-center gap-2 mb-8 pb-4 border-b border-[var(--border)]">
-                   <AlertCircle className="w-4 h-4 text-sky-400" />
-                   <h3 className="text-xs font-bold uppercase tracking-wider">System Intelligence</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 animate-fade-in">
+             <Card className="flex flex-col justify-between border-sky-500/20">
+                <div className="flex justify-between items-start">
+                   <div className="p-3 bg-sky-500/10 rounded-xl"><Tv className="text-sky-400 w-5 h-5"/></div>
+                   <span className="text-[10px] font-black text-sky-400 uppercase tracking-widest">Online</span>
                 </div>
-                <div className="space-y-4">
-                  {pendingMedia.length > 0 ? (
-                    <div className="p-6 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-center gap-6">
-                      <div className="p-4 bg-amber-500/20 rounded-full">
-                        <Clock className="w-8 h-8 text-amber-500" />
-                      </div>
-                      <div>
-                        <p className="font-bold text-lg leading-tight text-amber-200">Attention Required</p>
-                        <p className="text-sm font-medium text-amber-500/80 uppercase">{pendingMedia.length} Pending Approvals in Queue</p>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="p-6 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center gap-6">
-                      <div className="p-4 bg-emerald-500/20 rounded-full">
-                        <CheckCircle className="w-8 h-8 text-emerald-500" />
-                      </div>
-                      <div>
-                        <p className="font-bold text-lg leading-tight text-emerald-200">Status: Normal</p>
-                        <p className="text-sm font-medium text-emerald-500/80 uppercase">All systems executing as expected</p>
-                      </div>
-                    </div>
-                  )}
+                <div className="mt-8">
+                   <p className="text-5xl font-black tracking-tighter">{screens.filter(s => s.status === 'online').length}</p>
+                   <p className="text-[10px] font-bold text-slate-500 uppercase mt-2">Active Terminals</p>
                 </div>
-              </Card>
-
-              <Card>
-                <div className="flex items-center gap-2 mb-8 pb-4 border-b border-[var(--border)]">
-                   <Play className="w-4 h-4 text-sky-400" />
-                   <h3 className="text-xs font-bold uppercase tracking-wider">Broadcast Stream</h3>
+             </Card>
+             <Card className="flex flex-col justify-between border-emerald-500/20">
+                <div className="flex justify-between items-start">
+                   <div className="p-3 bg-emerald-500/10 rounded-xl"><Calendar className="text-emerald-400 w-5 h-5"/></div>
+                   <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Active</span>
                 </div>
-                <div className="bg-black/40 border border-[var(--border)] rounded-2xl p-8 overflow-hidden relative min-h-[140px] flex items-center">
-                  <div className="absolute top-0 left-0 w-1 h-full bg-[var(--accent)]" />
-                  <div className="flex gap-12 whitespace-nowrap animate-ticker w-full" style={{ animationDuration: `${(100 - ticker.speed * 10)}s` }}>
-                    <span className={`font-bold ${ticker.fontSize} ${ticker.fontStyle === 'italic' ? 'italic' : ''} ${ticker.fontStyle === 'bold' ? 'font-black' : ''}`}>
-                      {ticker.text || 'SYSTEM_READY_FOR_BROADCAST...'}
-                    </span>
-                    <span className={`font-bold ${ticker.fontSize} ${ticker.fontStyle === 'italic' ? 'italic' : ''} ${ticker.fontStyle === 'bold' ? 'font-black' : ''}`}>
-                      {ticker.text || 'SYSTEM_READY_FOR_BROADCAST...'}
-                    </span>
-                  </div>
+                <div className="mt-8">
+                   <p className="text-5xl font-black tracking-tighter">{schedules.length}</p>
+                   <p className="text-[10px] font-bold text-slate-500 uppercase mt-2">Live Broadcasts</p>
                 </div>
-              </Card>
-            </div>
+             </Card>
+             <Card className="flex flex-col justify-between border-amber-500/20">
+                <div className="flex justify-between items-start">
+                   <div className="p-3 bg-amber-500/10 rounded-xl"><CheckSquare className="text-amber-400 w-5 h-5"/></div>
+                   <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Required</span>
+                </div>
+                <div className="mt-8">
+                   <p className="text-5xl font-black tracking-tighter">{pendingMedia.length}</p>
+                   <p className="text-[10px] font-bold text-slate-500 uppercase mt-2">Pending Approvals</p>
+                </div>
+             </Card>
+             <Card className="flex flex-col justify-between border-indigo-500/20">
+                <div className="flex justify-between items-start">
+                   <div className="p-3 bg-indigo-500/10 rounded-xl"><UsersIcon className="text-indigo-400 w-5 h-5"/></div>
+                   <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Total</span>
+                </div>
+                <div className="mt-8">
+                   <p className="text-5xl font-black tracking-tighter">{users.length}</p>
+                   <p className="text-[10px] font-bold text-slate-500 uppercase mt-2">Authorized Personnel</p>
+                </div>
+             </Card>
           </div>
         );
 
       case 'approve':
         return (
-          <Card className="animate-fade-in">
-             <h3 className="text-sm font-bold uppercase tracking-wider mb-6">Application Console</h3>
-             {pendingMedia.length === 0 ? <div className="text-center py-20 opacity-40"><Info className="w-12 h-12 mx-auto mb-4" /><p>No pending requests.</p></div> : (
-               <div className="overflow-x-auto">
-                 <table className="w-full text-left">
-                   <thead>
-                     <tr className="border-b border-[var(--border)] text-[10px] uppercase text-[var(--text-dim)] font-bold">
-                       <th className="pb-4 px-4">Asset</th>
-                       <th className="pb-4 px-4">Uploader</th>
-                       <th className="pb-4 px-4">Requested Window</th>
-                       <th className="pb-4 px-4">Type</th>
-                       <th className="pb-4 px-4 text-right">Actions</th>
-                     </tr>
-                   </thead>
-                   <tbody className="divide-y divide-[var(--border)]">
-                     {pendingMedia.map(m => (
-                       <tr key={m.id} className="group hover:bg-white/5 transition-colors">
-                         <td className="py-4 px-4 text-sm font-semibold">{m.fileName}</td>
-                         <td className="py-4 px-4 text-xs text-[var(--text-dim)]">{m.uploaderName}</td>
-                         <td className="py-4 px-4">
-                            {m.requestedStartTime ? (
-                              <div className="space-y-1">
-                                 <p className="text-[9px] font-black text-sky-400 uppercase">START: {new Date(m.requestedStartTime).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'})}</p>
-                                 <p className="text-[9px] font-black text-rose-400 uppercase">END: {new Date(m.requestedEndTime).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'})}</p>
-                              </div>
-                            ) : (
-                              <span className="text-[10px] font-bold text-slate-600 italic">No Window</span>
-                            )}
-                         </td>
-                         <td className="py-4 px-4"><span className="text-[10px] font-bold uppercase px-2 py-0.5 bg-white/5 rounded">{m.fileType}</span></td>
-                         <td className="py-4 px-4 text-right">
-                            <div className="flex justify-end gap-2">
-                              <button 
-                                onClick={() => { setPreviewFile(m); setShowPreview(true); }}
-                                className="p-2 bg-sky-500/10 text-sky-400 rounded-lg hover:bg-sky-500/20"
-                                title="Preview Asset"
-                              >
-                                <Eye size={18}/>
-                              </button>
-                              <button 
-                                onClick={() => { setModFile(m); setShowModModal(true); }}
-                                className="p-2 bg-white/5 text-white border border-white/10 rounded-lg hover:bg-emerald-500 hover:border-transparent transition-all"
-                                title="Process Application"
-                              >
-                                <CheckCircle size={18}/>
-                              </button>
-                            </div>
-                         </td>
-                       </tr>
-                     ))}
-                   </tbody>
-                 </table>
+          <div className="animate-fade-in space-y-6">
+            <h3 className="text-sm font-bold uppercase tracking-wider mb-8">Pending Verification Queue</h3>
+            {pendingMedia.length === 0 ? (
+               <div className="text-center py-20 bg-white/5 rounded-3xl border border-dashed border-white/10">
+                 <CheckCircle className="mx-auto text-emerald-500 opacity-20 mb-4" size={48} />
+                 <p className="text-slate-500 uppercase font-black tracking-[4px] text-xs">Clearance Queue Empty</p>
                </div>
-             )}
-          </Card>
-        );
-
-      case 'screens':
-        return (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-fade-in">
-             <Card>
-                <h3 className="text-sm font-bold uppercase tracking-wider mb-8">Provision Screen</h3>
-                <form onSubmit={registerScreen} className="space-y-6">
-                   <div className="space-y-2">
-                     <label className="text-[10px] font-bold uppercase ml-1 opacity-50">Identity</label>
-                     <input type="text" required className="nexus-input" placeholder="Screen Name" value={newScreen.name} onChange={(e) => setNewScreen(p => ({ ...p, name: e.target.value }))}/>
-                   </div>
-                   <div className="space-y-2">
-                     <label className="text-[10px] font-bold uppercase ml-1 opacity-50">Deployment Zone</label>
-                     <input type="text" className="nexus-input" placeholder="Location" value={newScreen.location} onChange={(e) => setNewScreen(p => ({ ...p, location: e.target.value }))}/>
-                   </div>
-                   <button type="submit" className="nexus-btn-primary w-full flex items-center justify-center gap-2"><Plus size={18}/> REGISTER TERMINAL</button>
-                </form>
-             </Card>
-             <Card className="lg:col-span-2">
-                <h3 className="text-sm font-bold uppercase tracking-wider mb-8">Active Fleet</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                   {screens.map(s => (
-                     <div key={s.id} className="p-5 bg-white/5 border border-white/10 rounded-2xl glass-hover">
-                        <div className="flex justify-between items-start mb-4">
-                          <div>
-                            <h4 className="text-lg font-bold">{s.name}</h4>
-                            <p className="text-[10px] font-bold text-sky-400 uppercase tracking-widest">{s.location}</p>
-                          </div>
-                          <div className={`w-2 h-2 rounded-full ${s.status === 'online' ? 'bg-emerald-500 animate-pulse' : 'bg-slate-600'}`} />
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                 {pendingMedia.map(m => (
+                   <Card key={m.id} className="group relative">
+                      <div className="aspect-video bg-black/60 rounded-xl overflow-hidden mb-6 border border-white/10 relative">
+                         {m.fileType === 'video' ? <video src={`${import.meta.env.VITE_API_URL}/${m.filePath}`} className="w-full h-full object-cover opacity-50" /> : <img src={`${import.meta.env.VITE_API_URL}/${m.filePath}`} className="w-full h-full object-cover opacity-50" />}
+                         <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={() => { setPreviewFile(m); setShowPreview(true); }} className="p-4 bg-white text-black rounded-full shadow-2xl transform scale-75 group-hover:scale-100 transition-transform"><Eye size={20}/></button>
+                         </div>
+                      </div>
+                      <h4 className="font-bold truncate text-white uppercase tracking-tight">{m.fileName}</h4>
+                      <p className="text-[9px] font-black text-sky-400 mt-1 uppercase tracking-widest">{m.fileType} • {(m.uploaderId?.name || 'Unknown').split(' ')[0]}</p>
+                      
+                      <div className="mt-4 pt-4 border-t border-white/5 space-y-3">
+                        <div className="flex justify-between items-center text-[8px] font-black text-slate-500 uppercase">
+                           <span>Requested Window:</span>
                         </div>
-                        <a href={`/display?screenId=${s.id}`} target="_blank" rel="noreferrer" className="block text-center bg-[var(--accent)]/10 text-[var(--accent)] py-2.5 rounded-xl text-xs font-bold border border-[var(--accent)]/20 hover:bg-[var(--accent)] hover:text-white transition-all">Launch Feed</a>
-                     </div>
-                   ))}
-                </div>
-             </Card>
+                        <div className="flex gap-2">
+                           <div className="flex-1 bg-black/40 p-2 rounded-lg border border-white/5">
+                              <p className="text-[7px] opacity-40 mb-1 tracking-tighter">START</p>
+                              <p className="text-[9px] text-white tabular-nums">{m.requestedStartTime ? new Date(m.requestedStartTime).toLocaleDateString() : 'IMMEDIATE'}</p>
+                           </div>
+                           <div className="flex-1 bg-black/40 p-2 rounded-lg border border-white/5">
+                              <p className="text-[7px] opacity-40 mb-1 tracking-tighter">END</p>
+                              <p className="text-[9px] text-white tabular-nums">{m.requestedEndTime ? new Date(m.requestedEndTime).toLocaleDateString() : 'UNSET'}</p>
+                           </div>
+                        </div>
+                      </div>
+
+                      <button 
+                        onClick={() => { setModFile(m); setShowModModal(true); }}
+                        className="w-full mt-6 py-3 bg-[var(--accent)] text-[var(--bg)] font-black text-[10px] uppercase tracking-widest rounded-xl hover:brightness-110 transition-all shadow-lg shadow-[var(--accent)]/10"
+                      >
+                        Review Asset
+                      </button>
+                   </Card>
+                 ))}
+              </div>
+            )}
           </div>
         );
 
-      case 'schedule': {
-        const selectedTemplate = templates.find(t => t.id === newSchedule.templateId);
-        const zones = selectedTemplate ? safeParse(selectedTemplate.layout) : [];
-
+      case 'schedule':
         return (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-fade-in">
-             <Card>
-                <div className="flex items-center gap-2 mb-8 pb-4 border-b border-[var(--border)]">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 animate-fade-in">
+             <Card className="lg:col-span-1 border-sky-500/10">
+                <div className="flex items-center gap-3 mb-8">
                    <Calendar className="w-4 h-4 text-sky-400" />
                    <h3 className="text-xs font-bold uppercase tracking-wider">Broadcast System</h3>
                 </div>
@@ -553,7 +439,7 @@ const AdminDashboard = () => {
                    ) : (
                      <div className="space-y-4 p-4 border border-[var(--border)] bg-black/20 rounded-2xl">
                         <p className="text-[10px] font-black uppercase text-center border-b border-[var(--border)] pb-2 mb-4">Zone Mapping</p>
-                        {zones.map((z) => (
+                        {safeParse(templates.find(t => t.id === newSchedule.templateId)?.layout).map((z) => (
                           <div key={z.i} className="space-y-1">
                             <label className="text-[9px] font-bold uppercase ml-1 opacity-50">Zone {z.i}</label>
                             <select required className="nexus-input py-2 text-xs" value={mediaMapping[z.i] || ''} onChange={(e) => setMediaMapping(p => ({ ...p, [z.i]: e.target.value }))}>
@@ -578,64 +464,47 @@ const AdminDashboard = () => {
                    <button type="submit" className="nexus-btn-primary w-full tracking-[2px]">Broadcast</button>
                 </form>
              </Card>
-             <Card className="lg:col-span-2">
-                <div className="flex items-center gap-2 mb-8 pb-4 border-b border-[var(--border)]">
-                   <Clock className="w-4 h-4 text-sky-400" />
-                   <h3 className="text-xs font-bold uppercase tracking-wider">Broadcast log</h3>
+
+             <Card className="lg:col-span-3 overflow-hidden">
+                <div className="flex justify-between items-center mb-8">
+                   <h3 className="text-xs font-bold uppercase tracking-wider">Live Manifest</h3>
+                   <div className="px-3 py-1 bg-sky-500/10 border border-sky-500/20 rounded-full text-[8px] font-black text-sky-400 uppercase animate-pulse">Sync Active</div>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left">
                      <thead>
-                        <tr className="border-b border-[var(--border)] text-[10px] uppercase font-bold text-[var(--text-dim)]">
-                           <th className="pb-4 px-4">Content Manifest</th>
-                           <th className="pb-4 px-4">Active Window</th>
-                           <th className="pb-4 px-4 text-right">Status</th>
+                        <tr className="bg-white/5 text-[9px] font-black uppercase text-slate-500">
+                           <th className="py-4 px-6">Media / Template</th>
+                           <th className="py-4 px-6">Terminal</th>
+                           <th className="py-4 px-6">Active Window</th>
+                           <th className="py-4 px-6 text-right">Operations</th>
                         </tr>
                      </thead>
-                     <tbody className="divide-y divide-[var(--border)]">
+                     <tbody className="divide-y divide-white/5">
                         {schedules.map(s => {
-                          const isLive = new Date() >= new Date(s.startTime) && new Date() <= new Date(s.endTime);
+                          const m = approvedMedia.find(am => am.id === s.mediaId);
+                          const t = templates.find(tm => tm.id === s.templateId);
+                          const scr = screens.find(sc => sc.id === s.screenId);
                           return (
-                            <tr key={s.id} className="group hover:bg-white/5 transition-colors">
-                              <td className="py-5 px-4">
-                                <p className="text-sm font-bold text-white">{s.templateName || s.fileName}</p>
-                                <p className="text-[10px] font-bold text-sky-400 uppercase tracking-widest">{s.screenName || 'Global Feed'}</p>
-                              </td>
-                              <td className="py-5 px-4 font-mono text-[10px]">
-                                 <div className="flex items-center gap-2 mb-1">
-                                    <span className="text-emerald-400 font-bold">START:</span>
-                                    <span>{new Date(s.startTime).toLocaleString()}</span>
-                                 </div>
-                                 <div className="flex items-center gap-2">
-                                    <span className="text-rose-400 font-bold">END:</span>
-                                    <span>{new Date(s.endTime).toLocaleString()}</span>
-                                 </div>
-                              </td>
-                              <td className="py-5 px-4 text-right">
-                                <div className="flex flex-col items-end gap-2">
-                                  <span className={`px-3 py-1 text-[9px] font-black rounded-full border ${isLive ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.1)]' : 'bg-slate-500/10 text-slate-500 border-slate-500/20'}`}>
-                                    {isLive ? 'LIVE' : 'SCHEDULED'}
-                                  </span>
-                                  <div className="flex gap-2">
-                                    {s.filePath && (
-                                      <button 
-                                        onClick={() => { setPreviewFile(s); setShowPreview(true); }}
-                                        className="p-1.5 bg-sky-500/10 text-sky-400 rounded-lg hover:bg-sky-500 hover:text-white transition-all"
-                                        title="Preview Content"
-                                      >
-                                        <Eye size={14} />
-                                      </button>
-                                    )}
-                                    <button 
-                                      onClick={() => terminateBroadcast(s.id)}
-                                      className="p-1.5 bg-rose-500/10 text-rose-500 rounded-lg hover:bg-rose-500 hover:text-white transition-all group"
-                                      title="Terminate Broadcast"
-                                    >
-                                      <XCircle size={14} />
-                                    </button>
+                            <tr key={s.id} className="hover:bg-white/5 transition-colors group">
+                               <td className="py-5 px-6">
+                                  <p className="font-bold text-white uppercase text-xs tracking-tight">{t ? t.name : (m?.fileName || 'Asset Unknown')}</p>
+                                  <p className="text-[8px] font-bold text-sky-400/60 uppercase mt-1 tracking-widest">{t ? 'MULTI-FRAME ARRAY' : (m?.fileType || 'MEDIA')}</p>
+                               </td>
+                               <td className="py-5 px-6 text-[10px] font-black uppercase text-slate-400">{scr ? scr.name : 'GLOBAL'}</td>
+                               <td className="py-5 px-6">
+                                  <div className="flex items-center gap-3">
+                                     <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                     <p className="text-[10px] font-bold tabular-nums text-slate-300">
+                                        {new Date(s.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} 
+                                        <span className="mx-2 opacity-20">→</span>
+                                        {new Date(s.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                     </p>
                                   </div>
-                                </div>
-                              </td>
+                               </td>
+                               <td className="py-5 px-6 text-right">
+                                  <button onClick={() => deleteSchedule(s.id)} className="p-2 bg-rose-500/10 text-rose-500 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-rose-500 hover:text-white transition-all"><Trash2 size={14}/></button>
+                               </td>
                             </tr>
                           );
                         })}
@@ -645,7 +514,6 @@ const AdminDashboard = () => {
              </Card>
           </div>
         );
-      }
 
       case 'ticker':
         return (
@@ -749,25 +617,28 @@ const AdminDashboard = () => {
         );
 
       case 'templates':
+        const rowHeight = architectWidth > 0 ? (architectWidth / 12) * (9/16) : 50;
         return (
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 animate-fade-in">
-             <Card className="lg:col-span-3">
-                <div className="flex justify-between items-center mb-8">
+          <div className="space-y-8 animate-fade-in">
+             <Card className="w-full">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
                    <div>
-                     <h3 className="text-sm font-bold uppercase tracking-wider">Layout</h3>
-                     <p className="text-[10px] font-bold text-sky-400 uppercase tracking-widest mt-1">Grid System: 12 x 12 Logic</p>
+                     <h3 className="text-sm font-bold uppercase tracking-wider">Layout Architect</h3>
+                     <p className="text-[10px] font-bold text-sky-400 uppercase tracking-widest mt-1">Grid System: 12 x 12 Precision Mapping</p>
                    </div>
                    <div className="flex flex-wrap gap-2">
-                     <button onClick={() => setCurrentLayout([{ i: 'Left', x: 0, y: 0, w: 6, h: 12 }, { i: 'Right', x: 6, y: 0, w: 6, h: 12 }])} className="px-3 py-1.5 bg-sky-500/10 border border-sky-500/20 rounded-lg text-[9px] font-bold uppercase text-sky-400 hover:bg-sky-500 hover:text-white transition-all">50/50 V</button>
-                     <button onClick={() => setCurrentLayout([{ i: 'Top', x: 0, y: 0, w: 12, h: 6 }, { i: 'Bottom', x: 0, y: 6, w: 12, h: 6 }])} className="px-3 py-1.5 bg-sky-500/10 border border-sky-500/20 rounded-lg text-[9px] font-bold uppercase text-sky-400 hover:bg-sky-500 hover:text-white transition-all">50/50 H</button>
-                     <button onClick={() => setCurrentLayout([{ i: 'TL', x: 0, y: 0, w: 6, h: 6 }, { i: 'TR', x: 6, y: 0, w: 6, h: 6 }, { i: 'BL', x: 0, y: 6, w: 6, h: 6 }, { i: 'BR', x: 6, y: 6, w: 6, h: 6 }])} className="px-3 py-1.5 bg-indigo-500/10 border border-indigo-500/20 rounded-lg text-[9px] font-bold uppercase text-indigo-400 hover:bg-indigo-500 hover:text-white transition-all">Quad</button>
-                     <button onClick={() => setCurrentLayout([{ i: 'Main', x: 0, y: 0, w: 9, h: 12 }, { i: 'Side', x: 9, y: 0, w: 3, h: 12 }])} className="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-[9px] font-bold uppercase text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all">Sidebar</button>
-                     <button onClick={() => setCurrentLayout([...currentLayout, { i: `Frame${currentLayout.length+1}`, x: 0, y: 0, w: 4, h: 4 }])} className="px-3 py-1.5 bg-[var(--accent)] text-white rounded-lg text-[9px] font-bold uppercase hover:brightness-110 transition-all">+ Frame</button>
+                     <button onClick={() => setCurrentLayout([{ i: 'Main', x: 0, y: 0, w: 12, h: 12 }])} className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-[10px] font-black uppercase text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all">Fullscreen</button>
+                     <button onClick={() => setCurrentLayout([{ i: 'Left', x: 0, y: 0, w: 6, h: 12 }, { i: 'Right', x: 6, y: 0, w: 6, h: 12 }])} className="px-4 py-2 bg-sky-500/10 border border-sky-500/20 rounded-xl text-[10px] font-black uppercase text-sky-400 hover:bg-sky-500 hover:text-white transition-all">50/50 V</button>
+                     <button onClick={() => setCurrentLayout([{ i: 'Top', x: 0, y: 0, w: 12, h: 6 }, { i: 'Bottom', x: 0, y: 6, w: 12, h: 6 }])} className="px-4 py-2 bg-sky-500/10 border border-sky-500/20 rounded-xl text-[10px] font-black uppercase text-sky-400 hover:bg-sky-500 hover:text-white transition-all">50/50 H</button>
+                     <button onClick={() => setCurrentLayout([{ i: 'TL', x: 0, y: 0, w: 6, h: 6 }, { i: 'TR', x: 6, y: 0, w: 6, h: 6 }, { i: 'BL', x: 0, y: 6, w: 6, h: 6 }, { i: 'BR', x: 6, y: 6, w: 6, h: 6 }])} className="px-4 py-2 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-[10px] font-black uppercase text-indigo-400 hover:bg-indigo-500 hover:text-white transition-all">Quad</button>
+                     <button onClick={() => setCurrentLayout([{ i: 'Main', x: 0, y: 0, w: 9, h: 12 }, { i: 'Side', x: 9, y: 0, w: 3, h: 12 }])} className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-[10px] font-black uppercase text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all">Sidebar</button>
+                     <button onClick={() => { if(window.confirm('Wipe current design?')) setCurrentLayout([]); }} className="px-4 py-2 bg-rose-500/10 border border-rose-500/20 rounded-xl text-[10px] font-black uppercase text-rose-400 hover:bg-rose-500 hover:text-white transition-all">Wipe</button>
+                     <button onClick={() => setCurrentLayout([...currentLayout, { i: `Frame${currentLayout.length+1}`, x: 0, y: 0, w: 4, h: 4 }])} className="px-5 py-2 bg-white text-black rounded-xl text-[10px] font-black uppercase hover:bg-sky-400 hover:text-white transition-all shadow-[0_0_20px_rgba(255,255,255,0.2)]">+ Add Frame</button>
                    </div>
                 </div>
-                <div ref={architectRef} className="bg-slate-950 border-2 border-white/20 rounded-[32px] aspect-video relative overflow-hidden grid-bg shadow-[0_0_100px_rgba(0,0,0,0.5)] p-0">
-                   {/* Grid Overlay for visual aid */}
-                   <div className="absolute inset-0 grid grid-cols-12 grid-rows-12 pointer-events-none opacity-20">
+                <div ref={architectRef} className="bg-slate-950 border-4 border-white/10 rounded-[40px] relative overflow-hidden grid-bg shadow-[0_0_100px_rgba(0,0,0,0.5)] p-0" style={{ height: architectWidth > 0 ? (Math.floor(rowHeight) * 12) : 'auto', minHeight: '400px' }}>
+                   {/* Grid Overlay for visual aid - Force 12x12 */}
+                   <div className="absolute inset-0 grid pointer-events-none opacity-20" style={{ gridTemplateColumns: 'repeat(12, 1fr)', gridTemplateRows: 'repeat(12, 1fr)' }}>
                       {[...Array(144)].map((_, i) => (
                         <div key={i} className="border-[0.5px] border-white/10" />
                       ))}
@@ -775,22 +646,32 @@ const AdminDashboard = () => {
 
                    <GridLayout 
                     className="layout" 
-                    layout={currentLayout} 
+                    layout={currentLayout.map(item => ({ ...item, maxW: 12, maxH: 12, minW: 1, minH: 1 }))} 
                     cols={12} 
-                    rowHeight={architectWidth / 12 * (9/16)} 
+                    rowHeight={Math.floor(rowHeight)} 
                     width={architectWidth} 
                     maxRows={12}
                     onLayoutChange={(newLayout) => {
                       const validatedLayout = newLayout.map(item => {
-                        let { x, y, w, h } = item;
-                        // Clamp values to 12x12 grid
-                        w = Math.min(w, 12);
-                        h = Math.min(h, 12);
+                        let { x, y, w, h, i } = item;
+                        
+                        // 1. Clamp size first
+                        w = Math.max(1, Math.min(Math.round(w), 12));
+                        h = Math.max(1, Math.min(Math.round(h), 12));
+                        
+                        // 2. Clamp position based on size
+                        if (x < 0) x = 0;
+                        if (y < 0) y = 0;
                         if (x + w > 12) x = 12 - w;
                         if (y + h > 12) y = 12 - h;
-                        return { ...item, x, y, w, h };
+
+                        return { i, x: Math.round(x), y: Math.round(y), w, h };
                       });
-                      setCurrentLayout(validatedLayout);
+                      
+                      const hasChanged = JSON.stringify(validatedLayout) !== JSON.stringify(currentLayout);
+                      if (hasChanged) {
+                        setCurrentLayout(validatedLayout);
+                      }
                     }} 
                     margin={[0, 0]} 
                     draggableHandle=".drag-handle"
@@ -799,6 +680,7 @@ const AdminDashboard = () => {
                     preventCollision={false}
                     isDraggable={true}
                     isResizable={true}
+                    isBounded={true}
                   >
                       {currentLayout.map(z => (
                         <div key={z.i} className="bg-slate-900/90 border border-sky-500/30 backdrop-blur-md flex flex-col items-center justify-center text-white group overflow-hidden rounded-xl shadow-2xl transition-all hover:border-sky-400">
@@ -846,7 +728,7 @@ const AdminDashboard = () => {
                 </div>
              </Card>
 
-             <div className="space-y-6">
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <Card className="p-5">
                    <h3 className="text-[10px] font-black uppercase tracking-[2px] mb-4 pb-2 border-b border-white/10">Inspector</h3>
                    <div className="space-y-4 max-h-[480px] overflow-y-auto pr-2 custom-scrollbar">
@@ -873,22 +755,6 @@ const AdminDashboard = () => {
                                     setCurrentLayout(next);
                                  }} className="w-full bg-black/40 border border-white/10 rounded-lg px-2 py-1 text-xs font-bold outline-none focus:border-sky-500/50"/>
                               </div>
-                              <div className="space-y-1">
-                                 <label className="text-[8px] font-black uppercase opacity-40">X Axis</label>
-                                 <input type="number" min="0" max={12-z.w} value={z.x} onChange={(e) => {
-                                    const next = [...currentLayout];
-                                    next[idx].x = parseInt(e.target.value) || 0;
-                                    setCurrentLayout(next);
-                                 }} className="w-full bg-black/40 border border-white/10 rounded-lg px-2 py-1 text-xs font-bold outline-none focus:border-sky-500/50"/>
-                              </div>
-                              <div className="space-y-1">
-                                 <label className="text-[8px] font-black uppercase opacity-40">Y Axis</label>
-                                 <input type="number" min="0" max={12-z.h} value={z.y} onChange={(e) => {
-                                    const next = [...currentLayout];
-                                    next[idx].y = parseInt(e.target.value) || 0;
-                                    setCurrentLayout(next);
-                                 }} className="w-full bg-black/40 border border-white/10 rounded-lg px-2 py-1 text-xs font-bold outline-none focus:border-sky-500/50"/>
-                              </div>
                            </div>
                         </div>
                       ))}
@@ -898,11 +764,11 @@ const AdminDashboard = () => {
 
                 <Card className="p-5">
                    <h3 className="text-[10px] font-black uppercase tracking-[2px] mb-4 pb-2 border-b border-white/10">Library</h3>
-                   <div className="space-y-2">
+                   <div className="space-y-2 max-h-[480px] overflow-y-auto pr-2 custom-scrollbar">
                       {templates.map(t => (
                         <div key={t.id} className="p-3 bg-white/5 border border-white/10 rounded-xl flex justify-between items-center group hover:bg-white/10 transition-all cursor-pointer">
                            <div>
-                              <p className="text-[10px] font-extrabold truncate max-w-[120px] uppercase">{t.name}</p>
+                              <p className="text-[10px] font-extrabold truncate max-w-[120px] uppercase text-white">{t.name}</p>
                               <p className="text-[8px] font-bold text-sky-400 opacity-60 uppercase">{safeParse(t.layout).length} FRAMES</p>
                            </div>
                            <button onClick={() => setCurrentLayout(safeParse(t.layout))} className="text-[9px] font-black border border-white/20 px-3 py-1 rounded-lg hover:bg-white hover:text-black transition-all">LOAD</button>
@@ -1143,4 +1009,3 @@ const AdminDashboard = () => {
 };
 
 export default AdminDashboard;
-
