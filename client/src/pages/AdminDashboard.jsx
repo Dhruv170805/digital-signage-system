@@ -731,9 +731,15 @@ const AdminDashboard = () => {
                   <div className="p-4 bg-black/40 rounded-2xl border border-white/5 mt-4">
                     <p className="text-[10px] font-bold uppercase opacity-30 mb-2">Preview</p>
                     <div className="h-12 flex items-center overflow-hidden">
-                       <p className={`whitespace-nowrap ${ticker.fontSize} ${ticker.fontStyle}`}>
-                          {ticker.text || 'BROADCASTING...'}
-                       </p>
+                       <div className="flex gap-12 whitespace-nowrap animate-ticker" style={{ animationDuration: ticker.isActive ? `${Math.max(5, 60 - ticker.speed * 5)}s` : '0s' }}>
+                          <p className={`${ticker.fontSize} ${ticker.fontStyle}`}>
+                             {ticker.text || 'BROADCAST ACTIVE // READY FOR DATA TRANSMISSION...'}
+                          </p>
+                          {/* Duplicated for loop */}
+                          <p className={`${ticker.fontSize} ${ticker.fontStyle}`}>
+                             {ticker.text || 'BROADCAST ACTIVE // READY FOR DATA TRANSMISSION...'}
+                          </p>
+                       </div>
                     </div>
                   </div>
                </div>
@@ -747,10 +753,10 @@ const AdminDashboard = () => {
              <Card className="lg:col-span-3">
                 <div className="flex justify-between items-center mb-8">
                    <div>
-                     <h3 className="text-sm font-bold uppercase tracking-wider">Layout Architect</h3>
+                     <h3 className="text-sm font-bold uppercase tracking-wider">Layout</h3>
                      <p className="text-[10px] font-bold text-sky-400 uppercase tracking-widest mt-1">Grid System: 12 x 12 Logic</p>
                    </div>
-                   <button onClick={() => setCurrentLayout([...currentLayout, { i: `z${currentLayout.length+1}`, x: 0, y: 0, w: 4, h: 4 }])} className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-[10px] font-bold uppercase hover:bg-[var(--accent)] hover:text-white transition-all">+ ADD ZONE</button>
+                   <button onClick={() => setCurrentLayout([...currentLayout, { i: `Frame${currentLayout.length+1}`, x: 0, y: 0, w: 4, h: 4 }])} className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-[10px] font-bold uppercase hover:bg-[var(--accent)] hover:text-white transition-all">+ Add Frame</button>
                 </div>
                 <div ref={architectRef} className="bg-black/60 border border-white/10 rounded-3xl aspect-video relative overflow-hidden grid-bg p-2 shadow-inner">
                    <GridLayout 
@@ -799,8 +805,8 @@ const AdminDashboard = () => {
                    </GridLayout>
                 </div>
                 <div className="mt-8 flex gap-4 items-center bg-white/5 p-4 rounded-2xl border border-white/10">
-                   <input type="text" placeholder="Layout Template Identity" className="nexus-input" value={templateName} onChange={(e) => setTemplateName(e.target.value)}/>
-                   <button onClick={saveTemplate} className="nexus-btn-primary whitespace-nowrap px-10 tracking-[2px]">SAVE_ARCHITECTURE</button>
+                   <input type="text" placeholder="Layout Name" className="nexus-input" value={templateName} onChange={(e) => setTemplateName(e.target.value)}/>
+                   <button onClick={saveTemplate} className="nexus-btn-primary whitespace-nowrap px-10 tracking-[2px]">Save</button>
                 </div>
              </Card>
 
@@ -861,7 +867,7 @@ const AdminDashboard = () => {
                         <div key={t.id} className="p-3 bg-white/5 border border-white/10 rounded-xl flex justify-between items-center group hover:bg-white/10 transition-all cursor-pointer">
                            <div>
                               <p className="text-[10px] font-extrabold truncate max-w-[120px] uppercase">{t.name}</p>
-                              <p className="text-[8px] font-bold text-sky-400 opacity-60 uppercase">{safeParse(t.layout).length} ZONES</p>
+                              <p className="text-[8px] font-bold text-sky-400 opacity-60 uppercase">{safeParse(t.layout).length} FRAMES</p>
                            </div>
                            <button onClick={() => setCurrentLayout(safeParse(t.layout))} className="text-[9px] font-black border border-white/20 px-3 py-1 rounded-lg hover:bg-white hover:text-black transition-all">LOAD</button>
                         </div>
