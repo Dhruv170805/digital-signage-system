@@ -1,10 +1,11 @@
-const { poolPromise } = require('../config/db');
+const Media = require('../models/Media');
+const Schedule = require('../models/Schedule');
+const User = require('../models/User');
 
 const getAllMedia = async (req, res) => {
     try {
-        const pool = await poolPromise;
-        const [rows] = await pool.execute('SELECT * FROM Media WHERE status = "approved" ORDER BY uploadedAt DESC');
-        res.json(rows);
+        const media = await Media.find({ status: 'approved' }).sort({ uploadedAt: -1 });
+        res.json(media);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -12,9 +13,16 @@ const getAllMedia = async (req, res) => {
 
 const getPendingMedia = async (req, res) => {
     try {
-        const pool = await poolPromise;
-        const [rows] = await pool.execute('SELECT M.*, U.name as uploaderName FROM Media M JOIN Users U ON M.uploaderId = U.id WHERE M.status = "pending" ORDER BY M.uploadedAt DESC');
-        res.json(rows);
+        const media = await Media.find({ status: 'pending' })
+            .populate('uploaderId', 'name')
+            .sort({ uploadedAt: -1 });
+        
+        const transformed = media.map(m => ({
+            ...m.toJSON(),
+            uploaderName: m.uploaderId ? m.uploaderId.name : 'Unknown'
+        }));
+        
+        res.json(transformed);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -31,14 +39,24 @@ const uploadMedia = async (req, res) => {
         if (mimetype.includes('pdf')) fileType = 'pdf';
         if (mimetype.includes('video')) fileType = 'video';
 
-        const pool = await poolPromise;
-        const start = requestedStartTime ? requestedStartTime.replace('T', ' ') : null;
-        const end = requestedEndTime ? requestedEndTime.replace('T', ' ') : null;
+        // Check user role for auto-approval
+        let status = 'pending';
+        if (uploaderId) {
+            const user = await User.findById(uploaderId);
+            if (user && user.role === 'admin') {
+                status = 'approved';
+            }
+        }
 
-        await pool.execute(
-            'INSERT INTO Media (fileName, filePath, fileType, uploaderId, status, requestedStartTime, requestedEndTime) VALUES (?, ?, ?, ?, ?, ?, ?)',
-            [filename, filePath, fileType, uploaderId || null, Number(uploaderId) === 1 ? 'approved' : 'pending', start, end]
-        );
+        await Media.create({
+            fileName: filename,
+            filePath,
+            fileType,
+            uploaderId: uploaderId || null,
+            status,
+            requestedStartTime: requestedStartTime || null,
+            requestedEndTime: requestedEndTime || null
+        });
 
         res.status(201).json({ message: 'File uploaded successfully', fileName: filename });
     } catch (err) {
@@ -49,26 +67,17 @@ const uploadMedia = async (req, res) => {
 const approveMedia = async (req, res) => {
     const { id } = req.params;
     try {
-        const pool = await poolPromise;
+        const m = await Media.findByIdAndUpdate(id, { status: 'approved' }, { new: true });
         
-        // 1. Mark as approved
-        await pool.execute('UPDATE Media SET status = "approved" WHERE id = ?', [id]);
-        
-        // 2. Fetch requested times
-        const [rows] = await pool.execute('SELECT * FROM Media WHERE id = ?', [id]);
-        const m = rows[0];
-        
-        // 3. If user requested a schedule, create it automatically
         if (m && m.requestedStartTime && m.requestedEndTime) {
-            const start = m.requestedStartTime.replace('T', ' ');
-            const end = m.requestedEndTime.replace('T', ' ');
-
-            await pool.execute(
-                'INSERT INTO Schedules (mediaId, startTime, endTime, duration, isActive) VALUES (?, ?, ?, ?, ?)',
-                [m.id, start, end, 10, 1]
-            );
+            await Schedule.create({
+                mediaId: m.id,
+                startTime: m.requestedStartTime,
+                endTime: m.requestedEndTime,
+                duration: 10,
+                isActive: 1
+            });
             
-            // Notify all clients to refresh content
             const io = req.app.get('socketio');
             if (io) io.emit('contentUpdate');
         }
@@ -82,8 +91,7 @@ const approveMedia = async (req, res) => {
 const rejectMedia = async (req, res) => {
     const { id } = req.params;
     try {
-        const pool = await poolPromise;
-        await pool.execute('UPDATE Media SET status = "rejected" WHERE id = ?', [id]);
+        await Media.findByIdAndUpdate(id, { status: 'rejected' });
         res.json({ message: 'Media rejected' });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -93,17 +101,16 @@ const rejectMedia = async (req, res) => {
 const resubmitMedia = async (req, res) => {
     const { id } = req.params;
     try {
-        const pool = await poolPromise;
-        // Find existing media
-        const [rows] = await pool.execute('SELECT * FROM Media WHERE id = ?', [id]);
-        if (rows.length === 0) return res.status(404).json({ message: 'Media not found' });
+        const m = await Media.findById(id);
+        if (!m) return res.status(404).json({ message: 'Media not found' });
         
-        const m = rows[0];
-        // Create new record with pending status
-        await pool.execute(
-            'INSERT INTO Media (fileName, filePath, fileType, uploaderId, status) VALUES (?, ?, ?, ?, ?)',
-            [m.fileName, m.filePath, m.fileType, m.uploaderId, 'pending']
-        );
+        await Media.create({
+            fileName: m.fileName,
+            filePath: m.filePath,
+            fileType: m.fileType,
+            uploaderId: m.uploaderId,
+            status: 'pending'
+        });
         
         res.json({ message: 'Media re-submitted for approval' });
     } catch (err) {

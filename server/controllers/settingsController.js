@@ -1,9 +1,8 @@
-const { poolPromise } = require('../config/db');
+const Setting = require('../models/Setting');
 
 const getSettings = async (req, res) => {
     try {
-        const pool = await poolPromise;
-        const [rows] = await pool.execute('SELECT * FROM Settings');
+        const rows = await Setting.find();
         const settings = {};
         rows.forEach(r => {
             settings[r.key] = r.value;
@@ -17,15 +16,11 @@ const getSettings = async (req, res) => {
 const updateSettings = async (req, res) => {
     const { key, value } = req.body;
     try {
-        const pool = await poolPromise;
-        const [check] = await pool.execute('SELECT COUNT(*) as count FROM Settings WHERE key = ?', [key]);
-        
-        if (check[0].count > 0) {
-            await pool.execute('UPDATE Settings SET value = ? WHERE key = ?', [value, key]);
-        } else {
-            await pool.execute('INSERT INTO Settings (key, value) VALUES (?, ?)', [key, value]);
-        }
-
+        await Setting.findOneAndUpdate(
+            { key },
+            { value },
+            { upsert: true, new: true }
+        );
         res.json({ message: 'Settings updated' });
     } catch (err) {
         res.status(500).json({ error: err.message });

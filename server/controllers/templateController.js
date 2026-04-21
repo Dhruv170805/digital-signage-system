@@ -1,10 +1,9 @@
-const { poolPromise } = require('../config/db');
+const Template = require('../models/Template');
 
 const getAllTemplates = async (req, res) => {
     try {
-        const pool = await poolPromise;
-        const [rows] = await pool.execute('SELECT * FROM Templates ORDER BY name ASC');
-        res.json(rows);
+        const templates = await Template.find().sort({ name: 1 });
+        res.json(templates);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -13,11 +12,10 @@ const getAllTemplates = async (req, res) => {
 const createTemplate = async (req, res) => {
     const { name, layout } = req.body;
     try {
-        const pool = await poolPromise;
-        await pool.execute(
-            'INSERT INTO Templates (name, layout) VALUES (?, ?)',
-            [name, JSON.stringify(layout)]
-        );
+        await Template.create({
+            name,
+            layout: JSON.stringify(layout)
+        });
         
         res.status(201).json({ message: 'Template created' });
     } catch (err) {
@@ -28,8 +26,7 @@ const createTemplate = async (req, res) => {
 const deleteTemplate = async (req, res) => {
     const { id } = req.params;
     try {
-        const pool = await poolPromise;
-        await pool.execute('DELETE FROM Templates WHERE id = ?', [id]);
+        await Template.findByIdAndDelete(id);
         res.json({ message: 'Template deleted' });
     } catch (err) {
         res.status(500).json({ error: err.message });

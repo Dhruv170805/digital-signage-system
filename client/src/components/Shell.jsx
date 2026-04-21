@@ -10,14 +10,14 @@ const Shell = ({ children, role, activeTab, setActiveTab }) => {
   const userName = JSON.parse(localStorage.getItem('user'))?.name || 'User';
 
   const adminMenu = [
-    { id: 'dashboard', label: 'Command Core', icon: LayoutGrid },
-    { id: 'approve', label: 'Moderation', icon: CheckSquare },
-    { id: 'schedule', label: 'Mission Dispatch', icon: Calendar },
-    { id: 'templates', label: 'Architecture', icon: FileText },
-    { id: 'ticker', label: 'Broadcast', icon: Type },
-    { id: 'screens', label: 'Terminal Fleet', icon: Tv },
-    { id: 'users', label: 'Personnel', icon: Users },
-    { id: 'settings', label: 'Global Systems', icon: MonitorPlay },
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutGrid },
+    { id: 'approve', label: 'Application', icon: CheckSquare },
+    { id: 'schedule', label: 'Broadcast', icon: Calendar },
+    { id: 'templates', label: 'Layout', icon: FileText },
+    { id: 'ticker', label: 'Ticker', icon: Type },
+    { id: 'screens', label: 'Screens', icon: Tv },
+    { id: 'users', label: 'Users', icon: Users },
+    { id: 'settings', label: 'Idle', icon: MonitorPlay },
   ];
 
   const userMenu = [
@@ -42,10 +42,10 @@ const Shell = ({ children, role, activeTab, setActiveTab }) => {
             <div className="w-8 h-8 bg-[var(--accent)] rounded-lg flex items-center justify-center">
               <Activity className="text-[var(--bg)] w-5 h-5" />
             </div>
-            <span className="mono text-[var(--accent)] tracking-[3px] text-xs font-bold">NEXUS OS</span>
+            <span className="mono text-[var(--accent)] tracking-[1px] text-xs font-bold uppercase">Digital Screen</span>
           </div>
-          <p className="text-[var(--text-dim)] text-xs font-medium uppercase tracking-widest pl-11">
-            {role === 'admin' ? 'HQ Control' : 'Operator'}
+          <p className="text-[var(--text-dim)] text-[10px] font-medium uppercase tracking-widest pl-11">
+            {role === 'admin' ? '' : 'Operator'}
           </p>
         </div>
 

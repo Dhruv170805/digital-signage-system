@@ -1,4 +1,4 @@
-const { poolPromise } = require('../config/db');
+const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
@@ -6,10 +6,8 @@ require('dotenv').config();
 const login = async (req, res) => {
     const { email, password } = req.body;
     try {
-        const pool = await poolPromise;
-        const [rows] = await pool.execute('SELECT * FROM Users WHERE email = ?', [email]);
+        const user = await User.findOne({ email });
 
-        const user = rows[0];
         if (!user) {
             return res.status(401).json({ message: 'Invalid credentials' });
         }
@@ -40,9 +38,8 @@ const login = async (req, res) => {
 
 const getAllUsers = async (req, res) => {
     try {
-        const pool = await poolPromise;
-        const [rows] = await pool.execute('SELECT id, name, email, role, status, createdAt FROM Users ORDER BY createdAt DESC');
-        res.json(rows);
+        const users = await User.find().sort({ createdAt: -1 });
+        res.json(users);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -52,8 +49,7 @@ const toggleUserStatus = async (req, res) => {
     const { id } = req.params;
     const { status } = req.body; // 'active' or 'inactive'
     try {
-        const pool = await poolPromise;
-        await pool.execute('UPDATE Users SET status = ? WHERE id = ?', [status, id]);
+        await User.findByIdAndUpdate(id, { status });
         res.json({ message: `User status updated to ${status}` });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -63,17 +59,19 @@ const toggleUserStatus = async (req, res) => {
 const createUser = async (req, res) => {
     const { name, email, password, role } = req.body;
     try {
-        const pool = await poolPromise;
         const hashedPassword = await bcrypt.hash(password, 10);
         
-        await pool.execute(
-            'INSERT INTO Users (name, email, password, role, status) VALUES (?, ?, ?, ?, ?)',
-            [name, email, hashedPassword, role || 'user', 'active']
-        );
+        await User.create({
+            name,
+            email,
+            password: hashedPassword,
+            role: role || 'user',
+            status: 'active'
+        });
         
         res.status(201).json({ message: 'User provisioned successfully' });
     } catch (err) {
-        if (err.code === 'ER_DUP_ENTRY') {
+        if (err.code === 11000) {
             return res.status(400).json({ message: 'Email already exists' });
         }
         res.status(500).json({ error: err.message });

@@ -4,8 +4,12 @@ const path = require('path');
 const http = require('http');
 const { Server } = require('socket.io');
 require('dotenv').config();
+const connectDB = require('./config/db');
 
 const app = express();
+// Connect to Database
+connectDB();
+
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
@@ -17,6 +21,13 @@ const io = new Server(server, {
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// System Logs Middleware
+app.use((req, res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
+    next();
+});
+
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Socket.IO

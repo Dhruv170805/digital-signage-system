@@ -1,28 +1,42 @@
-const { poolPromise } = require('../config/db');
+const Schedule = require('../models/Schedule');
+const Media = require('../models/Media');
+const Template = require('../models/Template');
+const Screen = require('../models/Screen');
 
 const getActiveSchedule = async (req, res) => {
     const { screenId } = req.query;
     try {
-        const pool = await poolPromise;
-        let query = `
-            SELECT S.*, M.fileName, M.filePath, M.fileType, T.layout
-            FROM Schedules S
-            LEFT JOIN Media M ON S.mediaId = M.id
-            LEFT JOIN Templates T ON S.templateId = T.id
-            WHERE datetime('now', 'localtime') BETWEEN S.startTime AND S.endTime
-            AND S.isActive = 1
-        `;
-        const params = [];
-        
+        const now = new Date();
+        const query = {
+            startTime: { $lte: now },
+            endTime: { $gte: now },
+            isActive: 1
+        };
+
         if (screenId) {
-            query += " AND (S.screenId = ? OR S.screenId IS NULL)";
-            params.push(screenId);
+            query.$or = [{ screenId }, { screenId: null }];
         }
 
-        query += " ORDER BY S.startTime ASC";
-        
-        const [rows] = await pool.execute(query, params);
-        res.json(rows);
+        const schedules = await Schedule.find(query)
+            .populate('mediaId')
+            .populate('templateId')
+            .sort({ startTime: 1 });
+            
+        // Transform for frontend expected format (layout, filePath, etc)
+        const transformed = schedules.map(s => {
+            const data = s.toJSON();
+            const media = s.mediaId ? s.mediaId.toJSON() : {};
+            const template = s.templateId ? s.templateId.toJSON() : {};
+            return {
+                ...data,
+                fileName: media.fileName,
+                filePath: media.filePath,
+                fileType: media.fileType,
+                layout: template.layout
+            };
+        });
+
+        res.json(transformed);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -30,16 +44,24 @@ const getActiveSchedule = async (req, res) => {
 
 const getAllSchedules = async (req, res) => {
     try {
-        const pool = await poolPromise;
-        const [rows] = await pool.execute(`
-            SELECT S.*, M.fileName, M.fileType, T.name as templateName, Sc.name as screenName
-            FROM Schedules S
-            JOIN Media M ON S.mediaId = M.id
-            LEFT JOIN Templates T ON S.templateId = T.id
-            LEFT JOIN Screens Sc ON S.screenId = Sc.id
-            ORDER BY S.startTime DESC
-        `);
-        res.json(rows);
+        const schedules = await Schedule.find()
+            .populate('mediaId')
+            .populate('templateId')
+            .populate('screenId')
+            .sort({ startTime: -1 });
+
+        const transformed = schedules.map(s => {
+            const data = s.toJSON();
+            return {
+                ...data,
+                fileName: s.mediaId ? s.mediaId.fileName : 'N/A',
+                fileType: s.mediaId ? s.mediaId.fileType : 'N/A',
+                templateName: s.templateId ? s.templateId.name : 'Fullscreen',
+                screenName: s.screenId ? s.screenId.name : 'Global Feed'
+            };
+        });
+
+        res.json(transformed);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -48,16 +70,17 @@ const getAllSchedules = async (req, res) => {
 const createSchedule = async (req, res) => {
     const { mediaId, templateId, startTime, endTime, duration, screenId, mediaMapping } = req.body;
     try {
-        const pool = await poolPromise;
-        const start = startTime ? startTime.replace('T', ' ') : '';
-        const end = endTime ? endTime.replace('T', ' ') : '';
+        await Schedule.create({
+            mediaId: mediaId || null,
+            templateId: templateId || null,
+            screenId: screenId || null,
+            startTime,
+            endTime,
+            duration: duration || 10,
+            mediaMapping: JSON.stringify(mediaMapping || {}),
+            isActive: 1
+        });
         
-        await pool.execute(
-            'INSERT INTO Schedules (mediaId, templateId, startTime, endTime, duration, screenId, mediaMapping) VALUES (?, ?, ?, ?, ?, ?, ?)',
-            [mediaId || null, templateId || null, start, end, duration, screenId || null, JSON.stringify(mediaMapping || {})]
-        );
-        
-        // Notify all clients to refresh content
         const io = req.app.get('socketio');
         if (io) io.emit('contentUpdate');
 
@@ -70,10 +93,8 @@ const createSchedule = async (req, res) => {
 const deleteSchedule = async (req, res) => {
     const { id } = req.params;
     try {
-        const pool = await poolPromise;
-        await pool.execute('DELETE FROM Schedules WHERE id = ?', [id]);
+        await Schedule.findByIdAndDelete(id);
         
-        // Notify all clients to refresh content
         const io = req.app.get('socketio');
         if (io) io.emit('contentUpdate');
 

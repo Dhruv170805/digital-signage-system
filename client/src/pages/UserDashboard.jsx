@@ -164,7 +164,7 @@ const UserDashboard = () => {
                   <div className="px-4 py-3 bg-sky-500/10 border border-sky-500/20 rounded-xl flex items-start gap-3">
                     <Info size={16} className="text-sky-400 shrink-0 mt-0.5" />
                     <p className="text-[10px] font-bold text-sky-400/80 uppercase leading-relaxed">
-                      Submission will be automatically scheduled upon clearance by HQ Control.
+                      Submission will be automatically scheduled upon clearance by Digital Screen.
                     </p>
                   </div>
 
@@ -306,7 +306,7 @@ const UserDashboard = () => {
              </div>
              <span className="text-[10px] tracking-[6px] font-black uppercase opacity-60">Operations Terminal // {user.role === 'admin' ? 'Root' : 'Operator'}</span>
           </div>
-          <h1 className="text-7xl font-black tracking-tighter text-white leading-none">NEXUS STATION</h1>
+          <h1 className="text-7xl font-black tracking-tighter text-white leading-none">Digital Station</h1>
           <p className="text-lg text-slate-400 mt-6 max-w-lg leading-relaxed font-medium">Transmit safety protocols and high-priority factory assets directly to the central broadcast core.</p>
         </header>
         {renderView()}

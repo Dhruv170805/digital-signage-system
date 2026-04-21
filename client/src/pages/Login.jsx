@@ -43,12 +43,9 @@ const Login = () => {
         <div className="text-center mb-12">
           <div className="inline-flex items-center gap-3 mb-6 px-5 py-2 bg-white/5 border border-white/10 rounded-full backdrop-blur-md shadow-2xl">
             <Activity className="w-4 h-4 text-sky-400" />
-            <span className="text-[10px] uppercase tracking-[4px] font-black text-white/80">Nexus Intelligence OS</span>
+            <span className="text-[10px] uppercase tracking-[4px] font-black text-white/80">Digital Screen Intelligence</span>
           </div>
           <h1 className="text-5xl font-black text-white tracking-tighter mb-3">Welcome</h1>
-          <p className="text-slate-400 font-medium text-sm tracking-wide">
-            Authenticate to access terminal control systems
-          </p>
         </div>
 
         <div className="glass p-10 shadow-[0_32px_120px_-20px_rgba(0,0,0,0.8)] border-white/10 relative group">
@@ -57,7 +54,7 @@ const Login = () => {
           
           <form onSubmit={handleLogin} className="space-y-6 relative z-10">
             <div className="space-y-2">
-              <label className="text-[10px] uppercase tracking-[2px] text-slate-500 font-black ml-1">Identity Provider</label>
+              <label className="text-[10px] uppercase tracking-[2px] text-slate-500 font-black ml-1">User ID</label>
               <div className="relative group/input">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within/input:text-sky-400 transition-colors" />
                 <input 
@@ -72,7 +69,7 @@ const Login = () => {
             </div>
 
             <div className="space-y-2">
-              <label className="text-[10px] uppercase tracking-[2px] text-slate-500 font-black ml-1">Encryption Key</label>
+              <label className="text-[10px] uppercase tracking-[2px] text-slate-500 font-black ml-1">Password</label>
               <div className="relative group/input">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within/input:text-sky-400 transition-colors" />
                 <input 
@@ -105,19 +102,6 @@ const Login = () => {
               {!loading && <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />}
             </button>
           </form>
-
-          <div className="mt-10 pt-8 border-t border-white/5 text-center">
-            <div className="flex items-center justify-center gap-2 text-emerald-400 font-black text-[9px] uppercase tracking-widest">
-               <ShieldCheck size={12} />
-               Secure Environment Protocol v4.0.2
-            </div>
-          </div>
-        </div>
-
-        <div className="text-center mt-12 animate-fade-in opacity-40">
-          <p className="text-slate-500 text-[10px] font-black uppercase tracking-[4px]">
-             Authorized Access Only // Factory Operations Command
-          </p>
         </div>
       </div>
     </div>

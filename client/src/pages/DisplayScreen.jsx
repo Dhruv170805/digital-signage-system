@@ -98,7 +98,7 @@ const DisplayScreen = () => {
         <div className="w-full h-full grid grid-cols-12 grid-rows-12 gap-6 p-6">
           {layout.map((zone) => {
             const mappedMediaId = mapping[zone.i];
-            const mappedMedia = allMedia.find(m => m.id === parseInt(mappedMediaId));
+            const mappedMedia = allMedia.find(m => m.id === mappedMediaId);
             
             return (
               <div key={zone.i} className="relative glass overflow-hidden shadow-2xl"
@@ -121,7 +121,7 @@ const DisplayScreen = () => {
     );
   };
 
-  const idleWallpaper = allMedia.find(m => m.id === parseInt(settings.idleWallpaperId));
+  const idleWallpaper = allMedia.find(m => m.id === settings.idleWallpaperId);
 
   return (
     <div className="h-screen w-screen bg-[var(--bg)] overflow-hidden flex flex-col text-[var(--text)] select-none font-sans">
@@ -172,7 +172,7 @@ const DisplayScreen = () => {
                    <div className="absolute bottom-12 left-12">
                      <div className="flex items-center gap-4 mb-4">
                         <Monitor className="text-sky-400" size={32} />
-                        <h2 className="text-5xl font-black tracking-tighter uppercase">Nexus Idle Protocol</h2>
+                        <h2 className="text-5xl font-black tracking-tighter uppercase">Idle Screen</h2>
                      </div>
                      <p className="text-lg font-medium text-slate-300 max-w-2xl">Standing by for next mission broadcast. The station remains at high readiness.</p>
                    </div>
@@ -216,7 +216,7 @@ const DisplayScreen = () => {
               <div className="flex items-center gap-24">
                 <div className="flex items-center gap-12">
                   <span className={`text-white font-bold tracking-tight ${ticker.fontSize} ${ticker.fontStyle === 'bold' ? 'font-black' : ''} ${ticker.fontStyle === 'italic' ? 'italic' : ''}`}>
-                    {ticker.text || 'NEXUS SYSTEM BROADCAST ACTIVE // READY FOR DATA TRANSMISSION...'}
+                    {ticker.text || 'DIGITAL SCREEN BROADCAST ACTIVE // READY FOR DATA TRANSMISSION...'}
                   </span>
                   {ticker.type === 'link' && ticker.linkUrl && (
                     <div className="px-4 py-1.5 bg-white/10 rounded-lg border border-white/10">

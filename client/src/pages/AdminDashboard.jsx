@@ -187,10 +187,10 @@ const AdminDashboard = () => {
           <div className="space-y-12 animate-fade-in">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               {[
-                { label: 'Total Assets', value: stats.media, icon: FileText, color: 'text-sky-400' },
+                { label: 'total file', value: stats.media, icon: FileText, color: 'text-sky-400' },
                 { label: 'Pending', value: stats.pending, icon: Clock, color: 'text-amber-400' },
                 { label: 'Users', value: stats.users, icon: UsersIcon, color: 'text-indigo-400' },
-                { label: 'Terminals', value: stats.screens, icon: Tv, color: 'text-emerald-400' },
+                { label: 'Screens', value: stats.screens, icon: Tv, color: 'text-emerald-400' },
               ].map((s, i) => (
                 <Card key={i} className="flex justify-between items-center glass-hover">
                   <div>
@@ -227,7 +227,7 @@ const AdminDashboard = () => {
                         <CheckCircle className="w-8 h-8 text-emerald-500" />
                       </div>
                       <div>
-                        <p className="font-bold text-lg leading-tight text-emerald-200">Status: Nominal</p>
+                        <p className="font-bold text-lg leading-tight text-emerald-200">Status: Normal</p>
                         <p className="text-sm font-medium text-emerald-500/80 uppercase">All systems executing as expected</p>
                       </div>
                     </div>
@@ -259,7 +259,7 @@ const AdminDashboard = () => {
       case 'approve':
         return (
           <Card className="animate-fade-in">
-             <h3 className="text-sm font-bold uppercase tracking-wider mb-6">Moderation Console</h3>
+             <h3 className="text-sm font-bold uppercase tracking-wider mb-6">Application Console</h3>
              {pendingMedia.length === 0 ? <div className="text-center py-20 opacity-40"><Info className="w-12 h-12 mx-auto mb-4" /><p>No pending requests.</p></div> : (
                <div className="overflow-x-auto">
                  <table className="w-full text-left">
@@ -307,7 +307,7 @@ const AdminDashboard = () => {
         return (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-fade-in">
              <Card>
-                <h3 className="text-sm font-bold uppercase tracking-wider mb-8">Provision Terminal</h3>
+                <h3 className="text-sm font-bold uppercase tracking-wider mb-8">Provision Screen</h3>
                 <form onSubmit={registerScreen} className="space-y-6">
                    <div className="space-y-2">
                      <label className="text-[10px] font-bold uppercase ml-1 opacity-50">Identity</label>
@@ -341,7 +341,7 @@ const AdminDashboard = () => {
         );
 
       case 'schedule': {
-        const selectedTemplate = templates.find(t => t.id === parseInt(newSchedule.templateId));
+        const selectedTemplate = templates.find(t => t.id === newSchedule.templateId);
         const zones = selectedTemplate ? safeParse(selectedTemplate.layout) : [];
 
         return (
@@ -349,7 +349,7 @@ const AdminDashboard = () => {
              <Card>
                 <div className="flex items-center gap-2 mb-8 pb-4 border-b border-[var(--border)]">
                    <Calendar className="w-4 h-4 text-sky-400" />
-                   <h3 className="text-xs font-bold uppercase tracking-wider">Dispatch System</h3>
+                   <h3 className="text-xs font-bold uppercase tracking-wider">Broadcast System</h3>
                 </div>
                 <form onSubmit={createSchedule} className="space-y-6">
                    <div className="space-y-2">
@@ -410,7 +410,7 @@ const AdminDashboard = () => {
              <Card className="lg:col-span-2">
                 <div className="flex items-center gap-2 mb-8 pb-4 border-b border-[var(--border)]">
                    <Clock className="w-4 h-4 text-sky-400" />
-                   <h3 className="text-xs font-bold uppercase tracking-wider">Mission Log</h3>
+                   <h3 className="text-xs font-bold uppercase tracking-wider">Broadcast log</h3>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left">
@@ -469,7 +469,7 @@ const AdminDashboard = () => {
         return (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-fade-in">
             <Card className="lg:col-span-2">
-               <h3 className="text-sm font-bold uppercase tracking-wider mb-8">Broadcast Control Center</h3>
+               <h3 className="text-sm font-bold uppercase tracking-wider mb-8">Ticker Control</h3>
                <div className="space-y-8">
                   <div className="flex gap-2 p-1 bg-black/20 rounded-xl border border-[var(--border)]">
                      {['text', 'link'].map(t => (
@@ -714,7 +714,7 @@ const AdminDashboard = () => {
                     <input type="email" required className="nexus-input" placeholder="Email Address" value={newUser.email} onChange={(e) => setNewUser(p => ({ ...p, email: e.target.value }))}/>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black uppercase opacity-40 ml-1">Encryption Key (Password)</label>
+                    <label className="text-[10px] font-black uppercase opacity-40 ml-1">Password</label>
                     <input type="password" required className="nexus-input" placeholder="Password" value={newUser.password} onChange={(e) => setNewUser(p => ({ ...p, password: e.target.value }))}/>
                   </div>
                   <div className="space-y-1">
@@ -731,7 +731,7 @@ const AdminDashboard = () => {
               <Card>
                 <div className="flex justify-between items-center mb-10">
                    <div>
-                     <h3 className="text-xl font-bold">Personnel Manifest</h3>
+                     <h3 className="text-xl font-bold">User</h3>
                      <p className="text-xs text-[var(--text-dim)] uppercase tracking-wider font-semibold mt-1">Total Authorized: {users.length}</p>
                    </div>
                    <button onClick={() => setShowUserForm(true)} className="nexus-btn-primary text-xs py-2 px-6 shadow-xl">+ NEW PERSONNEL</button>
@@ -774,7 +774,7 @@ const AdminDashboard = () => {
             <Card>
               <h3 className="text-lg font-bold mb-8 flex items-center gap-3">
                 <Monitor className="text-sky-400" />
-                Idle Screen Protocol
+                Idle Screen
               </h3>
               <div className="space-y-6">
                 <div className="p-6 bg-white/5 border border-white/10 rounded-2xl">
@@ -827,16 +827,8 @@ const AdminDashboard = () => {
               <div className="p-2 bg-sky-500/20 rounded-lg">
                 <Monitor className="w-5 h-5 text-sky-400" />
               </div>
-              <span className="text-[10px] tracking-[6px] font-black uppercase opacity-60">STATION_HQ_CENTRAL_CORE</span>
             </div>
-            <h1 className="text-8xl font-black tracking-tighter leading-none text-white">COMMAND</h1>
-          </div>
-          <div className="text-right flex flex-col items-end">
-             <div className="flex items-center gap-2 text-emerald-400 font-black text-[10px] mb-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
-                <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                SYSTEM_OPTIMAL_STABLE
-             </div>
-             <p className="text-[10px] font-black uppercase opacity-20 tracking-tighter">OS_BUILD_NEXUS_v4.0.2_PLATINUM</p>
+            <h1 className="text-8xl font-black tracking-tighter leading-none text-white">DASHBOARD</h1>
           </div>
         </header>
         {renderView()}
