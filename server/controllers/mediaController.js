@@ -34,7 +34,7 @@ const uploadMedia = async (req, res) => {
         const pool = await poolPromise;
         await pool.execute(
             'INSERT INTO Media (fileName, filePath, fileType, uploaderId, status) VALUES (?, ?, ?, ?, ?)',
-            [filename, filePath, fileType, uploaderId || null, uploaderId === '1' ? 'approved' : 'pending']
+            [filename, filePath, fileType, uploaderId || null, Number(uploaderId) === 1 ? 'approved' : 'pending']
         );
 
         res.status(201).json({ message: 'File uploaded successfully', fileName: filename });

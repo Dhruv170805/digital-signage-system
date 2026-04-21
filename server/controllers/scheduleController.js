@@ -7,7 +7,7 @@ const getActiveSchedule = async (req, res) => {
         let query = `
             SELECT S.*, M.fileName, M.filePath, M.fileType, T.layout
             FROM Schedules S
-            JOIN Media M ON S.mediaId = M.id
+            LEFT JOIN Media M ON S.mediaId = M.id
             LEFT JOIN Templates T ON S.templateId = T.id
             WHERE NOW() BETWEEN S.startTime AND S.endTime
             AND S.isActive = 1
@@ -46,12 +46,12 @@ const getAllSchedules = async (req, res) => {
 };
 
 const createSchedule = async (req, res) => {
-    const { mediaId, templateId, startTime, endTime, duration, screenId } = req.body;
+    const { mediaId, templateId, startTime, endTime, duration, screenId, mediaMapping } = req.body;
     try {
         const pool = await poolPromise;
         await pool.execute(
-            'INSERT INTO Schedules (mediaId, templateId, startTime, endTime, duration, screenId) VALUES (?, ?, ?, ?, ?, ?)',
-            [mediaId, templateId || null, startTime, endTime, duration, screenId || null]
+            'INSERT INTO Schedules (mediaId, templateId, startTime, endTime, duration, screenId, mediaMapping) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [mediaId || null, templateId || null, startTime, endTime, duration, screenId || null, JSON.stringify(mediaMapping || {})]
         );
         
         // Notify all clients to refresh content

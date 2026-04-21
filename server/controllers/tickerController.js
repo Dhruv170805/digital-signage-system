@@ -11,21 +11,24 @@ const getTicker = async (req, res) => {
 };
 
 const updateTicker = async (req, res) => {
-    const { text, speed, type, linkUrl } = req.body;
+    const { text, speed, type, linkUrl, isActive } = req.body;
     try {
         const pool = await poolPromise;
         // Simple logic: if exists update, else insert
         const [check] = await pool.execute('SELECT COUNT(*) as count FROM Tickers');
         
-        if (check[0].count > 0) {
+        const hasRows = check && check.length > 0 && check[0].count > 0;
+        const activeStatus = isActive !== undefined ? isActive : 1;
+
+        if (hasRows) {
             await pool.execute(
-                'UPDATE Tickers SET text = ?, speed = ?, type = ?, linkUrl = ?',
-                [text, speed, type || 'text', linkUrl || null]
+                'UPDATE Tickers SET text = ?, speed = ?, type = ?, linkUrl = ?, isActive = ?',
+                [text, speed, type || 'text', linkUrl || null, activeStatus]
             );
         } else {
             await pool.execute(
-                'INSERT INTO Tickers (text, speed, type, linkUrl) VALUES (?, ?, ?, ?)',
-                [text, speed, type || 'text', linkUrl || null]
+                'INSERT INTO Tickers (text, speed, type, linkUrl, isActive) VALUES (?, ?, ?, ?, ?)',
+                [text, speed, type || 'text', linkUrl || null, activeStatus]
             );
         }
 

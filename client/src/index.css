@@ -1,5 +1,5 @@
-@import "tailwindcss";
 @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap');
+@import "tailwindcss";
 
 /* React Grid Layout Styles */
 .react-grid-layout {
@@ -43,74 +43,201 @@
   user-select: none;
 }
 
+.react-grid-item:hover {
+  border-color: var(--accent-alt) !important;
+  box-shadow: inset 0 0 0 1px var(--accent-alt);
+}
+
 .react-grid-item>.react-resizable-handle {
   position: absolute;
-  width: 20px;
-  height: 20px;
-  bottom: 0;
-  right: 0;
-  cursor: se-resize;
+  width: 24px;
+  height: 24px;
+  z-index: 10;
+  cursor: pointer;
 }
 
 .react-grid-item>.react-resizable-handle::after {
   content: "";
   position: absolute;
-  right: 3px;
-  bottom: 3px;
-  width: 5px;
-  height: 5px;
-  border-right: 2px solid var(--accent);
-  border-bottom: 2px solid var(--accent);
+  width: 8px;
+  height: 8px;
+  border: 2px solid var(--accent);
+  opacity: 0.3;
+  transition: all 0.2s;
+}
+
+.react-grid-item:hover>.react-resizable-handle::after {
+  opacity: 1;
+  border-color: var(--accent-alt);
+}
+
+.react-grid-item>.react-resizable-handle-se {
+  bottom: 0;
+  right: 0;
+  cursor: se-resize;
+}
+
+.react-grid-item>.react-resizable-handle-se::after {
+  right: 4px;
+  bottom: 4px;
+  border-top: none;
+  border-left: none;
+}
+
+.react-grid-item>.react-resizable-handle-sw {
+  bottom: 0;
+  left: 0;
+  cursor: sw-resize;
+}
+
+.react-grid-item>.react-resizable-handle-sw::after {
+  left: 4px;
+  bottom: 4px;
+  border-top: none;
+  border-right: none;
+}
+
+.react-grid-item>.react-resizable-handle-nw {
+  top: 0;
+  left: 0;
+  cursor: nw-resize;
+}
+
+.react-grid-item>.react-resizable-handle-nw::after {
+  left: 4px;
+  top: 4px;
+  border-bottom: none;
+  border-right: none;
+}
+
+.react-grid-item>.react-resizable-handle-ne {
+  top: 0;
+  right: 0;
+  cursor: ne-resize;
+}
+
+.react-grid-item>.react-resizable-handle-ne::after {
+  right: 4px;
+  top: 4px;
+  border-bottom: none;
+  border-left: none;
+}
+
+.react-grid-item>.react-resizable-handle-e,
+.react-grid-item>.react-resizable-handle-w {
+  top: 50%;
+  margin-top: -12px;
+}
+
+.react-grid-item>.react-resizable-handle-e {
+  right: 0;
+  cursor: e-resize;
+}
+
+.react-grid-item>.react-resizable-handle-e::after {
+  right: 4px;
+  top: 8px;
+  border-top: none;
+  border-bottom: none;
+  border-left: none;
+  height: 12px;
+}
+
+.react-grid-item>.react-resizable-handle-w {
+  left: 0;
+  cursor: w-resize;
+}
+
+.react-grid-item>.react-resizable-handle-w::after {
+  left: 4px;
+  top: 8px;
+  border-top: none;
+  border-bottom: none;
+  border-right: none;
+  height: 12px;
+}
+
+.react-grid-item>.react-resizable-handle-s,
+.react-grid-item>.react-resizable-handle-n {
+  left: 50%;
+  margin-left: -12px;
+}
+
+.react-grid-item>.react-resizable-handle-s {
+  bottom: 0;
+  cursor: s-resize;
+}
+
+.react-grid-item>.react-resizable-handle-s::after {
+  bottom: 4px;
+  left: 8px;
+  border-top: none;
+  border-left: none;
+  border-right: none;
+  width: 12px;
+}
+
+.react-grid-item>.react-resizable-handle-n {
+  top: 0;
+  cursor: n-resize;
+}
+
+.react-grid-item>.react-resizable-handle-n::after {
+  top: 4px;
+  left: 8px;
+  border-bottom: none;
+  border-left: none;
+  border-right: none;
+  width: 12px;
 }
 
 :root {
-  --bg: #0a0a0f;
-  --surface: #111118;
-  --card: #16161f;
-  --border: #1e1e2e;
-  --accent: #e8ff47;
-  --accent-dim: #c8e000;
-  --red: #ff4757;
-  --green: #2ed573;
-  --blue: #3a86ff;
-  --orange: #ff6b35;
-  --muted: #4a4a6a;
-  --text: #e8e8f0;
-  --text-dim: #8888aa;
-  --text-faint: #44445a;
+  --bg: #ffffff;
+  --surface: #f8f9fa;
+  --card: #ffffff;
+  --border: #1a1a1a;
+  --accent: #1a1a1a;
+  --accent-alt: #ffd700; /* Safety Yellow */
+  --red: #eb0000;
+  --green: #008a00;
+  --blue: #0052cc;
+  --orange: #ff8800;
+  --muted: #e0e0e0;
+  --text: #1a1a1a;
+  --text-dim: #666666;
+  --text-faint: #999999;
 }
 
 @layer base {
   body {
-    @apply bg-[var(--bg)] text-[var(--text)] antialiased selection:bg-[var(--accent)] selection:text-[var(--bg)];
+    @apply bg-[var(--bg)] text-[var(--text)] antialiased selection:bg-[var(--accent-alt)] selection:text-[var(--bg)];
     font-family: 'DM Sans', sans-serif;
+    letter-spacing: -0.01em;
   }
 
-  h1,
-  h2,
-  h3,
-  h4,
-  .mono {
+  h1, h2, h3, h4, .mono {
     font-family: 'Space Mono', monospace;
+    font-weight: 700;
+    text-transform: uppercase;
   }
 }
 
 @layer components {
   .glass {
-    @apply bg-[var(--card)] border border-[var(--border)] backdrop-blur-md rounded-xl shadow-2xl;
+    @apply bg-[var(--card)] border-2 border-[var(--border)] rounded-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)];
   }
 
   .nexus-input {
-    @apply w-full bg-[var(--surface)] border border-[var(--border)] rounded-lg px-4 py-3 text-[var(--text)] outline-none focus:border-[var(--accent)] transition-all;
+    @apply w-full bg-[var(--bg)] border-2 border-[var(--border)] rounded-none px-4 py-3 text-[var(--text)] outline-none focus:bg-[var(--accent-alt)] transition-all font-mono text-sm;
   }
 
   .nexus-btn-primary {
-    @apply bg-[var(--accent)] text-[var(--bg)] font-bold py-3 px-6 rounded-lg hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply bg-[var(--accent)] text-[var(--bg)] font-bold py-3 px-6 rounded-none hover:bg-[var(--accent-alt)] hover:text-[var(--accent)] active:translate-y-1 active:shadow-none transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] border-2 border-[var(--border)];
     font-family: 'Space Mono', monospace;
   }
 
   .nexus-btn-secondary {
-    @apply bg-transparent border border-[var(--border)] text-[var(--text-dim)] py-3 px-6 rounded-lg hover:border-[var(--accent)] hover:text-[var(--accent)] transition-all;
+    @apply bg-transparent border-2 border-[var(--border)] text-[var(--text)] py-3 px-6 rounded-none hover:bg-[var(--surface)] transition-all font-mono font-bold;
   }
 }
 
@@ -130,6 +257,19 @@
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--muted);
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 2px;
 }
 
 /* Animations */
@@ -184,8 +324,10 @@
 }
 
 .grid-bg {
-  background-image:
-    linear-gradient(var(--border) 1px, transparent 1px),
-    linear-gradient(90deg, var(--border) 1px, transparent 1px);
-  background-size: 48px 48px;
+  background-image: radial-gradient(rgba(0, 0, 0, 0.1) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.dark .grid-bg {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
 }
