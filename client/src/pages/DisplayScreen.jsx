@@ -6,30 +6,38 @@ import { Clock, ShieldCheck, Zap, Activity, Monitor, CloudSun, MapPin } from 'lu
 const Weather = ({ location }) => {
   const [temp, setTemp] = useState('--');
   const [area, setArea] = useState(location || 'Detecting...');
+  const apiKey = import.meta.env.VITE_OPENWEATHER_API_KEY;
 
   useEffect(() => {
     const fetchWeather = async () => {
       try {
-        let query = location || '';
+        let city = location || '';
         
-        if (!query) {
+        if (!city) {
           try {
             const geoRes = await axios.get('https://ipapi.co/json/');
             if (geoRes.data && geoRes.data.city) {
-              query = geoRes.data.city;
-              setArea(query);
+              city = geoRes.data.city;
+              setArea(city);
             }
           } catch (e) { console.error('Geo detection error:', e); }
         }
 
-        const res = await axios.get(`https://wttr.in/${encodeURIComponent(query)}?format=j1`);
-        const data = res.data.current_condition[0];
-        setTemp(data.temp_C);
-        
-        if (!location && !query) {
-          setArea(res.data.nearest_area[0].areaName[0].value);
-        } else if (location) {
-          setArea(location);
+        if (apiKey && city) {
+          // Use OpenWeatherMap
+          const owmRes = await axios.get(`https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&units=metric&appid=${apiKey}`);
+          setTemp(Math.round(owmRes.data.main.temp));
+          setArea(owmRes.data.name);
+        } else {
+          // Fallback to wttr.in
+          const res = await axios.get(`https://wttr.in/${encodeURIComponent(city)}?format=j1`);
+          const data = res.data.current_condition[0];
+          setTemp(data.temp_C);
+          if (!location && !city) {
+            setArea(res.data.nearest_area[0].areaName[0].value);
+          } else if (location) {
+            setArea(location);
+          }
         }
       } catch (err) { 
         console.error('Weather error:', err);
@@ -38,7 +46,7 @@ const Weather = ({ location }) => {
     fetchWeather();
     const interval = setInterval(fetchWeather, 600000);
     return () => clearInterval(interval);
-  }, [location]);
+  }, [location, apiKey]);
 
   return (
     <div className="flex items-center gap-4 px-5 py-1.5 bg-white/5 rounded-xl border border-white/10 backdrop-blur-md">
@@ -183,8 +191,20 @@ const DisplayScreen = () => {
 
   const idleWallpaper = allMedia.find(m => m.id === settings.idleWallpaperId);
 
+  const handleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch((err) => {
+        console.error(`Error attempting to enable fullscreen: ${err.message}`);
+      });
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      }
+    }
+  };
+
   return (
-    <div className="h-screen w-screen bg-[var(--bg)] overflow-hidden flex flex-col text-[var(--text)] select-none font-sans">
+    <div onDoubleClick={handleFullscreen} className="fixed inset-0 w-full h-full bg-[var(--bg)] overflow-hidden flex flex-col text-[var(--text)] select-none font-sans">
       {/* Header */}
       <div className="h-20 bg-black/20 backdrop-blur-3xl border-b border-white/5 flex items-center justify-between px-10 z-20">
         <div className="flex items-center gap-3">
