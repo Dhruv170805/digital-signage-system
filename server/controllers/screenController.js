@@ -5,7 +5,7 @@ const getAllScreens = async (req, res) => {
         const screens = await Screen.find().sort({ name: 1 });
         res.json(screens);
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: 'Failed to retrieve screen monitoring data.' });
     }
 };
 
@@ -18,9 +18,13 @@ const registerScreen = async (req, res) => {
             status: 'online',
             lastPing: new Date()
         });
+        
+        const io = req.app.get('socketio');
+        if (io) io.emit('screenUpdate');
+
         res.status(201).json({ id: screen.id, message: 'Screen registered' });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: 'Failed to register screen.' });
     }
 };
 
@@ -32,9 +36,13 @@ const updateScreenStatus = async (req, res) => {
             status, 
             lastPing: new Date() 
         });
+        
+        const io = req.app.get('socketio');
+        if (io) io.emit('screenUpdate');
+
         res.json({ message: 'Status updated' });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: 'Failed to update screen status.' });
     }
 };
 

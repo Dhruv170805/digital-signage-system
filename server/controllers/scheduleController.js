@@ -2,43 +2,19 @@ const Schedule = require('../models/Schedule');
 const Media = require('../models/Media');
 const Template = require('../models/Template');
 const Screen = require('../models/Screen');
+const PlaylistEngine = require('../services/playlistEngine');
+const AuditService = require('../services/auditService');
 
 const getActiveSchedule = async (req, res) => {
     const { screenId } = req.query;
+    if (!screenId) {
+        return res.status(400).json({ error: 'ScreenID is required for active broadcast retrieval.' });
+    }
     try {
-        const now = new Date();
-        const query = {
-            startTime: { $lte: now },
-            endTime: { $gte: now },
-            isActive: 1
-        };
-
-        if (screenId) {
-            query.$or = [{ screenId }, { screenId: null }];
-        }
-
-        const schedules = await Schedule.find(query)
-            .populate('mediaId')
-            .populate('templateId')
-            .sort({ startTime: 1 });
-            
-        // Transform for frontend expected format (layout, filePath, etc)
-        const transformed = schedules.map(s => {
-            const data = s.toJSON();
-            const media = s.mediaId ? s.mediaId.toJSON() : {};
-            const template = s.templateId ? s.templateId.toJSON() : {};
-            return {
-                ...data,
-                fileName: media.fileName,
-                filePath: media.filePath,
-                fileType: media.fileType,
-                layout: template.layout
-            };
-        });
-
-        res.json(transformed);
+        const playlist = await PlaylistEngine.getActivePlaylist(screenId);
+        res.json(playlist);
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: 'Failed to retrieve active broadcasts.' });
     }
 };
 
@@ -47,62 +23,129 @@ const getAllSchedules = async (req, res) => {
         const schedules = await Schedule.find()
             .populate('mediaId')
             .populate('templateId')
-            .populate('screenId')
-            .sort({ startTime: -1 });
+            .sort({ createdAt: -1 });
 
-        const transformed = schedules.map(s => {
-            const data = s.toJSON();
-            return {
-                ...data,
-                fileName: s.mediaId ? s.mediaId.fileName : 'N/A',
-                fileType: s.mediaId ? s.mediaId.fileType : 'N/A',
-                filePath: s.mediaId ? s.mediaId.filePath : null,
-                mediaMapping: s.mediaMapping,
-                templateName: s.templateId ? s.templateId.name : 'Fullscreen',
-                screenName: s.screenId ? s.screenId.name : 'Global Feed'
-            };
-        });
-
-        res.json(transformed);
+        res.json(schedules);
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: 'Failed to retrieve schedule history.' });
     }
 };
 
 const createSchedule = async (req, res) => {
-    const { mediaId, templateId, startTime, endTime, duration, screenId, mediaMapping } = req.body;
+    const { 
+        mediaId, 
+        templateId, 
+        targetType, 
+        targetIds, 
+        startDate, 
+        endDate, 
+        startTime, 
+        endTime, 
+        daysOfWeek, 
+        duration, 
+        priority,
+        mediaMapping 
+    } = req.body;
+    
+    const adminId = req.user.id;
+
     try {
-        await Schedule.create({
+        const newSchedule = await Schedule.create({
             mediaId: mediaId || null,
             templateId: templateId || null,
-            screenId: screenId || null,
-            startTime,
-            endTime,
+            targetType: targetType || 'all',
+            targetIds: targetIds || [],
+            startDate: startDate || new Date(),
+            endDate: endDate || new Date(new Date().setFullYear(new Date().getFullYear() + 1)), // 1 year default
+            startTime: startTime || "00:00",
+            endTime: endTime || "23:59",
+            daysOfWeek: daysOfWeek || [0, 1, 2, 3, 4, 5, 6],
             duration: duration || 10,
+            priority: priority || 10,
             mediaMapping: JSON.stringify(mediaMapping || {}),
-            isActive: 1
+            createdBy: adminId,
+            isActive: 1,
+            status: 'running'
         });
         
-        const io = req.app.get('socketio');
-        if (io) io.emit('contentUpdate');
+        // 📝 Log to Audit Trail
+        await AuditService.log({
+            actionType: 'SCHEDULE',
+            entityType: 'Schedule',
+            entityId: newSchedule._id,
+            userId: adminId,
+            newState: newSchedule.toJSON()
+        });
 
-        res.status(201).json({ message: 'Schedule created' });
+        const io = req.app.get('socketio');
+        if (io) io.emit('scheduleUpdated');
+
+        res.status(201).json({ message: 'Broadcast schedule established successfully.' });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        console.error(err);
+        res.status(500).json({ error: 'Failed to create broadcast schedule.' });
     }
 };
 
 const deleteSchedule = async (req, res) => {
     const { id } = req.params;
+    const adminId = req.user.id;
+
     try {
+        const schedule = await Schedule.findById(id);
+        if (!schedule) return res.status(404).json({ message: 'Schedule not found' });
+
+        const previousState = schedule.toJSON();
         await Schedule.findByIdAndDelete(id);
         
-        const io = req.app.get('socketio');
-        if (io) io.emit('contentUpdate');
+        // 📝 Log to Audit Trail
+        await AuditService.log({
+            actionType: 'TERMINATE',
+            entityType: 'Schedule',
+            entityId: id,
+            userId: adminId,
+            previousState
+        });
 
-        res.json({ message: 'Broadcast terminated' });
+        const io = req.app.get('socketio');
+        if (io) io.emit('scheduleUpdated');
+
+        res.json({ message: 'Broadcast terminated and removed from history.' });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: 'Failed to terminate broadcast.' });
+    }
+};
+
+const toggleScheduleStatus = async (req, res) => {
+    const { id } = req.params;
+    const { isActive } = req.body;
+    const adminId = req.user.id;
+
+    try {
+        const schedule = await Schedule.findById(id);
+        if (!schedule) return res.status(404).json({ message: 'Schedule not found' });
+
+        const previousState = schedule.toJSON();
+        schedule.isActive = isActive ? 1 : 0;
+        schedule.status = isActive ? 'running' : 'paused';
+        await schedule.save();
+
+        // 📝 Log to Audit Trail
+        await AuditService.log({
+            actionType: isActive ? 'RESUME' : 'PAUSE',
+            entityType: 'Schedule',
+            entityId: id,
+            userId: adminId,
+            previousState,
+            newState: schedule.toJSON()
+        });
+
+        const io = req.app.get('socketio');
+        if (io) io.emit('scheduleUpdated');
+
+        res.json({ message: `Broadcast ${isActive ? 'resumed' : 'paused'}` });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to toggle broadcast status.' });
     }
 };
 
@@ -110,5 +153,6 @@ module.exports = {
     getActiveSchedule,
     getAllSchedules,
     createSchedule,
-    deleteSchedule
+    deleteSchedule,
+    toggleScheduleStatus
 };

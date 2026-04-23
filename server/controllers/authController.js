@@ -47,7 +47,7 @@ const login = async (req, res) => {
             user: { id: user.id, email: user.email, role: user.role, name: user.name }
         });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: 'Authentication service unavailable.' });
     }
 };
 
@@ -56,18 +56,18 @@ const getAllUsers = async (req, res) => {
         const users = await User.find().sort({ createdAt: -1 });
         res.json(users);
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: 'Failed to retrieve user list.' });
     }
 };
 
 const toggleUserStatus = async (req, res) => {
     const { id } = req.params;
-    const { status } = req.body; // 'active' or 'inactive'
+    const { status } = req.body; 
     try {
         await User.findByIdAndUpdate(id, { status });
         res.json({ message: `User status updated to ${status}` });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: 'Failed to update user status.' });
     }
 };
 
@@ -77,7 +77,7 @@ const unlockUser = async (req, res) => {
         await User.findByIdAndUpdate(id, { isLocked: false, loginAttempts: 0 });
         res.json({ message: 'User account unlocked' });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: 'Failed to unlock account.' });
     }
 };
 
@@ -87,7 +87,7 @@ const lockUser = async (req, res) => {
         await User.findByIdAndUpdate(id, { isLocked: true });
         res.json({ message: 'User account locked' });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: 'Failed to lock account.' });
     }
 };
 
@@ -97,7 +97,7 @@ const deleteUser = async (req, res) => {
         await User.findByIdAndDelete(id);
         res.json({ message: 'User deleted successfully' });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: 'Failed to delete user.' });
     }
 };
 
@@ -111,7 +111,7 @@ const requestPasswordReset = async (req, res) => {
         await user.save();
         res.json({ message: 'Reset request sent to administrator' });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: 'Failed to process reset request.' });
     }
 };
 
@@ -128,7 +128,7 @@ const approveResetRequest = async (req, res) => {
         });
         res.json({ message: 'Password reset and account unlocked' });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: 'Failed to reset password.' });
     }
 };
 
@@ -150,7 +150,7 @@ const createUser = async (req, res) => {
         if (err.code === 11000) {
             return res.status(400).json({ message: 'Email already exists' });
         }
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: 'Failed to create user.' });
     }
 };
 

@@ -13,13 +13,16 @@ connectDB();
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
-        origin: "*",
-        methods: ["GET", "POST"]
+        origin: process.env.CLIENT_URL || "http://localhost:5173",
+        methods: ["GET", "POST", "PUT", "DELETE"]
     }
 });
 
 // Middleware
-app.use(cors());
+app.use(cors({
+    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    credentials: true
+}));
 app.use(express.json());
 
 // System Logs Middleware
@@ -32,10 +35,21 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Socket.IO
 io.on('connection', (socket) => {
-    console.log('A user connected:', socket.id);
+    console.log('💎 NEXUS: Device linked ->', socket.id);
     
+    // Heartbeat logic
+    socket.on('screenPing', async (data) => {
+        const Screen = require('./models/Screen');
+        if (data.screenId) {
+            await Screen.findByIdAndUpdate(data.screenId, { 
+                status: 'online', 
+                lastPing: new Date() 
+            });
+        }
+    });
+
     socket.on('disconnect', () => {
-        console.log('User disconnected:', socket.id);
+        console.log('💎 NEXUS: Device detached ->', socket.id);
     });
 });
 
@@ -50,6 +64,7 @@ app.use('/api/ticker', require('./routes/tickerRoutes'));
 app.use('/api/templates', require('./routes/templateRoutes'));
 app.use('/api/screens', require('./routes/screenRoutes'));
 app.use('/api/settings', require('./routes/settingsRoutes'));
+app.use('/api/audit', require('./routes/auditRoutes'));
 
 // Serve frontend
 if (process.env.NODE_ENV === 'production') {
@@ -63,6 +78,12 @@ if (process.env.NODE_ENV === 'production') {
 } else {
   app.get('/', (req, res) => res.send('Please set to production'));
 }
+
+// Global Error Handler
+app.use((err, req, res, next) => {
+    console.error('SERVER_ERROR:', err.stack);
+    res.status(500).json({ error: 'Internal system error. Personnel notified.' });
+});
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {

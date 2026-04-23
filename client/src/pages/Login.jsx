@@ -1,47 +1,49 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Monitor, Mail, Lock, ArrowRight, ShieldCheck, Activity } from 'lucide-react';
+import { Monitor, Mail, Lock, ArrowRight, ShieldCheck, Activity, XCircle } from 'lucide-react';
 import axios from 'axios';
+import toast from 'react-hot-toast';
 
 const Login = () => {
   const [email, setEmail] = useState('admin@corp.in');
   const [password, setPassword] = useState('admin123');
-  const [error, setError] = useState('');
   const [shaking, setShaking] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
-  const [resetMessage, setResetMessage] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleResetRequest = async (e) => {
     e.preventDefault();
+    setResetLoading(true);
     try {
       await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/request-reset`, { email: resetEmail });
-      setResetMessage('Reset request sent to administrator.');
-      setTimeout(() => {
-        setShowResetModal(false);
-        setResetMessage('');
-      }, 3000);
+      toast.success('Reset request sent to administrator.');
+      setShowResetModal(false);
+      setResetEmail('');
     } catch (err) {
-      setResetMessage(err.response?.data?.message || 'Failed to send request.');
+      toast.error(err.response?.data?.message || 'Failed to send request.');
+    } finally {
+      setResetLoading(false);
     }
   };
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
     
     try {
       const response = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/login`, { email, password });
       localStorage.setItem('token', response.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.user));
       
+      toast.success(`Access Granted: Welcome ${response.data.user.name}`);
+      
       const role = response.data.user.role;
       navigate(role === 'admin' ? '/admin' : '/user');
     } catch (err) {
-      setError(err.response?.data?.message || 'Authentication failed. Please check credentials.');
+      toast.error(err.response?.data?.message || 'Authentication failed. Access Denied.');
       setShaking(true);
       setTimeout(() => setShaking(false), 500);
     } finally {
@@ -51,7 +53,6 @@ const Login = () => {
 
   return (
     <div className="min-h-screen bg-[var(--bg)] flex items-center justify-center p-6 relative overflow-hidden font-sans">
-      {/* Dynamic Background */}
       <div className="absolute inset-0 grid-bg opacity-30" />
       <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-sky-500/10 rounded-full blur-[120px] animate-pulse" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-indigo-500/10 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '2s' }} />
@@ -66,7 +67,6 @@ const Login = () => {
         </div>
 
         <div className="glass p-10 shadow-[0_32px_120px_-20px_rgba(0,0,0,0.8)] border-white/10 relative group">
-          {/* Subtle Shine Effect */}
           <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/5 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none rounded-2xl" />
           
           <form onSubmit={handleLogin} className="space-y-6 relative z-10">
@@ -100,13 +100,6 @@ const Login = () => {
               </div>
             </div>
 
-            {error && (
-              <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl flex items-center gap-3">
-                 <ShieldCheck className="w-4 h-4 text-rose-400 shrink-0" />
-                 <p className="text-rose-400 text-[10px] font-black uppercase leading-tight tracking-wider">{error}</p>
-              </div>
-            )}
-
             <button 
               type="submit" 
               disabled={loading}
@@ -134,7 +127,7 @@ const Login = () => {
           <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-6">
             <div className="glass max-w-md w-full p-10 space-y-6 animate-fade-in relative">
               <div className="flex justify-between items-center">
-                <h3 className="text-xl font-bold">Password Reset</h3>
+                <h3 className="text-xl font-bold text-white">Password Reset</h3>
                 <button onClick={() => setShowResetModal(false)}><XCircle className="text-slate-500 hover:text-white" /></button>
               </div>
               <p className="text-xs text-slate-400 uppercase font-bold tracking-wider">Enter your email to request a manual password reset by the system administrator.</p>
@@ -148,8 +141,9 @@ const Login = () => {
                   placeholder="admin@corp.in"
                   required
                 />
-                {resetMessage && <p className="text-[10px] font-black text-sky-400 uppercase">{resetMessage}</p>}
-                <button type="submit" className="nexus-btn-primary w-full py-4 uppercase font-black tracking-widest text-xs">Send Request</button>
+                <button type="submit" disabled={resetLoading} className="nexus-btn-primary w-full py-4 uppercase font-black tracking-widest text-xs">
+                  {resetLoading ? 'Transmitting...' : 'Send Request'}
+                </button>
               </form>
             </div>
           </div>

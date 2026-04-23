@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
 import GridLayout from 'react-grid-layout';
+import toast from 'react-hot-toast';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 import Shell from '../components/Shell';
@@ -8,8 +9,10 @@ import {
   Users as UsersIcon, CheckCircle, XCircle, Clock, 
   Play, Plus, Trash2, Settings as SettingsIcon, ExternalLink, Activity, 
   FileText, Calendar, LayoutGrid, Type as TypeIcon,
-  Save, AlertCircle, Tv, Monitor, Palette, Info, Eye, CheckSquare, MonitorPlay, Lock, Timer, Send, RefreshCw
+  Save, AlertCircle, Tv, Monitor, Palette, Info, Eye, CheckSquare, MonitorPlay, Lock, Timer, Send, RefreshCw, File
 } from 'lucide-react';
+
+import AuditHistory from '../components/admin/AuditHistory';
 
 const Card = ({ children, className = "" }) => (
   <div className={`glass p-6 ${className}`}>{children}</div>
@@ -23,7 +26,7 @@ const Badge = ({ label, type }) => {
     reset: 'bg-amber-500/10 text-amber-400 border-amber-500/20'
   };
   return (
-    <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase border ${colors[type] || 'bg-white/5 text-white/40 border-white/10'}`}>
+    <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase border ${colors[type] || 'bg-white/5 text-[var(--text)]/40 border-white/10'}`}>
       {label}
     </span>
   );
@@ -38,11 +41,11 @@ const PreviewModal = ({ isOpen, onClose, file }) => {
       <div className="relative w-full h-full flex flex-col gap-6 animate-fade-in">
         <div className="flex justify-between items-center bg-white/5 p-4 rounded-2xl border border-white/10">
           <div>
-            <h3 className="text-xl font-black uppercase tracking-tighter">{file.fileName}</h3>
+            <h3 className="text-xl font-black uppercase tracking-tighter text-[var(--text)]">{file.fileName}</h3>
             <p className="text-[10px] font-bold text-sky-400 uppercase tracking-widest">{file.fileType} • {new Date(file.uploadedAt).toLocaleString()}</p>
           </div>
-          <button onClick={onClose} className="p-3 bg-white/10 rounded-xl hover:bg-rose-500 hover:text-white transition-all">
-            <XCircle size={24} />
+          <button onClick={onClose} className="p-3 bg-white/10 rounded-xl hover:bg-rose-500 hover:text-[var(--text)] transition-all">
+            <XCircle size={24} className="text-[var(--text)]"/>
           </button>
         </div>
         
@@ -50,7 +53,7 @@ const PreviewModal = ({ isOpen, onClose, file }) => {
           {file.fileType === 'video' ? (
             <video src={src} autoPlay controls className="w-full h-full object-contain" />
           ) : file.fileType === 'pdf' ? (
-            <iframe src={`${src}#toolbar=0`} className="w-full h-full border-none" title={file.fileName} />
+            <iframe src={`${src}#toolbar=0`} className="w-full h-full border-none bg-white" title={file.fileName} />
           ) : (
             <img src={src} alt="Preview" className="w-full h-full object-contain" />
           )}
@@ -62,23 +65,39 @@ const PreviewModal = ({ isOpen, onClose, file }) => {
 
 const ModerationModal = ({ isOpen, onClose, file, onConfirm }) => {
   const [action, setAction] = useState('approve');
-  const [startTime, setStartTime] = useState(file?.requestedStartTime ? new Date(file.requestedStartTime).toISOString().slice(0, 16) : '');
-  const [endTime, setEndTime] = useState(file?.requestedEndTime ? new Date(file.requestedEndTime).toISOString().slice(0, 16) : '');
+  const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
   const [reason, setReason] = useState('');
 
+  useEffect(() => {
+    if (file) {
+      setStartTime(file.requestedStartTime ? new Date(file.requestedStartTime).toISOString().slice(0, 16) : '');
+      setEndTime(file.requestedEndTime ? new Date(file.requestedEndTime).toISOString().slice(0, 16) : '');
+      setReason('');
+      setAction('approve');
+    }
+  }, [file, isOpen]);
+
   if (!isOpen || !file) return null;
+
+  const handleConfirm = () => {
+    if (action === 'reject' && !reason.trim()) {
+      return toast.error('Please provide a reason for rejection.');
+    }
+    onConfirm(file.id, action, action === 'approve' ? { startTime, endTime } : { reason });
+  };
 
   return (
     <div className="fixed inset-0 bg-black/90 backdrop-blur-xl z-[110] flex items-center justify-center p-6">
       <div className="glass max-w-lg w-full p-10 space-y-8 animate-fade-in border-white/10">
         <div className="flex justify-between items-center pb-6 border-b border-white/5">
-          <h3 className="text-2xl font-black uppercase tracking-tighter">Asset Moderation</h3>
-          <button onClick={onClose} className="text-slate-500 hover:text-white"><XCircle /></button>
+          <h3 className="text-2xl font-black uppercase tracking-tighter text-[var(--text)]">Asset Moderation</h3>
+          <button onClick={onClose} className="text-slate-500 hover:text-[var(--text)]"><XCircle /></button>
         </div>
 
         <div className="flex gap-2 p-1 bg-black/40 rounded-2xl border border-white/5">
-          <button onClick={() => setAction('approve')} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${action === 'approve' ? 'bg-emerald-500 text-white' : 'text-slate-500 hover:text-slate-300'}`}>Approve</button>
-          <button onClick={() => setAction('reject')} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${action === 'reject' ? 'bg-rose-500 text-white' : 'text-slate-500 hover:text-slate-300'}`}>Reject</button>
+          <button onClick={() => setAction('approve')} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${action === 'approve' ? 'bg-emerald-500 text-[var(--text)]' : 'text-slate-500 hover:text-slate-300'}`}>Approve</button>
+          <button onClick={() => setAction('reject')} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${action === 'reject' ? 'bg-rose-500 text-[var(--text)]' : 'text-slate-500 hover:text-slate-300'}`}>Reject</button>
         </div>
 
         <div className="space-y-6">
@@ -112,7 +131,7 @@ const ModerationModal = ({ isOpen, onClose, file, onConfirm }) => {
         </div>
 
         <button 
-          onClick={() => onConfirm(file.id, action, action === 'approve' ? { startTime, endTime } : { reason })}
+          onClick={handleConfirm}
           className={`w-full py-5 rounded-2xl font-black uppercase tracking-[4px] shadow-2xl transition-all active:scale-95 ${action === 'approve' ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-rose-500 hover:bg-rose-600'}`}
         >
           {action === 'approve' ? 'Authorize Asset' : 'Execute Rejection'}
@@ -130,6 +149,8 @@ const AdminDashboard = () => {
   const [templates, setTemplates] = useState([]);
   const [screens, setScreens] = useState([]);
   const [ticker, setTicker] = useState({ text: '', speed: 5, isActive: 1, fontSize: 'text-4xl', fontStyle: 'font-normal' });
+  const [draftTicker, setDraftTicker] = useState({ text: '', speed: 5, isActive: 1, fontSize: 'text-4xl', fontStyle: 'font-normal' });
+  const [isTickerDirty, setIsTickerDirty] = useState(false);
   const [settings, setSettings] = useState({});
   const [schedules, setSchedules] = useState([]);
   
@@ -147,9 +168,9 @@ const AdminDashboard = () => {
   const [modFile, setModFile] = useState(null);
   const [showModModal, setShowModModal] = useState(false);
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (isInitial = false) => {
     try {
-      const [u, m, p, t, s, tk, st, sch] = await Promise.all([
+      const results = await Promise.allSettled([
         axios.get(`${import.meta.env.VITE_API_URL}/api/auth/users`),
         axios.get(`${import.meta.env.VITE_API_URL}/api/media`),
         axios.get(`${import.meta.env.VITE_API_URL}/api/media/pending`),
@@ -159,20 +180,28 @@ const AdminDashboard = () => {
         axios.get(`${import.meta.env.VITE_API_URL}/api/settings`),
         axios.get(`${import.meta.env.VITE_API_URL}/api/schedule`)
       ]);
-      setUsers(u.data);
-      setMedia(m.data);
-      setPendingMedia(p.data);
-      setTemplates(t.data);
-      setScreens(s.data);
-      setTicker(tk.data);
-      setSettings(st.data);
-      setSchedules(sch.data);
-    } catch (err) { console.error(err); }
-  }, []);
+
+      if (results[0].status === 'fulfilled') setUsers(results[0].value.data);
+      if (results[1].status === 'fulfilled') setMedia(results[1].value.data);
+      if (results[2].status === 'fulfilled') setPendingMedia(results[2].value.data);
+      if (results[3].status === 'fulfilled') setTemplates(results[3].value.data);
+      if (results[4].status === 'fulfilled') setScreens(results[4].value.data);
+      if (results[5].status === 'fulfilled') {
+        setTicker(results[5].value.data);
+        if (isInitial || !isTickerDirty) {
+          setDraftTicker(results[5].value.data);
+        }
+      }
+      if (results[6].status === 'fulfilled') setSettings(results[6].value.data);
+      if (results[7].status === 'fulfilled') setSchedules(results[7].value.data);
+    } catch (err) { 
+      console.error('Fetch Error:', err);
+    }
+  }, [isTickerDirty]);
 
   useEffect(() => {
-    setTimeout(() => fetchData(), 0);
-    const interval = setInterval(fetchData, 30000); // 30s auto-fetch
+    fetchData(true);
+    const interval = setInterval(() => fetchData(), 30000);
     return () => clearInterval(interval);
   }, [fetchData]);
 
@@ -194,53 +223,55 @@ const AdminDashboard = () => {
       await axios.post(`${import.meta.env.VITE_API_URL}/api/media/${id}/${action}`, data);
       setShowModModal(false);
       setModFile(null);
+      toast.success(action === 'approve' ? 'Asset authorized.' : 'Asset rejected.');
       fetchData();
-    } catch (err) { alert(err.message); }
+    } catch (err) { toast.error(err.response?.data?.error || err.message); }
   };
 
   const registerScreen = async (e) => {
     e.preventDefault();
     try {
       await axios.post(`${import.meta.env.VITE_API_URL}/api/screens/register`, newScreen);
-      alert('Screen Registered');
+      toast.success('Screen Registered');
       setNewScreen({ name: '', location: '' });
       fetchData();
-    } catch (err) { alert(err.message); }
+    } catch (err) { toast.error(err.response?.data?.error || err.message); }
   };
 
   const saveTicker = async () => {
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL}/api/ticker`, ticker);
-      alert('Ticker Updated');
-    } catch (err) { alert(err.message); }
+      await axios.post(`${import.meta.env.VITE_API_URL}/api/ticker`, draftTicker);
+      toast.success('Ticker Updated');
+      setIsTickerDirty(false);
+      fetchData();
+    } catch (err) { toast.error(err.response?.data?.error || err.message); }
   };
 
   const saveTemplate = async () => {
-    if (!templateName) return alert('Enter Layout Name');
+    if (!templateName) return toast.error('Enter Layout Name');
     
-    // Check for duplicate name
     const isDuplicate = templates.some(t => t.name.toLowerCase() === templateName.trim().toLowerCase());
     if (isDuplicate) {
-      return alert('A layout with this name already exists. Please choose a unique name.');
+      return toast.error('Layout name must be unique.');
     }
 
     try {
       await axios.post(`${import.meta.env.VITE_API_URL}/api/templates`, { name: templateName.trim(), layout: currentLayout });
-      alert('Layout Saved');
+      toast.success('Layout Saved');
       setTemplateName('');
       fetchData();
-    } catch (err) { alert(err.message); }
+    } catch (err) { toast.error(err.response?.data?.error || err.message); }
   };
 
   const provisionUser = async (e) => {
     e.preventDefault();
     try {
       await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/register`, newUser);
-      alert('User Provisioned');
+      toast.success('User Provisioned');
       setShowUserForm(false);
       setNewUser({ name: '', email: '', password: '', role: 'user' });
       fetchData();
-    } catch (err) { alert(err.response?.data?.message || err.message); }
+    } catch (err) { toast.error(err.response?.data?.message || err.message); }
   };
 
   const createSchedule = async (e) => {
@@ -248,48 +279,52 @@ const AdminDashboard = () => {
     const data = { ...newSchedule, mediaMapping: JSON.stringify(mediaMapping) };
     try {
       await axios.post(`${import.meta.env.VITE_API_URL}/api/schedule`, data);
-      alert('Broadcast Scheduled');
+      toast.success('Broadcast Scheduled');
       setNewSchedule({ screenId: '', templateId: '', mediaId: '', startTime: '', endTime: '' });
       setMediaMapping({});
       fetchData();
-    } catch (err) { alert(err.message); }
+    } catch (err) { toast.error(err.response?.data?.error || err.message); }
   };
 
   const deleteSchedule = async (id) => {
     if (!window.confirm('Terminate Broadcast?')) return;
     try {
       await axios.delete(`${import.meta.env.VITE_API_URL}/api/schedule/${id}`);
+      toast.success('Broadcast Terminated');
       fetchData();
-    } catch (err) { alert(err.message); }
+    } catch (err) { toast.error(err.response?.data?.error || err.message); }
   };
 
   const saveSettings = async (key, val) => {
     try {
       await axios.post(`${import.meta.env.VITE_API_URL}/api/settings`, { [key]: val });
       fetchData();
-    } catch (err) { alert(err.message); }
+    } catch (err) { toast.error(err.response?.data?.error || err.message); }
   };
 
   const unlockUser = async (id) => {
     try {
       await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/users/${id}/unlock`);
+      toast.success('Account Unlocked');
       fetchData();
-    } catch (err) { alert(err.message); }
+    } catch (err) { toast.error(err.response?.data?.error || err.message); }
   };
 
   const lockUser = async (id) => {
     try {
       await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/users/${id}/lock`);
+      toast.success('Account Locked');
       fetchData();
-    } catch (err) { alert(err.message); }
+    } catch (err) { toast.error(err.response?.data?.error || err.message); }
   };
 
   const deleteUser = async (id) => {
     if (!window.confirm('Purge personnel records?')) return;
     try {
       await axios.delete(`${import.meta.env.VITE_API_URL}/api/auth/users/${id}`);
+      toast.success('Record Purged');
       fetchData();
-    } catch (err) { alert(err.message); }
+    } catch (err) { toast.error(err.response?.data?.error || err.message); }
   };
 
   const approveReset = async (id) => {
@@ -297,12 +332,26 @@ const AdminDashboard = () => {
     if (!pw) return;
     try {
       await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/users/${id}/approve-reset`, { newPassword: pw });
-      alert('Password Updated');
+      toast.success('Password Updated');
       fetchData();
-    } catch (err) { alert(err.message); }
+    } catch (err) { toast.error(err.response?.data?.error || err.message); }
   };
 
-  const safeParse = (data, fallback = []) => {
+  const executeSystemReset = async () => {
+    if (!window.confirm('CRITICAL: Permanently wipe all schedules and media records? This cannot be undone.')) return;
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(`${import.meta.env.VITE_API_URL}/api/settings/wipe`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success('System purged.');
+      fetchData();
+    } catch (err) { 
+      toast.error(err.response?.data?.error || 'Reset failed.'); 
+    }
+  };
+
+  const safeParseJSON = (data, fallback = []) => {
     if (!data) return fallback;
     if (typeof data === 'object') return data;
     try {
@@ -311,6 +360,13 @@ const AdminDashboard = () => {
   };
 
   const approvedMedia = media.filter(m => m.status === 'approved');
+
+  const getLoggedInUser = () => {
+    try {
+      const u = localStorage.getItem('user');
+      return u ? JSON.parse(u) : null;
+    } catch { return null; }
+  };
 
   const renderView = () => {
     switch (activeTab) {
@@ -323,8 +379,8 @@ const AdminDashboard = () => {
                    <span className="text-[10px] font-black text-sky-400 uppercase tracking-widest">Online</span>
                 </div>
                 <div className="mt-8">
-                   <p className="text-5xl font-black tracking-tighter">{screens.filter(s => s.status === 'online').length}</p>
-                   <p className="text-[10px] font-bold text-slate-500 uppercase mt-2">Active Terminals</p>
+                   <p className="text-5xl font-black tracking-tighter text-[var(--text)]">{screens.filter(s => s.status === 'online').length}</p>
+                   <p className="text-[10px] font-bold text-slate-500 uppercase mt-2">Active Screens</p>
                 </div>
              </Card>
              <Card className="flex flex-col justify-between border-emerald-500/20">
@@ -333,7 +389,7 @@ const AdminDashboard = () => {
                    <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Active</span>
                 </div>
                 <div className="mt-8">
-                   <p className="text-5xl font-black tracking-tighter">{schedules.length}</p>
+                   <p className="text-5xl font-black tracking-tighter text-[var(--text)]">{schedules.length}</p>
                    <p className="text-[10px] font-bold text-slate-500 uppercase mt-2">Live Broadcasts</p>
                 </div>
              </Card>
@@ -343,7 +399,7 @@ const AdminDashboard = () => {
                    <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Required</span>
                 </div>
                 <div className="mt-8">
-                   <p className="text-5xl font-black tracking-tighter">{pendingMedia.length}</p>
+                   <p className="text-5xl font-black tracking-tighter text-[var(--text)]">{pendingMedia.length}</p>
                    <p className="text-[10px] font-bold text-slate-500 uppercase mt-2">Pending Approvals</p>
                 </div>
              </Card>
@@ -353,7 +409,7 @@ const AdminDashboard = () => {
                    <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Total</span>
                 </div>
                 <div className="mt-8">
-                   <p className="text-5xl font-black tracking-tighter">{users.length}</p>
+                   <p className="text-5xl font-black tracking-tighter text-[var(--text)]">{users.length}</p>
                    <p className="text-[10px] font-bold text-slate-500 uppercase mt-2">Authorized Personnel</p>
                 </div>
              </Card>
@@ -374,12 +430,21 @@ const AdminDashboard = () => {
                  {pendingMedia.map(m => (
                    <Card key={m.id} className="group relative">
                       <div className="aspect-video bg-black/60 rounded-xl overflow-hidden mb-6 border border-white/10 relative">
-                         {m.fileType === 'video' ? <video src={`${import.meta.env.VITE_API_URL}/${m.filePath}`} className="w-full h-full object-cover opacity-50" /> : <img src={`${import.meta.env.VITE_API_URL}/${m.filePath}`} className="w-full h-full object-cover opacity-50" />}
+                         {m.fileType === 'video' ? (
+                           <video src={`${import.meta.env.VITE_API_URL}/${m.filePath}`} className="w-full h-full object-cover opacity-50" />
+                         ) : m.fileType === 'pdf' ? (
+                           <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900/50">
+                              <File className="text-sky-400 opacity-40 mb-2" size={32} />
+                              <span className="text-[8px] font-black text-sky-400/60 uppercase">PDF Document</span>
+                           </div>
+                         ) : (
+                           <img src={`${import.meta.env.VITE_API_URL}/${m.filePath}`} className="w-full h-full object-cover opacity-50" />
+                         )}
                          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                             <button onClick={() => { setPreviewFile(m); setShowPreview(true); }} className="p-4 bg-white text-black rounded-full shadow-2xl transform scale-75 group-hover:scale-100 transition-transform"><Eye size={20}/></button>
                          </div>
                       </div>
-                      <h4 className="font-bold truncate text-white uppercase tracking-tight">{m.fileName}</h4>
+                      <h4 className="font-bold truncate text-[var(--text)] uppercase tracking-tight">{m.fileName}</h4>
                       <p className="text-[9px] font-black text-sky-400 mt-1 uppercase tracking-widest">{m.fileType} • {(m.uploaderId?.name || 'Unknown').split(' ')[0]}</p>
                       
                       <div className="mt-4 pt-4 border-t border-white/5 space-y-3">
@@ -389,11 +454,11 @@ const AdminDashboard = () => {
                         <div className="flex gap-2">
                            <div className="flex-1 bg-black/40 p-2 rounded-lg border border-white/5">
                               <p className="text-[7px] opacity-40 mb-1 tracking-tighter">START</p>
-                              <p className="text-[9px] text-white tabular-nums">{m.requestedStartTime ? new Date(m.requestedStartTime).toLocaleDateString() : 'IMMEDIATE'}</p>
+                              <p className="text-[9px] text-[var(--text)] tabular-nums">{m.requestedStartTime ? new Date(m.requestedStartTime).toLocaleDateString() : 'IMMEDIATE'}</p>
                            </div>
                            <div className="flex-1 bg-black/40 p-2 rounded-lg border border-white/5">
                               <p className="text-[7px] opacity-40 mb-1 tracking-tighter">END</p>
-                              <p className="text-[9px] text-white tabular-nums">{m.requestedEndTime ? new Date(m.requestedEndTime).toLocaleDateString() : 'UNSET'}</p>
+                              <p className="text-[9px] text-[var(--text)] tabular-nums">{m.requestedEndTime ? new Date(m.requestedEndTime).toLocaleDateString() : 'UNSET'}</p>
                            </div>
                         </div>
                       </div>
@@ -417,7 +482,7 @@ const AdminDashboard = () => {
              <Card className="lg:col-span-1 border-sky-500/10">
                 <div className="flex items-center gap-3 mb-8">
                    <Calendar className="w-4 h-4 text-sky-400" />
-                   <h3 className="text-xs font-bold uppercase tracking-wider">Broadcast System</h3>
+                   <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text)]">Broadcast System</h3>
                 </div>
                 <form onSubmit={createSchedule} className="space-y-6">
                    <div className="space-y-2">
@@ -431,7 +496,7 @@ const AdminDashboard = () => {
                    <div className="space-y-2">
                      <label className="text-[10px] font-bold uppercase ml-1 opacity-50">Layout</label>
                      <select className="nexus-input" value={newSchedule.templateId} onChange={(e) => {
-                       setNewSchedule(p => ({ ...p, templateId: e.target.value }));
+                       setNewSchedule(p => ({ ...p, templateId: e.target.value, mediaId: '' }));
                        setMediaMapping({});
                      }}>
                         <option value="">Standard Fullscreen</option>
@@ -450,7 +515,7 @@ const AdminDashboard = () => {
                    ) : (
                      <div className="space-y-4 p-4 border border-[var(--border)] bg-black/20 rounded-2xl">
                         <p className="text-[10px] font-black uppercase text-center border-b border-[var(--border)] pb-2 mb-4">Zone Mapping</p>
-                        {safeParse(templates.find(t => t.id === newSchedule.templateId)?.layout).map((z) => (
+                        {safeParseJSON(templates.find(t => t.id === newSchedule.templateId)?.layout).map((z) => (
                           <div key={z.i} className="space-y-1">
                             <label className="text-[9px] font-bold uppercase ml-1 opacity-50">Zone {z.i}</label>
                             <select required className="nexus-input py-2 text-xs" value={mediaMapping[z.i] || ''} onChange={(e) => setMediaMapping(p => ({ ...p, [z.i]: e.target.value }))}>
@@ -478,7 +543,7 @@ const AdminDashboard = () => {
 
              <Card className="lg:col-span-3 overflow-hidden">
                 <div className="flex justify-between items-center mb-8">
-                   <h3 className="text-xs font-bold uppercase tracking-wider">Live Manifest</h3>
+                   <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text)]">Live Manifest</h3>
                    <div className="px-3 py-1 bg-sky-500/10 border border-sky-500/20 rounded-full text-[8px] font-black text-sky-400 uppercase animate-pulse">Sync Active</div>
                 </div>
                 <div className="overflow-x-auto">
@@ -486,7 +551,7 @@ const AdminDashboard = () => {
                      <thead>
                         <tr className="bg-white/5 text-[9px] font-black uppercase text-slate-500">
                            <th className="py-4 px-6">Media / Template</th>
-                           <th className="py-4 px-6">Terminal</th>
+                           <th className="py-4 px-6">Screen</th>
                            <th className="py-4 px-6">Active Window</th>
                            <th className="py-4 px-6 text-right">Operations</th>
                         </tr>
@@ -499,7 +564,7 @@ const AdminDashboard = () => {
                           return (
                             <tr key={s.id} className="hover:bg-white/5 transition-colors group">
                                <td className="py-5 px-6">
-                                  <p className="font-bold text-white uppercase text-xs tracking-tight">{t ? t.name : (m?.fileName || 'Asset Unknown')}</p>
+                                  <p className="font-bold text-[var(--text)] uppercase text-xs tracking-tight">{t ? t.name : (m?.fileName || 'Asset Unknown')}</p>
                                   <p className="text-[8px] font-bold text-sky-400/60 uppercase mt-1 tracking-widest">{t ? 'MULTI-FRAME ARRAY' : (m?.fileType || 'MEDIA')}</p>
                                </td>
                                <td className="py-5 px-6 text-[10px] font-black uppercase text-slate-400">{scr ? scr.name : 'GLOBAL'}</td>
@@ -514,7 +579,7 @@ const AdminDashboard = () => {
                                   </div>
                                </td>
                                <td className="py-5 px-6 text-right">
-                                  <button onClick={() => deleteSchedule(s.id)} className="p-2 bg-rose-500/10 text-rose-500 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-rose-500 hover:text-white transition-all"><Trash2 size={14}/></button>
+                                  <button onClick={() => deleteSchedule(s.id)} className="p-2 bg-rose-500/10 text-rose-500 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-rose-500 hover:text-[var(--text)] transition-all"><Trash2 size={14}/></button>
                                </td>
                             </tr>
                           );
@@ -530,21 +595,21 @@ const AdminDashboard = () => {
         return (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-fade-in">
             <Card className="lg:col-span-2">
-               <h3 className="text-sm font-bold uppercase tracking-wider mb-8">Ticker Control</h3>
+               <h3 className="text-sm font-bold uppercase tracking-wider mb-8 text-[var(--text)]">Ticker Control</h3>
                <div className="space-y-8">
                   <div className="flex gap-2 p-1 bg-black/20 rounded-xl border border-[var(--border)]">
                      {['text', 'link'].map(t => (
-                       <button key={t} onClick={() => setTicker(p => ({ ...p, type: t }))} className={`flex-1 py-2 rounded-lg font-bold text-[10px] uppercase transition-all ${ticker.type === t ? 'bg-[var(--accent)] text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>{t}</button>
+                       <button key={t} onClick={() => { setDraftTicker(p => ({ ...p, type: t })); setIsTickerDirty(true); }} className={`flex-1 py-2 rounded-lg font-bold text-[10px] uppercase transition-all ${draftTicker.type === t ? 'bg-[var(--accent)] text-[var(--text)] shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>{t}</button>
                      ))}
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold uppercase ml-1 opacity-50">Message</label>
-                    <textarea value={ticker.text} onChange={(e) => setTicker(p => ({ ...p, text: e.target.value }))} className="nexus-input min-h-[120px] resize-none" placeholder="Transmit high-priority alert..."/>
+                    <textarea value={draftTicker.text} onChange={(e) => { setDraftTicker(p => ({ ...p, text: e.target.value })); setIsTickerDirty(true); }} className="nexus-input min-h-[120px] resize-none" placeholder="Transmit high-priority alert..."/>
                   </div>
-                  {ticker.type === 'link' && (
+                  {draftTicker.type === 'link' && (
                     <div className="space-y-2">
                       <label className="text-[10px] font-bold uppercase ml-1 opacity-50">Data Source URL</label>
-                      <input type="url" value={ticker.linkUrl} onChange={(e) => setTicker(p => ({ ...p, linkUrl: e.target.value }))} className="nexus-input" placeholder="https://external.feed/api/v1"/>
+                      <input type="url" value={draftTicker.linkUrl} onChange={(e) => { setDraftTicker(p => ({ ...p, linkUrl: e.target.value })); setIsTickerDirty(true); }} className="nexus-input" placeholder="https://external.feed/api/v1"/>
                     </div>
                   )}
                   
@@ -553,22 +618,21 @@ const AdminDashboard = () => {
                       <div className="space-y-4">
                         <label className="text-[10px] font-bold uppercase ml-1 opacity-50 flex justify-between">
                           <span>Transmission Speed</span>
-                          <span className="text-sky-400">{ticker.speed}X</span>
+                          <span className="text-sky-400">{draftTicker.speed}X</span>
                         </label>
-                        <input type="range" min="1" max="10" value={ticker.speed} onChange={(e) => setTicker(p => ({ ...p, speed: parseInt(e.target.value) }))} className="w-full accent-[var(--accent)] h-1 bg-white/10 rounded-full appearance-none cursor-pointer"/>
+                        <input type="range" min="1" max="10" value={draftTicker.speed} onChange={(e) => { setDraftTicker(p => ({ ...p, speed: parseInt(e.target.value) })); setIsTickerDirty(true); }} className="w-full accent-[var(--accent)] h-1 bg-white/10 rounded-full appearance-none cursor-pointer"/>
                       </div>
                     </div>
 
                     <div className="p-4 bg-black/40 rounded-2xl border border-white/5 mt-4">
-                      <p className="text-[10px] font-bold uppercase opacity-30 mb-2">Preview</p>
+                      <p className="text-[10px] font-bold uppercase opacity-30 mb-2">Live Preview</p>
                       <div className="h-12 flex items-center overflow-hidden">
-                        <div className="flex gap-12 whitespace-nowrap animate-ticker" style={{ animationDuration: ticker.isActive ? `${Math.max(5, 60 - ticker.speed * 5)}s` : '0s' }}>
-                            <p className={`${ticker.fontSize} ${ticker.fontStyle}`}>
-                                {ticker.text || 'BROADCAST ACTIVE // READY FOR DATA TRANSMISSION...'}
+                        <div className="flex gap-12 whitespace-nowrap animate-ticker" style={{ animationDuration: draftTicker.isActive ? `${Math.max(5, 60 - draftTicker.speed * 5)}s` : '0s' }}>
+                            <p className={`${draftTicker.fontSize} ${draftTicker.fontStyle} text-[var(--text)]`}>
+                                {draftTicker.text || 'BROADCAST ACTIVE // READY FOR DATA TRANSMISSION...'}
                             </p>
-                            {/* Duplicated for loop */}
-                            <p className={`${ticker.fontSize} ${ticker.fontStyle}`}>
-                                {ticker.text || 'BROADCAST ACTIVE // READY FOR DATA TRANSMISSION...'}
+                            <p className={`${draftTicker.fontSize} ${draftTicker.fontStyle} text-[var(--text)]`}>
+                                {draftTicker.text || 'BROADCAST ACTIVE // READY FOR DATA TRANSMISSION...'}
                             </p>
                         </div>
                       </div>
@@ -580,7 +644,7 @@ const AdminDashboard = () => {
             </Card>
 
             <Card>
-               <h3 className="text-sm font-bold uppercase tracking-wider mb-8">Visual Formatting</h3>
+               <h3 className="text-sm font-bold uppercase tracking-wider mb-8 text-[var(--text)]">Visual Formatting</h3>
                <div className="space-y-8">
                   <div className="space-y-4">
                     <label className="text-[10px] font-bold uppercase ml-1 opacity-50 flex items-center gap-2"><Palette size={14}/> Font Size</label>
@@ -588,8 +652,8 @@ const AdminDashboard = () => {
                       {['text-xs', 'text-sm', 'text-base', 'text-lg', 'text-xl', 'text-2xl', 'text-4xl', 'text-6xl', 'text-8xl', 'text-9xl'].map(size => (
                         <button 
                           key={size}
-                          onClick={() => setTicker(p => ({ ...p, fontSize: size }))}
-                          className={`py-2 rounded-lg text-[10px] font-bold border ${ticker.fontSize === size ? 'bg-[var(--accent)]/20 border-[var(--accent)] text-[var(--accent)]' : 'border-white/10 hover:border-white/30'}`}
+                          onClick={() => { setDraftTicker(p => ({ ...p, fontSize: size })); setIsTickerDirty(true); }}
+                          className={`py-2 rounded-lg text-[10px] font-bold border ${draftTicker.fontSize === size ? 'bg-[var(--accent)]/20 border-[var(--accent)] text-[var(--accent)]' : 'border-white/10 hover:border-white/30 text-[var(--text)]'}`}
                         >
                           {size.replace('text-', '').toUpperCase()}
                         </button>
@@ -613,8 +677,8 @@ const AdminDashboard = () => {
                       ].map(style => (
                         <button 
                           key={style.val}
-                          onClick={() => setTicker(p => ({ ...p, fontStyle: style.val }))}
-                          className={`py-2 rounded-lg text-[9px] font-bold border ${ticker.fontStyle === style.val ? 'bg-[var(--accent)]/20 border-[var(--accent)] text-[var(--accent)]' : 'border-white/10 hover:border-white/30'}`}
+                          onClick={() => { setDraftTicker(p => ({ ...p, fontStyle: style.val })); setIsTickerDirty(true); }}
+                          className={`py-2 rounded-lg text-[9px] font-bold border ${draftTicker.fontStyle === style.val ? 'bg-[var(--accent)]/20 border-[var(--accent)] text-[var(--accent)]' : 'border-white/10 hover:border-white/30 text-[var(--text)]'}`}
                         >
                           {style.label.toUpperCase()}
                         </button>
@@ -632,27 +696,24 @@ const AdminDashboard = () => {
              <Card className="lg:col-span-1">
                 <div className="flex items-center gap-3 mb-8">
                    <Tv className="w-4 h-4 text-sky-400" />
-                   <h3 className="text-xs font-bold uppercase tracking-wider">Register Terminal</h3>
+                   <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text)]">Register Screen</h3>
                 </div>
                 <form onSubmit={registerScreen} className="space-y-6">
                    <div className="space-y-1">
-                     <label className="text-[10px] font-bold uppercase ml-1 opacity-40">Terminal ID / Name</label>
+                     <label className="text-[10px] font-bold uppercase ml-1 opacity-40">Screen ID / Name</label>
                      <input type="text" required className="nexus-input" placeholder="e.g., LOBBY-SCREEN-01" value={newScreen.name} onChange={(e) => setNewScreen(p => ({ ...p, name: e.target.value }))}/>
                    </div>
                    <div className="space-y-1">
                      <label className="text-[10px] font-bold uppercase ml-1 opacity-40">Physical Location</label>
                      <input type="text" required className="nexus-input" placeholder="e.g., North Wing Entrance" value={newScreen.location} onChange={(e) => setNewScreen(p => ({ ...p, location: e.target.value }))}/>
                    </div>
-                   <button type="submit" className="nexus-btn-primary w-full py-4 font-black tracking-widest uppercase">PROVISION TERMINAL</button>
+                   <button type="submit" className="nexus-btn-primary w-full py-4 font-black tracking-widest uppercase">PROVISION SCREEN</button>
                 </form>
-                <div className="mt-8 p-4 bg-sky-500/10 border border-sky-500/20 rounded-2xl">
-                   <p className="text-[9px] font-bold text-sky-400 uppercase leading-relaxed">Terminals must be registered here before they can receive broadcasts.</p>
-                </div>
              </Card>
 
              <Card className="lg:col-span-3">
                 <div className="flex justify-between items-center mb-8">
-                   <h3 className="text-xs font-bold uppercase tracking-wider">Managed Terminals</h3>
+                   <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text)]">Managed Screens</h3>
                    <span className="text-[10px] font-black text-slate-500 uppercase">TOTAL: {screens.length}</span>
                 </div>
                 <div className="overflow-hidden rounded-2xl border border-white/10">
@@ -669,7 +730,7 @@ const AdminDashboard = () => {
                          {screens.map(s => (
                            <tr key={s.id} className="hover:bg-white/5 transition-colors">
                               <td className="py-5 px-6">
-                                 <p className="font-bold text-white uppercase text-sm tracking-tight">{s.name}</p>
+                                 <p className="font-bold text-[var(--text)] uppercase text-sm tracking-tight">{s.name}</p>
                                  <p className="text-[8px] font-bold text-sky-400/60 uppercase mt-0.5 tracking-widest">ID: {s.id.slice(-8)}</p>
                               </td>
                               <td className="py-5 px-6 text-[10px] font-bold uppercase text-slate-400">{s.location}</td>
@@ -690,7 +751,8 @@ const AdminDashboard = () => {
              </Card>
           </div>
         );
-
+      case 'audit':
+        return <AuditHistory />;
       case 'templates':
         const rowHeight = architectWidth > 0 ? (architectWidth / 12) * (9/16) : 50;
         return (
@@ -698,21 +760,20 @@ const AdminDashboard = () => {
              <Card className="w-full">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
                    <div>
-                     <h3 className="text-sm font-bold uppercase tracking-wider">Layout Architect</h3>
+                     <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--text)]">Layout Architect</h3>
                      <p className="text-[10px] font-bold text-sky-400 uppercase tracking-widest mt-1">Grid System: 12 x 12 Precision Mapping</p>
                    </div>
                    <div className="flex flex-wrap gap-2">
-                     <button onClick={() => setCurrentLayout([{ i: 'Main', x: 0, y: 0, w: 12, h: 12 }])} className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-[10px] font-black uppercase text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all">Fullscreen</button>
-                     <button onClick={() => setCurrentLayout([{ i: 'Left', x: 0, y: 0, w: 6, h: 12 }, { i: 'Right', x: 6, y: 0, w: 6, h: 12 }])} className="px-4 py-2 bg-sky-500/10 border border-sky-500/20 rounded-xl text-[10px] font-black uppercase text-sky-400 hover:bg-sky-500 hover:text-white transition-all">50/50 V</button>
-                     <button onClick={() => setCurrentLayout([{ i: 'Top', x: 0, y: 0, w: 12, h: 6 }, { i: 'Bottom', x: 0, y: 6, w: 12, h: 6 }])} className="px-4 py-2 bg-sky-500/10 border border-sky-500/20 rounded-xl text-[10px] font-black uppercase text-sky-400 hover:bg-sky-500 hover:text-white transition-all">50/50 H</button>
-                     <button onClick={() => setCurrentLayout([{ i: 'TL', x: 0, y: 0, w: 6, h: 6 }, { i: 'TR', x: 6, y: 0, w: 6, h: 6 }, { i: 'BL', x: 0, y: 6, w: 6, h: 6 }, { i: 'BR', x: 6, y: 6, w: 6, h: 6 }])} className="px-4 py-2 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-[10px] font-black uppercase text-indigo-400 hover:bg-indigo-500 hover:text-white transition-all">Quad</button>
-                     <button onClick={() => setCurrentLayout([{ i: 'Main', x: 0, y: 0, w: 9, h: 12 }, { i: 'Side', x: 9, y: 0, w: 3, h: 12 }])} className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-[10px] font-black uppercase text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all">Sidebar</button>
-                     <button onClick={() => { if(window.confirm('Wipe current design?')) setCurrentLayout([]); }} className="px-4 py-2 bg-rose-500/10 border border-rose-500/20 rounded-xl text-[10px] font-black uppercase text-rose-400 hover:bg-rose-500 hover:text-white transition-all">Wipe</button>
-                     <button onClick={() => setCurrentLayout([...currentLayout, { i: `Frame${currentLayout.length+1}`, x: 0, y: 0, w: 4, h: 4 }])} className="px-5 py-2 bg-white text-black rounded-xl text-[10px] font-black uppercase hover:bg-sky-400 hover:text-white transition-all shadow-[0_0_20px_rgba(255,255,255,0.2)]">+ Add Frame</button>
+                     <button onClick={() => setCurrentLayout([{ i: 'Main', x: 0, y: 0, w: 12, h: 12 }])} className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-[10px] font-black uppercase text-emerald-400 hover:bg-emerald-500 hover:text-[var(--text)] transition-all">Fullscreen</button>
+                     <button onClick={() => setCurrentLayout([{ i: 'Left', x: 0, y: 0, w: 6, h: 12 }, { i: 'Right', x: 6, y: 0, w: 6, h: 12 }])} className="px-4 py-2 bg-sky-500/10 border border-sky-500/20 rounded-xl text-[10px] font-black uppercase text-sky-400 hover:bg-sky-500 hover:text-[var(--text)] transition-all">50/50 V</button>
+                     <button onClick={() => setCurrentLayout([{ i: 'Top', x: 0, y: 0, w: 12, h: 6 }, { i: 'Bottom', x: 0, y: 6, w: 12, h: 6 }])} className="px-4 py-2 bg-sky-500/10 border border-sky-500/20 rounded-xl text-[10px] font-black uppercase text-sky-400 hover:bg-sky-500 hover:text-[var(--text)] transition-all">50/50 H</button>
+                     <button onClick={() => setCurrentLayout([{ i: 'TL', x: 0, y: 0, w: 6, h: 6 }, { i: 'TR', x: 6, y: 0, w: 6, h: 6 }, { i: 'BL', x: 0, y: 6, w: 6, h: 6 }, { i: 'BR', x: 6, y: 6, w: 6, h: 6 }])} className="px-4 py-2 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-[10px] font-black uppercase text-indigo-400 hover:bg-indigo-500 hover:text-[var(--text)] transition-all">Quad</button>
+                     <button onClick={() => setCurrentLayout([{ i: 'Main', x: 0, y: 0, w: 9, h: 12 }, { i: 'Side', x: 9, y: 0, w: 3, h: 12 }])} className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-[10px] font-black uppercase text-emerald-400 hover:bg-emerald-500 hover:text-[var(--text)] transition-all">Sidebar</button>
+                     <button onClick={() => { if(window.confirm('Wipe current design?')) setCurrentLayout([]); }} className="px-4 py-2 bg-rose-500/10 border border-rose-500/20 rounded-xl text-[10px] font-black uppercase text-rose-400 hover:bg-rose-500 hover:text-[var(--text)] transition-all">Wipe</button>
+                     <button onClick={() => setCurrentLayout([...currentLayout, { i: `Frame${currentLayout.length+1}`, x: 0, y: 0, w: 4, h: 4 }])} className="px-5 py-2 bg-white text-black rounded-xl text-[10px] font-black uppercase hover:bg-sky-400 hover:text-[var(--text)] transition-all shadow-[0_0_20px_rgba(255,255,255,0.2)]">+ Add Frame</button>
                    </div>
                 </div>
                 <div ref={architectRef} className="bg-slate-950 border-4 border-white/10 rounded-[40px] relative overflow-hidden grid-bg shadow-[0_0_100px_rgba(0,0,0,0.5)] p-0" style={{ height: architectWidth > 0 ? (Math.floor(rowHeight) * 12) : 'auto', minHeight: '400px' }}>
-                   {/* Grid Overlay for visual aid - Force 12x12 */}
                    <div className="absolute inset-0 grid pointer-events-none opacity-20" style={{ gridTemplateColumns: 'repeat(12, 1fr)', gridTemplateRows: 'repeat(12, 1fr)' }}>
                       {[...Array(144)].map((_, i) => (
                         <div key={i} className="border-[0.5px] border-white/10" />
@@ -729,24 +790,16 @@ const AdminDashboard = () => {
                     onLayoutChange={(newLayout) => {
                       const validatedLayout = newLayout.map(item => {
                         let { x, y, w, h, i } = item;
-                        
-                        // 1. Clamp size first
                         w = Math.max(1, Math.min(Math.round(w), 12));
                         h = Math.max(1, Math.min(Math.round(h), 12));
-                        
-                        // 2. Clamp position based on size
                         if (x < 0) x = 0;
                         if (y < 0) y = 0;
                         if (x + w > 12) x = 12 - w;
                         if (y + h > 12) y = 12 - h;
-
                         return { i, x: Math.round(x), y: Math.round(y), w, h };
                       });
-                      
                       const hasChanged = JSON.stringify(validatedLayout) !== JSON.stringify(currentLayout);
-                      if (hasChanged) {
-                        setCurrentLayout(validatedLayout);
-                      }
+                      if (hasChanged) setCurrentLayout(validatedLayout);
                     }} 
                     margin={[0, 0]} 
                     draggableHandle=".drag-handle"
@@ -758,7 +811,7 @@ const AdminDashboard = () => {
                     isBounded={true}
                   >
                       {currentLayout.map(z => (
-                        <div key={z.i} className="bg-slate-900/90 border border-sky-500/30 backdrop-blur-md flex flex-col items-center justify-center text-white group overflow-hidden rounded-xl shadow-2xl transition-all hover:border-sky-400">
+                        <div key={z.i} className="bg-slate-900/90 border border-sky-500/30 backdrop-blur-md flex flex-col items-center justify-center text-[var(--text)] group overflow-hidden rounded-xl shadow-2xl transition-all hover:border-sky-400">
                            <div className="drag-handle w-full bg-sky-500/20 backdrop-blur-md text-sky-200 flex justify-between items-center px-3 py-1.5 font-black uppercase tracking-widest text-[9px] border-b border-sky-500/20 cursor-grab active:cursor-grabbing">
                               <div className="flex items-center gap-2">
                                 <div className="grid grid-cols-2 gap-0.5 opacity-40">
@@ -766,20 +819,13 @@ const AdminDashboard = () => {
                                 </div>
                                 <span>{z.i}</span>
                               </div>
-                              <button 
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setCurrentLayout(currentLayout.filter(item => item.i !== z.i));
-                                }}
-                                className="hover:text-rose-400 transition-colors p-1"
-                              >
+                              <button onClick={(e) => { e.stopPropagation(); setCurrentLayout(currentLayout.filter(item => item.i !== z.i)); }} className="hover:text-rose-400 transition-colors p-1">
                                 <XCircle size={14} />
                               </button>
                            </div>
-                           
                            <div className="flex-1 flex flex-col items-center justify-center leading-none pointer-events-none p-4 w-full">
                               <div className="relative">
-                                <span className="font-black text-3xl tracking-tighter text-white drop-shadow-2xl">{z.w} : {z.h}</span>
+                                <span className="font-black text-3xl tracking-tighter text-[var(--text)] drop-shadow-2xl">{z.w} : {z.h}</span>
                                 <div className="absolute -inset-2 bg-sky-500/10 blur-xl rounded-full -z-10" />
                               </div>
                               <div className="mt-2 flex items-center gap-3">
@@ -788,8 +834,6 @@ const AdminDashboard = () => {
                                 <div className="h-px w-4 bg-sky-500/30" />
                               </div>
                            </div>
-                           
-                           {/* Decorative Corner Handles */}
                            <div className="absolute bottom-0 right-0 w-4 h-4 p-1 pointer-events-none opacity-40 group-hover:opacity-100">
                               <div className="w-full h-full border-r-2 border-b-2 border-sky-400 rounded-br-sm" />
                            </div>
@@ -805,7 +849,7 @@ const AdminDashboard = () => {
 
              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <Card className="p-5">
-                   <h3 className="text-[10px] font-black uppercase tracking-[2px] mb-4 pb-2 border-b border-white/10">Inspector</h3>
+                   <h3 className="text-[10px] font-black uppercase tracking-[2px] mb-4 pb-2 border-b border-white/10 text-[var(--text)]">Inspector</h3>
                    <div className="space-y-4 max-h-[480px] overflow-y-auto pr-2 custom-scrollbar">
                       {currentLayout.map((z, idx) => (
                         <div key={z.i} className="p-4 bg-white/5 border border-white/10 rounded-xl space-y-3">
@@ -820,7 +864,7 @@ const AdminDashboard = () => {
                                     const next = [...currentLayout];
                                     next[idx].w = parseInt(e.target.value) || 1;
                                     setCurrentLayout(next);
-                                 }} className="w-full bg-black/40 border border-white/10 rounded-lg px-2 py-1 text-xs font-bold outline-none focus:border-sky-500/50"/>
+                                 }} className="w-full bg-black/40 border border-white/10 rounded-lg px-2 py-1 text-xs font-bold outline-none focus:border-sky-500/50 text-[var(--text)]"/>
                               </div>
                               <div className="space-y-1">
                                  <label className="text-[8px] font-black uppercase opacity-40">Height</label>
@@ -828,25 +872,24 @@ const AdminDashboard = () => {
                                     const next = [...currentLayout];
                                     next[idx].h = parseInt(e.target.value) || 1;
                                     setCurrentLayout(next);
-                                 }} className="w-full bg-black/40 border border-white/10 rounded-lg px-2 py-1 text-xs font-bold outline-none focus:border-sky-500/50"/>
+                                 }} className="w-full bg-black/40 border border-white/10 rounded-lg px-2 py-1 text-xs font-bold outline-none focus:border-sky-500/50 text-[var(--text)]"/>
                               </div>
                            </div>
                         </div>
                       ))}
-                      {currentLayout.length === 0 && <p className="text-[10px] font-bold text-center opacity-30 py-10 uppercase">No active zones detected</p>}
                    </div>
                 </Card>
 
                 <Card className="p-5">
-                   <h3 className="text-[10px] font-black uppercase tracking-[2px] mb-4 pb-2 border-b border-white/10">Library</h3>
+                   <h3 className="text-[10px] font-black uppercase tracking-[2px] mb-4 pb-2 border-b border-white/10 text-[var(--text)]">Library</h3>
                    <div className="space-y-2 max-h-[480px] overflow-y-auto pr-2 custom-scrollbar">
                       {templates.map(t => (
                         <div key={t.id} className="p-3 bg-white/5 border border-white/10 rounded-xl flex justify-between items-center group hover:bg-white/10 transition-all cursor-pointer">
                            <div>
-                              <p className="text-[10px] font-extrabold truncate max-w-[120px] uppercase text-white">{t.name}</p>
-                              <p className="text-[8px] font-bold text-sky-400 opacity-60 uppercase">{safeParse(t.layout).length} FRAMES</p>
+                              <p className="text-[10px] font-extrabold truncate max-w-[120px] uppercase text-[var(--text)]">{t.name}</p>
+                              <p className="text-[8px] font-bold text-sky-400 opacity-60 uppercase">{safeParseJSON(t.layout).length} FRAMES</p>
                            </div>
-                           <button onClick={() => setCurrentLayout(safeParse(t.layout))} className="text-[9px] font-black border border-white/20 px-3 py-1 rounded-lg hover:bg-white hover:text-black transition-all">LOAD</button>
+                           <button onClick={() => setCurrentLayout(safeParseJSON(t.layout))} className="text-[9px] font-black border border-white/20 px-3 py-1 rounded-lg hover:bg-white hover:text-black transition-all text-[var(--text)]">LOAD</button>
                         </div>
                       ))}
                    </div>
@@ -861,8 +904,8 @@ const AdminDashboard = () => {
             {showUserForm ? (
               <Card className="max-w-xl mx-auto p-10">
                 <div className="flex justify-between items-center mb-10">
-                   <h3 className="text-xl font-bold">New Personnel</h3>
-                   <button onClick={() => setShowUserForm(false)} className="text-slate-500 hover:text-white"><XCircle size={24}/></button>
+                   <h3 className="text-xl font-bold text-[var(--text)]">New Personnel</h3>
+                   <button onClick={() => setShowUserForm(false)} className="text-slate-500 hover:text-[var(--text)]"><XCircle size={24}/></button>
                 </div>
                 <form onSubmit={provisionUser} className="space-y-6">
                   <div className="space-y-1">
@@ -891,7 +934,7 @@ const AdminDashboard = () => {
               <Card>
                 <div className="flex justify-between items-center mb-10">
                    <div>
-                     <h3 className="text-xl font-bold">User</h3>
+                     <h3 className="text-xl font-bold text-[var(--text)]">User</h3>
                      <p className="text-xs text-[var(--text-dim)] uppercase tracking-wider font-semibold mt-1">Total Authorized: {users.length}</p>
                    </div>
                    <button onClick={() => setShowUserForm(true)} className="nexus-btn-primary text-xs py-2 px-6 shadow-xl">+Add User</button>
@@ -909,7 +952,7 @@ const AdminDashboard = () => {
                       {users.map(u => (
                         <tr key={u.id} className="hover:bg-white/5 transition-colors">
                           <td className="py-6 px-6">
-                             <p className="font-bold text-lg leading-none">{u.name}</p>
+                             <p className="font-bold text-lg leading-none text-[var(--text)]">{u.name}</p>
                              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter mt-1">{u.email}</p>
                           </td>
                           <td className="py-6 px-6">
@@ -926,26 +969,18 @@ const AdminDashboard = () => {
                                  <span className="text-[10px] font-black uppercase text-slate-400">{u.status}</span>
                               </div>
                               <div className="flex gap-2">
-                                {u.email !== JSON.parse(localStorage.getItem('user'))?.email && (
+                                {u.email !== getLoggedInUser()?.email && (
                                   <>
                                     {u.isLocked ? (
-                                      <button onClick={() => unlockUser(u.id)} className="p-2 bg-emerald-500/10 text-emerald-500 rounded-lg hover:bg-emerald-500 hover:text-white transition-colors" title="Unlock Account">
-                                        <CheckCircle size={14}/>
-                                      </button>
+                                      <button onClick={() => unlockUser(u.id)} className="p-2 bg-emerald-500/10 text-emerald-500 rounded-lg hover:bg-emerald-500 hover:text-[var(--text)] transition-colors" title="Unlock Account"><CheckCircle size={14}/></button>
                                     ) : (
-                                      <button onClick={() => lockUser(u.id)} className="p-2 bg-amber-500/10 text-amber-500 rounded-lg hover:bg-amber-500 hover:text-white transition-colors" title="Lock Account">
-                                        <Lock size={14}/>
-                                      </button>
+                                      <button onClick={() => lockUser(u.id)} className="p-2 bg-amber-500/10 text-amber-500 rounded-lg hover:bg-amber-500 hover:text-[var(--text)] transition-colors" title="Lock Account"><Lock size={14}/></button>
                                     )}
-                                    <button onClick={() => deleteUser(u.id)} className="p-2 bg-rose-500/10 text-rose-500 rounded-lg hover:bg-rose-500 hover:text-white transition-colors" title="Delete User">
-                                      <Trash2 size={14}/>
-                                    </button>
+                                    <button onClick={() => deleteUser(u.id)} className="p-2 bg-rose-500/10 text-rose-500 rounded-lg hover:bg-rose-500 hover:text-[var(--text)] transition-colors" title="Delete User"><Trash2 size={14}/></button>
                                   </>
                                 )}
                                 {u.passwordResetRequested && (
-                                  <button onClick={() => approveReset(u.id)} className="p-2 bg-sky-500/10 text-sky-400 rounded-lg hover:bg-sky-500 hover:text-white transition-colors" title="Approve Reset">
-                                    <Clock size={14}/>
-                                  </button>
+                                  <button onClick={() => approveReset(u.id)} className="p-2 bg-sky-500/10 text-sky-400 rounded-lg hover:bg-sky-500 hover:text-[var(--text)] transition-colors" title="Approve Reset"><Clock size={14}/></button>
                                 )}
                               </div>
                             </div>
@@ -963,27 +998,20 @@ const AdminDashboard = () => {
         return (
           <div className="animate-fade-in max-w-4xl mx-auto space-y-8">
             <Card>
-              <h3 className="text-lg font-bold mb-8 flex items-center gap-3">
-                <Monitor className="text-sky-400" />
-                Idle Screen
+              <h3 className="text-lg font-bold mb-8 flex items-center gap-3 text-[var(--text)]">
+                <Monitor className="text-sky-400" /> Idle Screen
               </h3>
               <div className="space-y-6">
                 <div className="p-6 bg-white/5 border border-white/10 rounded-2xl">
-                  <label className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4 block">Global Default Media (Idle Wallpaper)</label>
+                  <label className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4 block">Global Default Media</label>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <select 
-                      className="nexus-input" 
-                      value={settings.idleWallpaperId || ''} 
-                      onChange={(e) => saveSettings('idleWallpaperId', e.target.value)}
-                    >
+                    <select className="nexus-input" value={settings.idleWallpaperId || ''} onChange={(e) => saveSettings('idleWallpaperId', e.target.value)}>
                       <option value="">System Default (Quotes)</option>
-                      {approvedMedia.map(m => (
-                        <option key={m.id} value={m.id}>{m.fileName} ({m.fileType})</option>
-                      ))}
+                      {approvedMedia.map(m => <option key={m.id} value={m.id}>{m.fileName} ({m.fileType})</option>)}
                     </select>
                     <div className="flex items-center gap-3 px-4 py-3 bg-sky-500/10 border border-sky-500/20 rounded-xl">
                       <Info className="text-sky-400 shrink-0" size={16} />
-                      <p className="text-[10px] font-bold text-sky-400 uppercase leading-tight">This asset will play on all terminals when no specific schedule is active.</p>
+                      <p className="text-[10px] font-bold text-sky-400 uppercase leading-tight">This asset will play when no specific schedule is active.</p>
                     </div>
                   </div>
                 </div>
@@ -992,15 +1020,14 @@ const AdminDashboard = () => {
 
             <Card className="border-rose-500/20">
                <h3 className="text-lg font-bold mb-8 flex items-center gap-3 text-rose-400">
-                <AlertCircle />
-                System Maintenance
+                <AlertCircle /> System Maintenance
               </h3>
               <div className="flex items-center justify-between p-6 bg-rose-500/5 border border-rose-500/10 rounded-2xl">
                 <div>
                    <p className="font-bold text-rose-200">Reset Local Database</p>
                    <p className="text-xs text-rose-500/60 uppercase font-black mt-1">Permanently wipe all schedules and media records</p>
                 </div>
-                <button className="px-6 py-2.5 bg-rose-500 text-white rounded-xl font-black text-[10px] uppercase hover:bg-rose-600 transition-all">Execute Reset</button>
+                <button onClick={executeSystemReset} className="px-6 py-2.5 bg-rose-500 text-[var(--text)] rounded-xl font-black text-[10px] uppercase hover:bg-rose-600 transition-all">Execute Reset</button>
               </div>
             </Card>
           </div>
@@ -1008,12 +1035,10 @@ const AdminDashboard = () => {
       case 'live':
         return (
            <div className="animate-fade-in px-4">
-              <div className="flex justify-between items-center mb-8">
-              </div>
               <div className="aspect-video bg-black rounded-[40px] overflow-hidden border border-white/10 shadow-2xl relative group shadow-sky-500/5">
                  <iframe src="/display" className="w-full h-full border-none pointer-events-none scale-[1.001]" title="Live Preview" />
                  <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm">
-                    <p className="text-white text-lg tracking-[12px] font-black animate-pulse uppercase">Monitoring Active</p>
+                    <p className="text-[var(--text)] text-lg tracking-[12px] font-black animate-pulse uppercase">Monitoring Active</p>
                  </div>
               </div>
            </div>
@@ -1058,27 +1083,15 @@ const AdminDashboard = () => {
         <header className="mb-12 pb-8 flex justify-between items-end border-b border-white/10 relative">
           <div>
             <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-sky-500/20 rounded-lg">
-                {getTabIcon()}
-              </div>
+              <div className="p-2 bg-sky-500/20 rounded-lg">{getTabIcon()}</div>
             </div>
-            <h1 className="text-8xl font-black tracking-tighter leading-none text-white uppercase">{getTabLabel()}</h1>
+            <h1 className="text-8xl font-black tracking-tighter leading-none text-[var(--text)] uppercase">{getTabLabel()}</h1>
           </div>
         </header>
         {renderView()}
       </div>
-      <PreviewModal 
-        isOpen={showPreview} 
-        onClose={() => { setShowPreview(false); setPreviewFile(null); }} 
-        file={previewFile} 
-      />
-      <ModerationModal
-        key={modFile?.id}
-        isOpen={showModModal}
-        onClose={() => { setShowModModal(false); setModFile(null); }}
-        file={modFile}
-        onConfirm={handleModeration}
-      />
+      <PreviewModal isOpen={showPreview} onClose={() => { setShowPreview(false); setPreviewFile(null); }} file={previewFile} />
+      <ModerationModal key={modFile?.id} isOpen={showModModal} onClose={() => { setShowModModal(false); setModFile(null); }} file={modFile} onConfirm={handleModeration} />
     </Shell>
   );
 };

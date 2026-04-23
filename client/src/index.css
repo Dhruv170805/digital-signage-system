@@ -2,30 +2,30 @@
 @import "tailwindcss";
 
 :root {
-  /* Premium Liquid Glass Ultra-Black Palette */
-  --bg: #000000;
+  /* Premium Dusty White / Operations Palette */
+  --bg: #f8fafc;
   --bg-gradient: 
-    radial-gradient(at 0% 0%, rgba(30, 58, 138, 0.15) 0px, transparent 50%),
-    radial-gradient(at 100% 0%, rgba(15, 23, 42, 0.2) 0px, transparent 50%),
-    radial-gradient(at 50% 100%, rgba(3, 7, 18, 1) 0px, transparent 80%),
-    #000000;
-  --surface: rgba(10, 10, 10, 0.7);
-  --card: rgba(15, 23, 42, 0.3);
-  --border: rgba(56, 189, 248, 0.08);
-  --accent: #38bdf8;
-  --accent-alt: #0ea5e9;
-  --glass-border: rgba(255, 255, 255, 0.03);
-  --glass-shine: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 50%, rgba(255,255,255,0.01) 100%);
+    radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.05) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(15, 23, 42, 0.05) 0px, transparent 50%),
+    radial-gradient(at 50% 100%, #ffffff 0px, transparent 80%),
+    #f8fafc;
+  --surface: rgba(255, 255, 255, 0.8);
+  --card: #ffffff;
+  --border: rgba(15, 23, 42, 0.08);
+  --accent: #0ea5e9;
+  --accent-alt: #0284c7;
+  --glass-border: rgba(0, 0, 0, 0.05);
+  --glass-shine: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 50%, rgba(255,255,255,0.2) 100%);
   
-  --red: #f43f5e;
-  --green: #10b981;
-  --blue: #3b82f6;
-  --orange: #f59e0b;
-  --muted: #475569;
+  --red: #e11d48;
+  --green: #059669;
+  --blue: #2563eb;
+  --orange: #d97706;
+  --muted: #64748b;
   
-  --text: #f8fafc;
-  --text-dim: #94a3b8;
-  --text-faint: #64748b;
+  --text: #0f172a;
+  --text-dim: #475569;
+  --text-faint: #94a3b8;
 }
 
 @layer base {
@@ -49,16 +49,16 @@
 @layer components {
   .glass {
     @apply backdrop-blur-2xl border border-[var(--glass-border)] rounded-2xl;
-    background: rgba(15, 23, 42, 0.2);
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
+    background: rgba(255, 255, 255, 0.6);
+    box-shadow: 0 8px 32px 0 rgba(15, 23, 42, 0.05);
   }
 
   .glass-hover {
-    @apply transition-all duration-300 hover:bg-white/10 hover:border-white/20 hover:-translate-y-1;
+    @apply transition-all duration-300 hover:bg-white/80 hover:border-black/10 hover:-translate-y-1;
   }
 
   .nexus-input {
-    @apply w-full bg-black/20 border border-[var(--border)] rounded-xl px-4 py-3 text-[var(--text)] outline-none focus:border-[var(--accent)]/50 focus:ring-4 focus:ring-[var(--accent)]/10 transition-all font-sans text-sm;
+    @apply w-full bg-white/50 border border-[var(--border)] rounded-xl px-4 py-3 text-[var(--text)] outline-none focus:border-[var(--accent)]/50 focus:ring-4 focus:ring-[var(--accent)]/10 transition-all font-sans text-sm;
   }
 
   .nexus-btn-primary {
@@ -66,12 +66,12 @@
   }
 
   .nexus-btn-secondary {
-    @apply bg-white/5 border border-[var(--glass-border)] text-white py-3 px-6 rounded-xl hover:bg-white/10 transition-all font-semibold;
+    @apply bg-white border border-[var(--glass-border)] text-[var(--text)] py-3 px-6 rounded-xl hover:bg-slate-50 transition-all font-semibold shadow-sm;
   }
 
   .grid-bg {
     background-image: 
-      radial-gradient(circle at center, var(--border) 1px, transparent 1px);
+      radial-gradient(circle at center, rgba(15, 23, 42, 0.05) 1px, transparent 1px);
     background-size: 24px 24px;
   }
 
