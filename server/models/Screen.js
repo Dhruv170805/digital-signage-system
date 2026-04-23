@@ -1,9 +1,13 @@
 const mongoose = require('mongoose');
 
 const ScreenSchema = new mongoose.Schema({
+    screenId: { type: String, required: true, unique: true },
     name: { type: String, required: true },
     location: { type: String },
     groupId: { type: mongoose.Schema.Types.ObjectId, ref: 'ScreenGroup' },
+    groupName: { type: String },
+    deviceToken: { type: String, required: true, unique: true },
+    isActive: { type: Boolean, default: true },
     status: { type: String, enum: ['online', 'offline', 'maintenance'], default: 'offline' },
     resolution: { 
         width: { type: Number, default: 1920 },
@@ -12,9 +16,9 @@ const ScreenSchema = new mongoose.Schema({
     defaultTemplateId: { type: mongoose.Schema.Types.ObjectId, ref: 'Template' },
     priority: { type: Number, default: 1 },
     tags: [{ type: String }],
-    lastPing: { type: Date },
+    lastSeen: { type: Date },
     createdAt: { type: Date, default: Date.now }
-});
+}, { timestamps: true });
 
 ScreenSchema.set('toJSON', {
     transform: (doc, ret) => {

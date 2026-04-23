@@ -9,7 +9,7 @@ class TemplateRepository {
 
   async getById(id) {
     return await prisma.template.findUnique({
-      where: { id: parseInt(id) },
+      where: { id },
       include: { frames: true },
     });
   }
@@ -28,10 +28,10 @@ class TemplateRepository {
 
   async update(id, templateData, framesData) {
     // Delete existing frames and recreate them for simplicity in update (or do complex diff)
-    await prisma.frame.deleteMany({ where: { templateId: parseInt(id) } });
+    await prisma.frame.deleteMany({ where: { templateId: id } });
     
     return await prisma.template.update({
-      where: { id: parseInt(id) },
+      where: { id },
       data: {
         ...templateData,
         frames: {
@@ -44,7 +44,7 @@ class TemplateRepository {
 
   async delete(id) {
     return await prisma.template.delete({
-      where: { id: parseInt(id) },
+      where: { id },
     });
   }
 }

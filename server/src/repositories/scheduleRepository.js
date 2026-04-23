@@ -11,8 +11,8 @@ class ScheduleRepository {
         startDate: { lte: now },
         endDate: { gte: now },
         OR: [
-          { screenId: parseInt(screenId) },
-          { groupId: groupId ? parseInt(groupId) : undefined },
+          { screenId: screenId },
+          { groupId: groupId ? groupId : undefined },
         ],
       },
       include: {

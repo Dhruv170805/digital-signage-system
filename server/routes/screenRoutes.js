@@ -1,9 +1,15 @@
 const express = require('express');
 const router = express.Router();
-const { getAllScreens, registerScreen, updateScreenStatus } = require('../controllers/screenController');
+const screenController = require('../controllers/screenController');
+const screenAuth = require('../middleware/screenAuth');
 
-router.get('/', getAllScreens);
-router.post('/register', registerScreen);
-router.put('/:id/status', updateScreenStatus);
+// Public/Screen identification
+router.get('/me', screenAuth, screenController.getMe);
+
+// Admin operations
+router.get('/', screenController.getAllScreens);
+router.post('/', screenController.registerScreen);
+router.put('/:id', screenController.updateScreen);
+router.post('/:id/reset-token', screenController.resetToken);
 
 module.exports = router;

@@ -3,57 +3,48 @@ const Screen = require('../models/Screen');
 
 class PlaylistEngine {
     /**
-     * Calculates the active playlist for a specific screen.
-     * @param {String} screenId - The ID of the screen requesting content.
+     * Calculates the active playlist for a specific screen using token-based identity.
+     * @param {Object} screen - The authenticated screen object from middleware.
      */
-    static async getActivePlaylist(screenId) {
+    static async getPlaylistByToken(screen) {
         try {
             const now = new Date();
             const currentDay = now.getDay(); // 0-6
             const currentTime = now.getHours().toString().padStart(2, '0') + ':' + 
                               now.getMinutes().toString().padStart(2, '0');
 
-            // 1. Get screen details to find its group
-            const screen = await Screen.findById(screenId);
-            const groupId = screen ? screen.groupId : null;
-
-            // 2. Fetch potentially active schedules
+            // Fetch schedules that match 'all', this specific screenId, or this groupName
+            // Note: We search for both MongoDB _id and the custom screenId/groupName for maximum compatibility
             const schedules = await Schedule.find({
                 isActive: 1,
                 startDate: { $lte: now },
                 endDate: { $gte: now },
-                daysOfWeek: currentDay
+                daysOfWeek: currentDay,
+                $or: [
+                    { targetType: 'all' },
+                    { targetType: 'screen', targetIds: screen.id }, // Match by MongoDB _id
+                    { targetType: 'screen', targetId: screen.screenId }, // Match by custom screenId
+                    { targetType: 'group', targetIds: screen.groupId }, // Match by MongoDB _id (if exists)
+                    { targetType: 'group', targetId: screen.groupName }  // Match by groupName string
+                ]
             })
             .populate('mediaId')
             .populate('templateId')
             .lean();
 
-            // 3. Filter by Time Window and Targeting
+            // Filter by Time Window
             let validSchedules = schedules.filter(s => {
-                // Time window check
-                const isWithinTime = (currentTime >= s.startTime && currentTime <= s.endTime);
-                if (!isWithinTime) return false;
-
-                // Targeting check
-                if (s.targetType === 'all') return true;
-                if (s.targetType === 'screen' && s.targetIds.some(id => id.toString() === screenId)) return true;
-                if (s.targetType === 'group' && groupId && s.targetIds.some(id => id.toString() === groupId.toString())) return true;
-
-                return false;
+                return (currentTime >= s.startTime && currentTime <= s.endTime);
             });
 
             if (validSchedules.length === 0) return [];
 
-            // 4. Priority Sort (Highest wins)
+            // Priority Sort (Highest wins)
             validSchedules.sort((a, b) => (b.priority || 0) - (a.priority || 0));
 
-            // 5. Conflict Resolution: 
-            // If there's a priority gap (e.g., 100 vs 50), the high priority (100) blocks everything else.
-            // If multiple items have the SAME top priority, they form a LOOP (Playlist).
             const topPriority = validSchedules[0].priority;
             const finalPlaylist = validSchedules.filter(s => s.priority === topPriority);
 
-            // 6. Transform for Frontend
             return finalPlaylist.map(s => ({
                 id: s._id,
                 mediaId: s.mediaId ? s.mediaId._id : null,
@@ -71,6 +62,15 @@ class PlaylistEngine {
             console.error('PlaylistEngine Error:', error);
             return [];
         }
+    }
+
+    /**
+     * Legacy method for compatibility with existing code.
+     */
+    static async getActivePlaylist(screenId) {
+        const screen = await Screen.findById(screenId);
+        if (!screen) return [];
+        return this.getPlaylistByToken(screen);
     }
 }
 

@@ -5,6 +5,8 @@ const errorMiddleware = require('./middlewares/errorMiddleware');
 
 // Routes
 const screenRoutes = require('./routes/screenRoutes');
+const authRoutes = require('./routes/authRoutes');
+const mediaRoutes = require('./routes/mediaRoutes');
 
 const app = express();
 
@@ -18,6 +20,8 @@ app.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
 
 // API Routes
 app.use('/api/screens', screenRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/media', mediaRoutes);
 
 // Base route
 app.get('/', (req, res) => {

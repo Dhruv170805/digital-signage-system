@@ -49,7 +49,7 @@ const Weather = ({ location }) => {
         <div className="w-8 h-8 rounded-xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
           <MapPin size={14} className="text-blue-400" />
         </div>
-        <span className="text-[10px] font-black uppercase tracking-[2px] text-white/60">{area}</span>
+        <span className="text-[10px] font-black uppercase tracking-[2px] text-white/60 truncate max-w-[150px]">{area}</span>
       </div>
       <div className="h-6 w-px bg-white/10" />
       <div className="flex items-center gap-3">
@@ -64,6 +64,18 @@ const Weather = ({ location }) => {
 
 // --- Media Item Component ---
 const MediaItem = ({ item }) => {
+  const videoRef = React.useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (videoRef.current) {
+        videoRef.current.pause();
+        videoRef.current.src = "";
+        videoRef.current.load();
+      }
+    };
+  }, []);
+
   if (!item) return (
     <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900/50 gap-4">
       <div className="w-16 h-16 rounded-full bg-rose-500/10 flex items-center justify-center border border-rose-500/20">
@@ -78,11 +90,23 @@ const MediaItem = ({ item }) => {
   const src = `${apiBase}${filePath}`;
 
   if (item.fileType === 'video') {
-    return <video src={src} autoPlay muted loop className="w-full h-full object-fill bg-black shadow-2xl" />;
+    return (
+      <div className="w-full h-full relative bg-black">
+        <video 
+          ref={videoRef}
+          src={src} 
+          autoPlay 
+          muted 
+          loop 
+          playsInline
+          className="w-full h-full object-fill shadow-2xl" 
+        />
+      </div>
+    );
   }
   
   if (item.fileType === 'pdf') {
-    return <iframe src={`${src}#toolbar=0&navpanes=0&scrollbar=0`} className="w-full h-full border-none bg-white shadow-2xl" title={item.fileName} />;
+    return <iframe src={`${src}#toolbar=0&navpanes=0&scrollbar=0`} className="w-full h-full border-none bg-white shadow-2xl pointer-events-none" title={item.fileName} />;
   }
 
   return <img src={src} alt={item.fileName} className="w-full h-full object-fill bg-black shadow-2xl" />;
@@ -92,17 +116,51 @@ const MediaItem = ({ item }) => {
 const TickerDisplay = ({ ticker }) => {
     if (!ticker) return null;
 
+    const fontSizeMap = {
+        'text-xs': '0.75rem',
+        'text-sm': '0.875rem',
+        'text-base': '1rem',
+        'text-lg': '1.125rem',
+        'text-xl': '1.25rem',
+        'text-2xl': '1.5rem',
+        'text-3xl': '1.875rem',
+        'text-4xl': '2.25rem',
+        'text-5xl': '3rem',
+        'text-6xl': '3.75rem',
+        'text-7xl': '4.5rem',
+        'text-8xl': '6rem',
+        'text-9xl': '8rem',
+    };
+
+    const resolvedFontSize = fontSizeMap[ticker.fontSize] || ticker.fontSize || '2.25rem';
+
     const style = {
         fontFamily: ticker.fontFamily || 'sans-serif',
         color: ticker.color || '#ffffff',
         backgroundColor: ticker.backgroundColor || 'transparent',
         padding: ticker.padding || '0px',
         fontWeight: ticker.fontWeight || 'bold',
+        fontSize: resolvedFontSize
     };
 
     const isVertical = ticker.direction === 'vertical';
     const animationName = ticker.direction === 'left-right' ? 'ticker-ltr' : (isVertical ? 'ticker-vertical' : 'ticker-rtl');
     const animDuration = Math.max(5, 100 - (ticker.speed || 50)) + 's';
+
+    const TickerContent = () => (
+        <div className="flex items-center gap-32 px-16">
+            <span className="tracking-tight uppercase font-black">
+                {ticker.text}
+            </span>
+            {ticker.type === 'link' && ticker.linkUrl && (
+                <div className="px-6 py-2 bg-white/10 rounded-2xl border border-white/20 backdrop-blur-md">
+                    <span className="text-[12px] font-black text-blue-400 uppercase tracking-[4px] flex items-center gap-3" style={{ fontSize: '1rem' }}>
+                        <Zap size={14} className="animate-pulse" /> {ticker.linkUrl.replace(/^https?:\/\//, '')}
+                    </span>
+                </div>
+            )}
+        </div>
+    );
 
     return (
         <div className="w-full h-full flex items-center overflow-hidden relative shadow-inner" style={{ backgroundColor: style.backgroundColor }}>
@@ -113,18 +171,10 @@ const TickerDisplay = ({ ticker }) => {
                     ...style
                 }}
             >
-                <div className="flex items-center gap-32 px-16">
-                    <span className={`tracking-tight ${ticker.fontSize || 'text-4xl'} uppercase font-black`}>
-                        {ticker.text}
-                    </span>
-                    {ticker.type === 'link' && ticker.linkUrl && (
-                        <div className="px-6 py-2 bg-white/10 rounded-2xl border border-white/20 backdrop-blur-md">
-                            <span className="text-[12px] font-black text-blue-400 uppercase tracking-[4px] flex items-center gap-3">
-                                <Zap size={14} className="animate-pulse" /> {ticker.linkUrl.replace(/^https?:\/\//, '')}
-                            </span>
-                        </div>
-                    )}
-                </div>
+                <TickerContent />
+                <TickerContent />
+                <TickerContent />
+                <TickerContent />
             </div>
         </div>
     );
@@ -133,8 +183,8 @@ const TickerDisplay = ({ ticker }) => {
 // --- Main Display Screen ---
 const DisplayScreen = () => {
   const [searchParams] = useSearchParams();
-  const screenId = searchParams.get('screenId');
-
+  
+  const [screenInfo, setScreenInfo] = useState(null);
   const [playlist, setPlaylist] = useState([]);
   const [allMedia, setAllMedia] = useState([]);
   const [currentIdx, setCurrentIdx] = useState(0);
@@ -144,16 +194,49 @@ const DisplayScreen = () => {
 
   const [settings, setSettings] = useState({ idleWallpaperId: '' });
   const [time, setTime] = useState(new Date());
-  const [screenLocation, setScreenLocation] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+
+  // Capture token from URL and persist
+  useEffect(() => {
+    const token = searchParams.get("token");
+    if (token) {
+      localStorage.setItem("screenToken", token);
+      // Clean URL
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
+    }
+  }, [searchParams]);
 
   const fetchData = useCallback(async () => {
+    const token = localStorage.getItem('screenToken');
+    const screenId = searchParams.get('screenId'); // Fallback for legacy
+
+    const authConfig = {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    };
+
     setIsSyncing(true);
     try {
+      // 1. Identify Screen (if token exists)
+      if (token) {
+        try {
+          const meRes = await axios.get(`${import.meta.env.VITE_API_URL}/api/screens/me`, authConfig);
+          setScreenInfo(meRes.data);
+        } catch (e) {
+          console.error("Identity verification failed", e);
+        }
+      }
+
+      // 2. Fetch Playlist (Assignments)
+      const scheduleUrl = token 
+        ? `${import.meta.env.VITE_API_URL}/api/schedule/me`
+        : `${import.meta.env.VITE_API_URL}/api/schedule/active${screenId ? `?screenId=${screenId}` : ''}`;
+
       const [playlistRes, mediaRes, tickerRes, settingsRes] = await Promise.all([
-        axios.get(`${import.meta.env.VITE_API_URL}/api/schedule/active${screenId ? `?screenId=${screenId}` : ''}`),
-        axios.get(`${import.meta.env.VITE_API_URL}/api/media`),
-        axios.get(`${import.meta.env.VITE_API_URL}/api/ticker/active${screenId ? `?screenId=${screenId}` : ''}`),
+        axios.get(scheduleUrl, authConfig),
+        axios.get(`${import.meta.env.VITE_API_URL}/api/media`, authConfig),
+        axios.get(`${import.meta.env.VITE_API_URL}/api/ticker/active`, authConfig),
         axios.get(`${import.meta.env.VITE_API_URL}/api/settings`)
       ]);
 
@@ -165,15 +248,15 @@ const DisplayScreen = () => {
       setTickers(tickerRes.data);
       setSettings(settingsRes.data);
 
-      if (screenId) {
-        const screenRes = await axios.get(`${import.meta.env.VITE_API_URL}/api/screens`);
-        const thisScreen = screenRes.data.find(s => s.id === screenId);
-        if (thisScreen?.location) setScreenLocation(thisScreen.location);
-      }
-    } catch (err) {} finally {
-      setTimeout(() => setIsSyncing(false), 2000);
+    } catch (err) {
+      console.error("Data sync error", err);
+    } finally {
+      setTimeout(() => {
+        setIsSyncing(false);
+        setIsInitialLoading(false);
+      }, 1500);
     }
-  }, [screenId, playlist.length, tickers.length]);
+  }, [searchParams, playlist.length, tickers.length]);
 
   useEffect(() => {
     const socket = io(import.meta.env.VITE_API_URL);
@@ -184,7 +267,13 @@ const DisplayScreen = () => {
     const f = setInterval(fetchData, 300000);
 
     const hb = setInterval(() => {
-        if (screenId) socket.emit('screenPing', { screenId });
+        const token = localStorage.getItem('screenToken');
+        const screenId = searchParams.get('screenId');
+        if (token) {
+            socket.emit('screenPing', { token });
+        } else if (screenId) {
+            socket.emit('screenPing', { screenId });
+        }
     }, 10000);
 
     socket.on('contentUpdate', fetchData);
@@ -197,7 +286,7 @@ const DisplayScreen = () => {
       clearInterval(hb);
       socket.disconnect();
     };
-  }, [fetchData, screenId]);
+  }, [fetchData, searchParams]);
 
   // Playlist Engine
   useEffect(() => {
@@ -281,6 +370,22 @@ const DisplayScreen = () => {
 
   const idleWallpaper = allMedia.find(m => (m.id === settings.idleWallpaperId || m._id === settings.idleWallpaperId));
 
+  if (isInitialLoading) return (
+    <div className="fixed inset-0 bg-[#0B1220] flex items-center justify-center z-[100] font-sans">
+      <div className="text-center">
+        <div className="relative w-32 h-32 mx-auto mb-10">
+          <div className="absolute inset-0 border-4 border-blue-500/10 rounded-full" />
+          <div className="absolute inset-0 border-4 border-t-blue-500 rounded-full animate-spin" />
+          <div className="absolute inset-0 flex items-center justify-center">
+             <Activity size={32} className="text-blue-500 animate-pulse" />
+          </div>
+        </div>
+        <h2 className="text-xl font-black text-white uppercase tracking-[12px] animate-pulse">Nexus Intelligence</h2>
+        <p className="text-[10px] text-white/20 uppercase font-black tracking-[4px] mt-4">Establishing Secure Node Connection</p>
+      </div>
+    </div>
+  );
+
   return (
     <div className="fixed inset-0 w-full h-full bg-[#0B1220] overflow-hidden flex flex-col text-white select-none font-sans bg-drift">
       {/* Cinematic Background Gradient */}
@@ -296,16 +401,18 @@ const DisplayScreen = () => {
             <div className={`w-4 h-4 rounded-full ${isSyncing ? 'bg-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.6)]' : 'bg-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.6)]'} animate-pulse`} />
             <span className="text-[12px] font-black uppercase tracking-[12px] text-white/90">Live</span>
           </div>
-          {screenId && (
+          {(screenInfo || searchParams.get('screenId')) && (
             <div className="px-6 py-2.5 bg-white/5 rounded-2xl border border-white/10 flex items-center gap-3">
                <Monitor size={16} className="text-white/20" />
-               <span className="text-[12px] font-black text-white/40 uppercase tracking-[4px]">{screenId.slice(-8)}</span>
+               <span className="text-[12px] font-black text-white/40 uppercase tracking-[4px]">
+                 {screenInfo ? screenInfo.name : searchParams.get('screenId').slice(-8)}
+               </span>
             </div>
           )}
         </div>
 
         <div className="flex items-center gap-12">
-          <Weather location={screenLocation} />
+          <Weather location={screenInfo?.location} />
           <div className="h-16 w-px bg-white/10" />
           <div className="flex items-center gap-6">
              <div className="text-right">
@@ -335,8 +442,8 @@ const DisplayScreen = () => {
               <div className="w-full h-full p-16 bg-black">
                 <div className="w-full h-full glass overflow-hidden relative shadow-2xl border-white/5">
                   <MediaItem item={idleWallpaper} />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
-                </div>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40 pointer-events-none" />
+                  </div>
               </div>
             ) : (
               <div className="text-center">

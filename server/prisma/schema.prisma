@@ -3,23 +3,22 @@
 
 generator client {
   provider = "prisma-client-js"
-  engineType = "library"
 }
 
 datasource db {
-  provider = "sqlserver"
+  provider = "mongodb"
   url      = env("DATABASE_URL")
 }
 
 model AppSettings {
-  id        Int      @id @default(autoincrement())
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
   key       String   @unique
   value     String   // Store JSON or string values
   updatedAt DateTime @updatedAt
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
   email     String   @unique
   password  String
   name      String
@@ -31,14 +30,14 @@ model User {
 }
 
 model Screen {
-  id           Int           @id @default(autoincrement())
+  id           String        @id @default(auto()) @map("_id") @db.ObjectId
   name         String
   location     String?
   status       String        @default("offline")
   lastSeen     DateTime?
   ipAddress    String?
   macAddress   String?       @unique
-  groupId      Int?
+  groupId      String?       @db.ObjectId
   group        ScreenGroup?  @relation(fields: [groupId], references: [id])
   schedules    Schedule[]
   tickerConfig String?       // JSON override for screen-specific ticker style
@@ -46,14 +45,14 @@ model Screen {
 }
 
 model ScreenGroup {
-  id        Int      @id @default(autoincrement())
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
   name      String   @unique
   screens   Screen[]
   schedules Schedule[]
 }
 
 model Template {
-  id          Int      @id @default(autoincrement())
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
   name        String
   description String?
   layoutJson  String   // Root layout properties
@@ -64,8 +63,8 @@ model Template {
 }
 
 model Frame {
-  id           Int      @id @default(autoincrement())
-  templateId   Int
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  templateId   String   @db.ObjectId
   template     Template @relation(fields: [templateId], references: [id], onDelete: Cascade)
   name         String
   coordinateX  Float    // Percentage or Pixel
@@ -78,20 +77,20 @@ model Frame {
 }
 
 model Media {
-  id          Int      @id @default(autoincrement())
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
   filename    String
   originalName String
   mimeType    String
   size        Int
   path        String
   status      String   @default("pending") // pending, approved, rejected
-  uploadedBy  Int?
+  uploadedBy  String?   @db.ObjectId
   schedules   Schedule[]
   createdAt   DateTime @default(now())
 }
 
 model Ticker {
-  id           Int      @id @default(autoincrement())
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
   text         String
   speed        Int      @default(5)
   direction    String   @default("left")
@@ -105,24 +104,24 @@ model Ticker {
 }
 
 model Schedule {
-  id          Int       @id @default(autoincrement())
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
   name        String
   priority    Int       @default(1)
   
   // Content (One of these should be set)
-  mediaId     Int?
+  mediaId     String?   @db.ObjectId
   media       Media?    @relation(fields: [mediaId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  templateId  Int?
+  templateId  String?   @db.ObjectId
   template    Template? @relation(fields: [templateId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  tickerId    Int?
+  tickerId    String?   @db.ObjectId
   ticker      Ticker?   @relation(fields: [tickerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  frameId     Int?      // Optional: Target specific frame if using template
+  frameId     String?   @db.ObjectId
   frame       Frame?    @relation(fields: [frameId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   // Targets
-  screenId    Int?
+  screenId    String?   @db.ObjectId
   screen      Screen?   @relation(fields: [screenId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  groupId     Int?
+  groupId     String?   @db.ObjectId
   group       ScreenGroup? @relation(fields: [groupId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   // Timing
@@ -138,18 +137,18 @@ model Schedule {
 }
 
 model AuditLog {
-  id        Int      @id @default(autoincrement())
-  userId    Int?
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String?  @db.ObjectId
   user      User?    @relation(fields: [userId], references: [id])
   action    String
   entity    String
-  entityId  Int?
+  entityId  String?
   details   String?  // JSON string
   timestamp DateTime @default(now())
 }
 
 model ErrorLog {
-  id        Int      @id @default(autoincrement())
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
   message   String
   stack     String?
   context   String?  // JSON string

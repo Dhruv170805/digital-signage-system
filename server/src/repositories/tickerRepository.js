@@ -6,7 +6,7 @@ class TickerRepository {
   }
 
   async getById(id) {
-    return await prisma.ticker.findUnique({ where: { id: parseInt(id) } });
+    return await prisma.ticker.findUnique({ where: { id } });
   }
 
   async create(data) {
@@ -15,7 +15,7 @@ class TickerRepository {
 
   async update(id, data) {
     return await prisma.ticker.update({
-      where: { id: parseInt(id) },
+      where: { id },
       data,
     });
   }

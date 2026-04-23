@@ -9,7 +9,7 @@ class ScreenRepository {
 
   async getById(id) {
     return await prisma.screen.findUnique({
-      where: { id: parseInt(id) },
+      where: { id },
       include: { group: true },
     });
   }
@@ -20,7 +20,7 @@ class ScreenRepository {
 
   async update(id, data) {
     return await prisma.screen.update({
-      where: { id: parseInt(id) },
+      where: { id },
       data,
     });
   }

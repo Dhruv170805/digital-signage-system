@@ -52,35 +52,35 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--bg)] flex items-center justify-center p-6 relative overflow-hidden font-sans bg-drift">
+    <div className="min-h-screen bg-[#0B1220] flex items-center justify-center p-6 relative overflow-hidden font-sans bg-drift text-white">
       {/* Background Orbs */}
       <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-blue-600/10 rounded-full blur-[160px] animate-pulse" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-emerald-500/10 rounded-full blur-[160px] animate-pulse" style={{ animationDelay: '2s' }} />
       
       <div className={`relative w-full max-w-[480px] ${shaking ? 'animate-shake' : 'animate-fade-in'}`}>
         <div className="text-center mb-12">
-          <div className="inline-flex items-center gap-3 mb-8 px-6 py-2.5 bg-white/5 border border-white/10 rounded-full backdrop-blur-xl shadow-2xl relative overflow-hidden group">
+          <div className="inline-flex items-center gap-3 mb-8 px-6 py-2.5 bg-white/10 border border-white/20 rounded-full backdrop-blur-xl shadow-2xl relative overflow-hidden group">
             <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-transparent to-blue-500/10 animate-drift" />
             <Activity className="w-4 h-4 text-blue-400 relative z-10" />
-            <span className="text-[10px] uppercase tracking-[6px] font-black text-white/80 relative z-10">Nexus Operations</span>
+            <span className="text-[10px] uppercase tracking-[6px] font-black text-white relative z-10">Nexus Operations</span>
           </div>
           <h1 className="text-6xl font-black text-white tracking-tighter mb-4 uppercase">Identity</h1>
-          <p className="text-[10px] font-black text-white/20 uppercase tracking-[4px]">Secure Terminal Access Required</p>
+          <p className="text-[10px] font-black text-white/40 uppercase tracking-[4px]">Secure Terminal Access Required</p>
         </div>
 
-        <div className="glass p-12 shadow-[0_32px_120px_-20px_rgba(0,0,0,0.8)] border-white/5 relative group rounded-[40px]">
-          <div className="absolute inset-0 bg-gradient-to-tr from-blue-500/0 via-blue-500/5 to-blue-500/0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none rounded-[40px]" />
+        <div className="glass p-12 shadow-[0_32px_120px_-20px_rgba(0,0,0,0.8)] border-white/10 relative group rounded-[40px] bg-white/5">
+          <div className="absolute inset-0 bg-gradient-to-tr from-blue-500/0 via-blue-500/10 to-blue-500/0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none rounded-[40px]" />
           
           <form onSubmit={handleLogin} className="space-y-8 relative z-10">
             <div className="space-y-3">
-              <label className="text-[10px] uppercase tracking-[3px] text-white/40 font-black ml-1">Authentication ID</label>
+              <label className="text-[10px] uppercase tracking-[3px] text-white/60 font-black ml-1">Authentication ID</label>
               <div className="relative group/input">
-                <Mail className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 group-focus-within/input:text-blue-400 transition-colors" />
+                <Mail className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 group-focus-within/input:text-blue-400 transition-colors" />
                 <input 
                   type="email" 
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="nexus-input pl-14 h-16 bg-white/[0.03] hover:bg-white/[0.06] transition-all border-white/10 focus:border-blue-500/50 rounded-2xl" 
+                  className="nexus-input pl-14 h-16 bg-white/[0.05] hover:bg-white/[0.08] transition-all border-white/10 focus:border-blue-500/50 rounded-2xl text-white placeholder:text-white/20" 
                   placeholder=" personnel@nexus.sys"
                   required
                 />
@@ -88,14 +88,14 @@ const Login = () => {
             </div>
 
             <div className="space-y-3">
-              <label className="text-[10px] uppercase tracking-[3px] text-white/40 font-black ml-1">Security Key</label>
+              <label className="text-[10px] uppercase tracking-[3px] text-white/60 font-black ml-1">Security Key</label>
               <div className="relative group/input">
-                <Lock className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 group-focus-within/input:text-blue-400 transition-colors" />
+                <Lock className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 group-focus-within/input:text-blue-400 transition-colors" />
                 <input 
                   type="password" 
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="nexus-input pl-14 h-16 bg-white/[0.03] hover:bg-white/[0.06] transition-all border-white/10 focus:border-blue-500/50 rounded-2xl" 
+                  className="nexus-input pl-14 h-16 bg-white/[0.05] hover:bg-white/[0.08] transition-all border-white/10 focus:border-blue-500/50 rounded-2xl text-white placeholder:text-white/20" 
                   placeholder="••••••••"
                   required
                 />
@@ -107,17 +107,17 @@ const Login = () => {
               disabled={loading}
               className="nexus-btn-primary w-full h-16 flex items-center justify-center gap-4 group/btn relative overflow-hidden rounded-2xl"
             >
-              <span className="tracking-[4px] font-black uppercase text-xs">
+              <span className="tracking-[4px] font-black uppercase text-xs text-white">
                 {loading ? 'Verifying...' : 'Initialize Session'}
               </span>
-              {!loading && <ArrowRight className="w-5 h-5 group-hover/btn:translate-x-2 transition-transform" />}
+              {!loading && <ArrowRight className="w-5 h-5 group-hover/btn:translate-x-2 transition-transform text-white" />}
             </button>
           </form>
 
           <div className="mt-8 pt-8 border-t border-white/5 text-center">
             <button 
               onClick={() => setShowResetModal(true)}
-              className="text-[10px] uppercase tracking-[3px] text-white/20 font-black hover:text-white transition-colors"
+              className="text-[10px] uppercase tracking-[3px] text-white/40 font-black hover:text-white transition-colors"
             >
               Request Access Reset
             </button>

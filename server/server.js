@@ -16,6 +16,7 @@ const io = socketIo(server, {
 
 // Initialize real-time service
 socketService.init(io);
+app.set('socketio', io);
 
 server.listen(PORT, () => {
   console.log(`🚀 NEXUS PRODUCTION ENGINE: Running on port ${PORT}`);

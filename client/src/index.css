@@ -33,6 +33,7 @@
 @layer base {
   body {
     @apply text-[var(--text)] antialiased selection:bg-[var(--accent)] selection:text-white;
+    background-color: #0B1220; /* Solid fallback */
     background: var(--bg-gradient);
     min-height: 100vh;
     font-family: 'Plus Jakarta Sans', sans-serif;

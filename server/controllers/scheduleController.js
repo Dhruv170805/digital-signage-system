@@ -149,10 +149,20 @@ const toggleScheduleStatus = async (req, res) => {
     }
 };
 
+const getPlaylistForMe = async (req, res) => {
+    try {
+        const playlist = await PlaylistEngine.getPlaylistByToken(req.screen);
+        res.json(playlist);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to retrieve your broadcast playlist.' });
+    }
+};
+
 module.exports = {
     getActiveSchedule,
     getAllSchedules,
     createSchedule,
     deleteSchedule,
-    toggleScheduleStatus
+    toggleScheduleStatus,
+    getPlaylistForMe
 };
