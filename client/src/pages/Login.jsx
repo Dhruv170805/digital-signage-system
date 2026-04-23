@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Monitor, Mail, Lock, ArrowRight, ShieldCheck, Activity, XCircle } from 'lucide-react';
+import { Mail, Lock, ArrowRight, Activity, XCircle, ShieldCheck } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
@@ -52,48 +52,50 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--bg)] flex items-center justify-center p-6 relative overflow-hidden font-sans">
-      <div className="absolute inset-0 grid-bg opacity-30" />
-      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-sky-500/10 rounded-full blur-[120px] animate-pulse" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-indigo-500/10 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '2s' }} />
+    <div className="min-h-screen bg-[var(--bg)] flex items-center justify-center p-6 relative overflow-hidden font-sans bg-drift">
+      {/* Background Orbs */}
+      <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-blue-600/10 rounded-full blur-[160px] animate-pulse" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-emerald-500/10 rounded-full blur-[160px] animate-pulse" style={{ animationDelay: '2s' }} />
       
-      <div className={`relative w-full max-w-[440px] ${shaking ? 'animate-shake' : 'animate-fade-in'}`}>
+      <div className={`relative w-full max-w-[480px] ${shaking ? 'animate-shake' : 'animate-fade-in'}`}>
         <div className="text-center mb-12">
-          <div className="inline-flex items-center gap-3 mb-6 px-5 py-2 bg-white/5 border border-white/10 rounded-full backdrop-blur-md shadow-2xl">
-            <Activity className="w-4 h-4 text-sky-400" />
-            <span className="text-[10px] uppercase tracking-[4px] font-black text-white/80">Digital Screen Intelligence</span>
+          <div className="inline-flex items-center gap-3 mb-8 px-6 py-2.5 bg-white/5 border border-white/10 rounded-full backdrop-blur-xl shadow-2xl relative overflow-hidden group">
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-transparent to-blue-500/10 animate-drift" />
+            <Activity className="w-4 h-4 text-blue-400 relative z-10" />
+            <span className="text-[10px] uppercase tracking-[6px] font-black text-white/80 relative z-10">Nexus Operations</span>
           </div>
-          <h1 className="text-5xl font-black text-white tracking-tighter mb-3">Welcome</h1>
+          <h1 className="text-6xl font-black text-white tracking-tighter mb-4 uppercase">Identity</h1>
+          <p className="text-[10px] font-black text-white/20 uppercase tracking-[4px]">Secure Terminal Access Required</p>
         </div>
 
-        <div className="glass p-10 shadow-[0_32px_120px_-20px_rgba(0,0,0,0.8)] border-white/10 relative group">
-          <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/5 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none rounded-2xl" />
+        <div className="glass p-12 shadow-[0_32px_120px_-20px_rgba(0,0,0,0.8)] border-white/5 relative group rounded-[40px]">
+          <div className="absolute inset-0 bg-gradient-to-tr from-blue-500/0 via-blue-500/5 to-blue-500/0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none rounded-[40px]" />
           
-          <form onSubmit={handleLogin} className="space-y-6 relative z-10">
-            <div className="space-y-2">
-              <label className="text-[10px] uppercase tracking-[2px] text-slate-500 font-black ml-1">User ID</label>
+          <form onSubmit={handleLogin} className="space-y-8 relative z-10">
+            <div className="space-y-3">
+              <label className="text-[10px] uppercase tracking-[3px] text-white/40 font-black ml-1">Authentication ID</label>
               <div className="relative group/input">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within/input:text-sky-400 transition-colors" />
+                <Mail className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 group-focus-within/input:text-blue-400 transition-colors" />
                 <input 
                   type="email" 
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="nexus-input pl-12 bg-black/40 hover:bg-black/60 transition-colors" 
-                  placeholder="name@corp.in"
+                  className="nexus-input pl-14 h-16 bg-white/[0.03] hover:bg-white/[0.06] transition-all border-white/10 focus:border-blue-500/50 rounded-2xl" 
+                  placeholder=" personnel@nexus.sys"
                   required
                 />
               </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-[10px] uppercase tracking-[2px] text-slate-500 font-black ml-1">Password</label>
+            <div className="space-y-3">
+              <label className="text-[10px] uppercase tracking-[3px] text-white/40 font-black ml-1">Security Key</label>
               <div className="relative group/input">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within/input:text-sky-400 transition-colors" />
+                <Lock className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 group-focus-within/input:text-blue-400 transition-colors" />
                 <input 
                   type="password" 
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="nexus-input pl-12 bg-black/40 hover:bg-black/60 transition-colors" 
+                  className="nexus-input pl-14 h-16 bg-white/[0.03] hover:bg-white/[0.06] transition-all border-white/10 focus:border-blue-500/50 rounded-2xl" 
                   placeholder="••••••••"
                   required
                 />
@@ -103,45 +105,55 @@ const Login = () => {
             <button 
               type="submit" 
               disabled={loading}
-              className="nexus-btn-primary w-full flex items-center justify-center gap-3 py-4 group/btn relative overflow-hidden"
+              className="nexus-btn-primary w-full h-16 flex items-center justify-center gap-4 group/btn relative overflow-hidden rounded-2xl"
             >
-              <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover/btn:translate-x-[100%] transition-transform duration-700 pointer-events-none" />
-              <span className="tracking-[2px] font-black uppercase text-sm">
-                {loading ? 'Decrypting...' : 'Log In'}
+              <span className="tracking-[4px] font-black uppercase text-xs">
+                {loading ? 'Verifying...' : 'Initialize Session'}
               </span>
-              {!loading && <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />}
+              {!loading && <ArrowRight className="w-5 h-5 group-hover/btn:translate-x-2 transition-transform" />}
             </button>
           </form>
 
-          <div className="mt-6 text-center">
+          <div className="mt-8 pt-8 border-t border-white/5 text-center">
             <button 
               onClick={() => setShowResetModal(true)}
-              className="text-[10px] uppercase tracking-[2px] text-slate-500 font-black hover:text-sky-400 transition-colors"
+              className="text-[10px] uppercase tracking-[3px] text-white/20 font-black hover:text-white transition-colors"
             >
-              Forgot Password?
+              Request Access Reset
             </button>
           </div>
         </div>
 
+        <div className="mt-12 flex items-center justify-center gap-8 opacity-20 grayscale group-hover:grayscale-0 transition-all duration-700">
+           <ShieldCheck size={20} className="text-white" />
+           <Activity size={20} className="text-white" />
+           <Lock size={20} className="text-white" />
+        </div>
+
         {showResetModal && (
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-6">
-            <div className="glass max-w-md w-full p-10 space-y-6 animate-fade-in relative">
+          <div className="fixed inset-0 bg-black/90 backdrop-blur-xl z-50 flex items-center justify-center p-6">
+            <div className="glass max-w-md w-full p-12 space-y-8 animate-fade-in relative rounded-[40px] border-white/10">
               <div className="flex justify-between items-center">
-                <h3 className="text-xl font-bold text-white">Password Reset</h3>
-                <button onClick={() => setShowResetModal(false)}><XCircle className="text-slate-500 hover:text-white" /></button>
+                <div>
+                  <h3 className="text-2xl font-black text-white uppercase tracking-tighter leading-none">Access Recovery</h3>
+                  <p className="text-[10px] font-bold text-blue-400 uppercase tracking-[4px] mt-2">Protocol Override</p>
+                </div>
+                <button onClick={() => setShowResetModal(false)} className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center hover:bg-rose-500/20 hover:text-rose-500 transition-all">
+                  <XCircle size={20} />
+                </button>
               </div>
-              <p className="text-xs text-slate-400 uppercase font-bold tracking-wider">Enter your email to request a manual password reset by the system administrator.</p>
+              <p className="text-[10px] text-white/40 uppercase font-black tracking-widest leading-relaxed">Administrator verification is required for password recovery. Enter your registered email to transmit a clearance request.</p>
               
-              <form onSubmit={handleResetRequest} className="space-y-4">
+              <form onSubmit={handleResetRequest} className="space-y-6">
                 <input 
                   type="email" 
                   value={resetEmail}
                   onChange={(e) => setResetEmail(e.target.value)}
-                  className="nexus-input" 
+                  className="nexus-input h-16 rounded-2xl border-white/10" 
                   placeholder="admin@corp.in"
                   required
                 />
-                <button type="submit" disabled={resetLoading} className="nexus-btn-primary w-full py-4 uppercase font-black tracking-widest text-xs">
+                <button type="submit" disabled={resetLoading} className="nexus-btn-primary w-full h-16 uppercase font-black tracking-[4px] text-xs rounded-2xl">
                   {resetLoading ? 'Transmitting...' : 'Send Request'}
                 </button>
               </form>

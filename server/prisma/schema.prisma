@@ -1,0 +1,155 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlserver"
+}
+
+model AppSettings {
+  id        Int      @id @default(autoincrement())
+  key       String   @unique
+  value     String   // Store JSON or string values
+  updatedAt DateTime @updatedAt
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  name      String
+  role      String   @default("user") // admin, user
+  status    String   @default("active")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  auditLogs AuditLog[]
+}
+
+model Screen {
+  id           Int           @id @default(autoincrement())
+  name         String
+  location     String?
+  status       String        @default("offline")
+  lastSeen     DateTime?
+  ipAddress    String?
+  macAddress   String?       @unique
+  groupId      Int?
+  group        ScreenGroup?  @relation(fields: [groupId], references: [id])
+  schedules    Schedule[]
+  tickerConfig String?       // JSON override for screen-specific ticker style
+  updatedAt    DateTime      @updatedAt
+}
+
+model ScreenGroup {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  screens   Screen[]
+  schedules Schedule[]
+}
+
+model Template {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  layoutJson  String   // Root layout properties
+  frames      Frame[]
+  schedules   Schedule[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Frame {
+  id           Int      @id @default(autoincrement())
+  templateId   Int
+  template     Template @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  name         String
+  coordinateX  Float    // Percentage or Pixel
+  coordinateY  Float
+  width        Float
+  height       Float
+  zIndex       Int      @default(1)
+  allowedTypes String?  // e.g. "image,video"
+  schedules    Schedule[]
+}
+
+model Media {
+  id          Int      @id @default(autoincrement())
+  filename    String
+  originalName String
+  mimeType    String
+  size        Int
+  path        String
+  status      String   @default("pending") // pending, approved, rejected
+  uploadedBy  Int?
+  schedules   Schedule[]
+  createdAt   DateTime @default(now())
+}
+
+model Ticker {
+  id           Int      @id @default(autoincrement())
+  text         String
+  speed        Int      @default(5)
+  direction    String   @default("left")
+  fontColor    String   @default("#FFFFFF")
+  backgroundColor String @default("#000000")
+  fontSize     Int      @default(24)
+  priority     Int      @default(1) // Higher = override
+  schedules    Schedule[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Schedule {
+  id          Int       @id @default(autoincrement())
+  name        String
+  priority    Int       @default(1)
+  
+  // Content (One of these should be set)
+  mediaId     Int?
+  media       Media?    @relation(fields: [mediaId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  templateId  Int?
+  template    Template? @relation(fields: [templateId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  tickerId    Int?
+  ticker      Ticker?   @relation(fields: [tickerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  frameId     Int?      // Optional: Target specific frame if using template
+  frame       Frame?    @relation(fields: [frameId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  // Targets
+  screenId    Int?
+  screen      Screen?   @relation(fields: [screenId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  groupId     Int?
+  group       ScreenGroup? @relation(fields: [groupId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  // Timing
+  startDate   DateTime
+  endDate     DateTime
+  startTime   String?   // HH:mm
+  endTime     String?   // HH:mm
+  daysOfWeek  String?   // "1,2,3,4,5" (Monday=1)
+  
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int?
+  user      User?    @relation(fields: [userId], references: [id])
+  action    String
+  entity    String
+  entityId  Int?
+  details   String?  // JSON string
+  timestamp DateTime @default(now())
+}
+
+model ErrorLog {
+  id        Int      @id @default(autoincrement())
+  message   String
+  stack     String?
+  context   String?  // JSON string
+  timestamp DateTime @default(now())
+}

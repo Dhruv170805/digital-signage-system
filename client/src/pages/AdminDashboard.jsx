@@ -14,8 +14,45 @@ import {
 
 import AuditHistory from '../components/admin/AuditHistory';
 
-const Card = ({ children, className = "" }) => (
-  <div className={`glass p-6 ${className}`}>{children}</div>
+const Card = ({ children, className = "", title, icon: Icon, subtitle }) => (
+  <div className={`glass-card p-8 animate-fade-in ${className}`}>
+    {(title || Icon) && (
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center gap-4">
+          {Icon && (
+            <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-[var(--accent)] shadow-inner">
+              <Icon size={24} />
+            </div>
+          )}
+          <div>
+            <h3 className="text-lg font-black text-white uppercase tracking-tighter leading-none">{title}</h3>
+            {subtitle && <p className="text-[10px] font-bold text-white/30 uppercase tracking-[2px] mt-1.5">{subtitle}</p>}
+          </div>
+        </div>
+      </div>
+    )}
+    {children}
+  </div>
+);
+
+const StatWidget = ({ label, value, icon: Icon, color = "blue", trend }) => (
+  <div className="glass-card p-8 group relative overflow-hidden">
+    <div className={`absolute top-0 right-0 w-32 h-32 bg-${color}-500/10 rounded-full blur-3xl -mr-16 -mt-16 transition-all group-hover:bg-${color}-500/20`} />
+    <div className="relative z-10">
+      <div className="flex items-center justify-between mb-6">
+        <div className={`p-4 rounded-2xl bg-${color}-500/10 border border-${color}-500/20 text-${color}-400 shadow-inner group-hover:scale-110 transition-transform`}>
+          <Icon size={24} />
+        </div>
+        {trend && (
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase">
+            {trend}
+          </div>
+        )}
+      </div>
+      <p className="text-[10px] font-black text-white/30 uppercase tracking-[3px] mb-2">{label}</p>
+      <h2 className="text-4xl font-black text-white tracking-tighter tabular-nums">{value}</h2>
+    </div>
+  </div>
 );
 
 const Badge = ({ label, type }) => {
@@ -187,17 +224,14 @@ const AdminDashboard = () => {
       if (results[3].status === 'fulfilled') setTemplates(results[3].value.data);
       if (results[4].status === 'fulfilled') setScreens(results[4].value.data);
       if (results[5].status === 'fulfilled') {
-        setTicker(results[5].value.data);
-        if (isInitial || !isTickerDirty) {
-          setDraftTicker(results[5].value.data);
-        }
+        setTickers(results[5].value.data);
       }
       if (results[6].status === 'fulfilled') setSettings(results[6].value.data);
       if (results[7].status === 'fulfilled') setSchedules(results[7].value.data);
     } catch (err) { 
       console.error('Fetch Error:', err);
     }
-  }, [isTickerDirty]);
+  }, []);
 
   useEffect(() => {
     fetchData(true);
@@ -372,104 +406,163 @@ const AdminDashboard = () => {
     switch (activeTab) {
       case 'dashboard':
         return (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 animate-fade-in">
-             <Card className="flex flex-col justify-between border-sky-500/20">
-                <div className="flex justify-between items-start">
-                   <div className="p-3 bg-sky-500/10 rounded-xl"><Tv className="text-sky-400 w-5 h-5"/></div>
-                   <span className="text-[10px] font-black text-sky-400 uppercase tracking-widest">Online</span>
+          <div className="space-y-10 animate-fade-in">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <StatWidget 
+                label="Active Terminals" 
+                value={screens.filter(s => s.status === 'online').length} 
+                icon={Tv} 
+                trend={`${screens.length} TOTAL`} 
+              />
+              <StatWidget 
+                label="Active Broadcasts" 
+                value={schedules.length} 
+                icon={Calendar} 
+                color="emerald" 
+              />
+              <StatWidget 
+                label="Pending Review" 
+                value={pendingMedia.length} 
+                icon={Timer} 
+                color="amber" 
+              />
+              <StatWidget 
+                label="Authorized Assets" 
+                value={media.length} 
+                icon={CheckSquare} 
+                color="indigo" 
+              />
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <Card 
+                className="lg:col-span-2" 
+                title="Operational Status" 
+                icon={Activity} 
+                subtitle="Live Terminal Monitoring"
+              >
+                <div className="space-y-4">
+                  {screens.length === 0 ? (
+                    <div className="p-20 text-center bg-white/[0.02] border border-dashed border-white/5 rounded-[32px]">
+                      <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <Monitor size={32} className="text-white/20" />
+                      </div>
+                      <p className="text-[10px] font-black text-white/30 uppercase tracking-[4px]">No active units detected in network</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {screens.map(s => (
+                        <div key={s.id} className="p-6 bg-white/[0.03] border border-white/5 rounded-[24px] flex items-center justify-between hover:bg-white/5 transition-all group relative overflow-hidden">
+                          <div className={`absolute top-0 left-0 w-1 h-full ${s.status === 'online' ? 'bg-emerald-500' : 'bg-rose-500'} opacity-50`} />
+                          <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center relative">
+                              <Tv className="text-white/40 group-hover:text-white transition-colors" />
+                              <div className={`absolute -top-1 -right-1 w-3 h-3 rounded-full border-4 border-[#0B1220] ${s.status === 'online' ? 'bg-emerald-500 animate-live' : 'bg-rose-500'}`} />
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-black text-white/20 uppercase tracking-[2px] mb-1">{s.location}</p>
+                              <p className="font-black text-white uppercase tracking-tighter">{s.name}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <div className="text-right hidden sm:block">
+                              <p className="text-[8px] font-black text-white/20 uppercase tracking-widest mb-0.5">Network</p>
+                              <p className="text-[10px] font-bold text-emerald-400 mono">100.2 KB/S</p>
+                            </div>
+                            <button className="p-3 bg-white/5 rounded-xl opacity-0 group-hover:opacity-100 transition-all hover:bg-white/10">
+                              <ExternalLink size={16} className="text-white/40" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <div className="mt-8">
-                   <p className="text-5xl font-black tracking-tighter text-[var(--text)]">{screens.filter(s => s.status === 'online').length}</p>
-                   <p className="text-[10px] font-bold text-slate-500 uppercase mt-2">Active Screens</p>
-                </div>
-             </Card>
-             <Card className="flex flex-col justify-between border-emerald-500/20">
-                <div className="flex justify-between items-start">
-                   <div className="p-3 bg-emerald-500/10 rounded-xl"><Calendar className="text-emerald-400 w-5 h-5"/></div>
-                   <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Active</span>
-                </div>
-                <div className="mt-8">
-                   <p className="text-5xl font-black tracking-tighter text-[var(--text)]">{schedules.length}</p>
-                   <p className="text-[10px] font-bold text-slate-500 uppercase mt-2">Live Broadcasts</p>
-                </div>
-             </Card>
-             <Card className="flex flex-col justify-between border-amber-500/20">
-                <div className="flex justify-between items-start">
-                   <div className="p-3 bg-amber-500/10 rounded-xl"><CheckSquare className="text-amber-400 w-5 h-5"/></div>
-                   <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Required</span>
-                </div>
-                <div className="mt-8">
-                   <p className="text-5xl font-black tracking-tighter text-[var(--text)]">{pendingMedia.length}</p>
-                   <p className="text-[10px] font-bold text-slate-500 uppercase mt-2">Pending Approvals</p>
-                </div>
-             </Card>
-             <Card className="flex flex-col justify-between border-indigo-500/20">
-                <div className="flex justify-between items-start">
-                   <div className="p-3 bg-indigo-500/10 rounded-xl"><UsersIcon className="text-indigo-400 w-5 h-5"/></div>
-                   <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Total</span>
-                </div>
-                <div className="mt-8">
-                   <p className="text-5xl font-black tracking-tighter text-[var(--text)]">{users.length}</p>
-                   <p className="text-[10px] font-bold text-slate-500 uppercase mt-2">Authorized Personnel</p>
-                </div>
-             </Card>
+              </Card>
+
+              <Card title="Quick Deploy" icon={Plus} subtitle="Rapid Operations Control">
+                 <div className="grid grid-cols-1 gap-4">
+                    <button onClick={() => setActiveTab('approve')} className="nexus-btn-primary flex items-center justify-between group h-16 px-6">
+                       <span className="text-[10px] font-black uppercase tracking-[3px]">Moderate Content</span>
+                       <CheckSquare size={18} className="group-hover:translate-x-1 transition-transform" />
+                    </button>
+                    <button onClick={() => setActiveTab('schedule')} className="nexus-btn-secondary flex items-center justify-between group h-16 px-6 bg-white/5 border-white/10 text-white hover:bg-white/10">
+                       <span className="text-[10px] font-black uppercase tracking-[3px]">Global Broadcast</span>
+                       <Calendar size={18} className="group-hover:translate-x-1 transition-transform" />
+                    </button>
+                    <button onClick={() => setActiveTab('templates')} className="nexus-btn-secondary flex items-center justify-between group h-16 px-6 bg-white/5 border-white/10 text-white hover:bg-white/10">
+                       <span className="text-[10px] font-black uppercase tracking-[3px]">Architect UI</span>
+                       <FileText size={18} className="group-hover:translate-x-1 transition-transform" />
+                    </button>
+                 </div>
+              </Card>
+            </div>
+
+            <Card title="Network Activity" icon={Activity} subtitle="System Audit Records">
+               <AuditHistory logs={[]} />
+            </Card>
           </div>
         );
 
       case 'approve':
         return (
-          <div className="animate-fade-in space-y-6">
-            <h3 className="text-sm font-bold uppercase tracking-wider mb-8">Pending Verification Queue</h3>
+          <div className="animate-fade-in space-y-10 max-w-6xl mx-auto">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-2xl font-black text-white uppercase tracking-tighter">Moderation Queue</h3>
+                <p className="text-[10px] font-bold text-white/30 uppercase tracking-[4px] mt-2">Required Asset Clearances</p>
+              </div>
+              <div className="px-6 py-3 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black text-amber-400 uppercase tracking-widest">
+                {pendingMedia.length} Pending
+              </div>
+            </div>
+
             {pendingMedia.length === 0 ? (
-               <div className="text-center py-20 bg-white/5 rounded-3xl border border-dashed border-white/10">
-                 <CheckCircle className="mx-auto text-emerald-500 opacity-20 mb-4" size={48} />
-                 <p className="text-slate-500 uppercase font-black tracking-[4px] text-xs">Clearance Queue Empty</p>
+               <div className="text-center py-32 bg-white/[0.02] rounded-[40px] border border-dashed border-white/5">
+                 <div className="w-20 h-20 bg-emerald-500/5 rounded-full flex items-center justify-center mx-auto mb-6 border border-emerald-500/10">
+                   <CheckCircle className="text-emerald-500 opacity-40" size={32} />
+                 </div>
+                 <p className="text-white/20 uppercase font-black tracking-[6px] text-xs">Clearance Queue Empty</p>
                </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                  {pendingMedia.map(m => (
-                   <Card key={m.id} className="group relative">
-                      <div className="aspect-video bg-black/60 rounded-xl overflow-hidden mb-6 border border-white/10 relative">
+                   <div key={m.id} className="glass-card p-6 group relative overflow-hidden transition-all duration-500 hover:scale-[1.02]">
+                      <div className="aspect-video bg-black rounded-2xl overflow-hidden mb-6 border border-white/5 relative group-hover:border-white/20 transition-all">
                          {m.fileType === 'video' ? (
-                           <video src={`${import.meta.env.VITE_API_URL}/${m.filePath}`} className="w-full h-full object-cover opacity-50" />
+                           <video src={`${import.meta.env.VITE_API_URL}/${m.filePath}`} className="w-full h-full object-cover opacity-60 grayscale group-hover:grayscale-0 transition-all duration-700" />
                          ) : m.fileType === 'pdf' ? (
-                           <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900/50">
-                              <File className="text-sky-400 opacity-40 mb-2" size={32} />
-                              <span className="text-[8px] font-black text-sky-400/60 uppercase">PDF Document</span>
+                           <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900">
+                              <File className="text-blue-500 opacity-40 mb-3" size={40} />
+                              <span className="text-[10px] font-black text-blue-500/60 uppercase tracking-widest">Digital PDF</span>
                            </div>
                          ) : (
-                           <img src={`${import.meta.env.VITE_API_URL}/${m.filePath}`} className="w-full h-full object-cover opacity-50" />
+                           <img src={`${import.meta.env.VITE_API_URL}/${m.filePath}`} className="w-full h-full object-cover opacity-60 grayscale group-hover:grayscale-0 transition-all duration-700" />
                          )}
-                         <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={() => { setPreviewFile(m); setShowPreview(true); }} className="p-4 bg-white text-black rounded-full shadow-2xl transform scale-75 group-hover:scale-100 transition-transform"><Eye size={20}/></button>
+                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                         <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-500 translate-y-4 group-hover:translate-y-0">
+                            <button onClick={() => { setPreviewFile(m); setShowPreview(true); }} className="w-14 h-14 bg-white text-black rounded-2xl shadow-2xl flex items-center justify-center hover:scale-110 active:scale-90 transition-all"><Eye size={24}/></button>
                          </div>
                       </div>
-                      <h4 className="font-bold truncate text-[var(--text)] uppercase tracking-tight">{m.fileName}</h4>
-                      <p className="text-[9px] font-black text-sky-400 mt-1 uppercase tracking-widest">{m.fileType} • {(m.uploaderId?.name || 'Unknown').split(' ')[0]}</p>
                       
-                      <div className="mt-4 pt-4 border-t border-white/5 space-y-3">
-                        <div className="flex justify-between items-center text-[8px] font-black text-slate-500 uppercase">
-                           <span>Requested Window:</span>
+                      <div className="space-y-1">
+                        <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest">{m.fileType} • {(m.uploaderId?.name || 'Unknown').split(' ')[0]}</p>
+                        <h4 className="text-lg font-black truncate text-white uppercase tracking-tighter">{m.fileName}</h4>
+                      </div>
+                      
+                      <div className="mt-6 pt-6 border-t border-white/5 grid grid-cols-2 gap-4">
+                        <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
+                           <p className="text-[8px] font-black text-white/20 mb-2 uppercase tracking-widest leading-none">Window Start</p>
+                           <p className="text-[10px] font-black text-white uppercase tracking-tighter tabular-nums">{m.requestedStartTime ? new Date(m.requestedStartTime).toLocaleDateString() : 'Immediate'}</p>
                         </div>
-                        <div className="flex gap-2">
-                           <div className="flex-1 bg-black/40 p-2 rounded-lg border border-white/5">
-                              <p className="text-[7px] opacity-40 mb-1 tracking-tighter">START</p>
-                              <p className="text-[9px] text-[var(--text)] tabular-nums">{m.requestedStartTime ? new Date(m.requestedStartTime).toLocaleDateString() : 'IMMEDIATE'}</p>
-                           </div>
-                           <div className="flex-1 bg-black/40 p-2 rounded-lg border border-white/5">
-                              <p className="text-[7px] opacity-40 mb-1 tracking-tighter">END</p>
-                              <p className="text-[9px] text-[var(--text)] tabular-nums">{m.requestedEndTime ? new Date(m.requestedEndTime).toLocaleDateString() : 'UNSET'}</p>
-                           </div>
+                        <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
+                           <p className="text-[8px] font-black text-white/20 mb-2 uppercase tracking-widest leading-none">Window End</p>
+                           <p className="text-[10px] font-black text-white uppercase tracking-tighter tabular-nums">{m.requestedEndTime ? new Date(m.requestedEndTime).toLocaleDateString() : 'Unset'}</p>
                         </div>
                       </div>
 
-                      <button 
-                        onClick={() => { setModFile(m); setShowModModal(true); }}
-                        className="w-full mt-6 py-3 bg-[var(--accent)] text-[var(--bg)] font-black text-[10px] uppercase tracking-widest rounded-xl hover:brightness-110 transition-all shadow-lg shadow-[var(--accent)]/10"
-                      >
-                        Review Asset
-                      </button>
-                   </Card>
+                      <button onClick={() => { setModFile(m); setShowModModal(true); }} className="w-full mt-6 py-4 bg-blue-600/10 border border-blue-600/20 text-blue-400 rounded-2xl text-[10px] font-black uppercase tracking-[4px] hover:bg-blue-600 hover:text-white transition-all duration-300">Evaluate Asset</button>
+                   </div>
                  ))}
               </div>
             )}
@@ -519,8 +612,12 @@ const AdminDashboard = () => {
                           <div key={z.i} className="space-y-1">
                             <label className="text-[9px] font-bold uppercase ml-1 opacity-50">Zone {z.i}</label>
                             <select required className="nexus-input py-2 text-xs" value={mediaMapping[z.i] || ''} onChange={(e) => setMediaMapping(p => ({ ...p, [z.i]: e.target.value }))}>
-                               <option value="">Select Asset</option>
-                               {approvedMedia.map(m => <option key={m.id} value={m.id}>{m.fileName}</option>)}
+                               <option value="">Select {z.type === 'ticker' ? 'Ticker' : 'Media Asset'}</option>
+                               {z.type === 'ticker' ? (
+                                   tickers.map(t => <option key={t.id || t._id} value={t.id || t._id}>{t.text}</option>)
+                               ) : (
+                                   approvedMedia.map(m => <option key={m.id} value={m.id}>{m.fileName}</option>)
+                               )}
                             </select>
                           </div>
                         ))}
@@ -592,103 +689,7 @@ const AdminDashboard = () => {
         );
 
       case 'ticker':
-        return (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-fade-in">
-            <Card className="lg:col-span-2">
-               <h3 className="text-sm font-bold uppercase tracking-wider mb-8 text-[var(--text)]">Ticker Control</h3>
-               <div className="space-y-8">
-                  <div className="flex gap-2 p-1 bg-black/20 rounded-xl border border-[var(--border)]">
-                     {['text', 'link'].map(t => (
-                       <button key={t} onClick={() => { setDraftTicker(p => ({ ...p, type: t })); setIsTickerDirty(true); }} className={`flex-1 py-2 rounded-lg font-bold text-[10px] uppercase transition-all ${draftTicker.type === t ? 'bg-[var(--accent)] text-[var(--text)] shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>{t}</button>
-                     ))}
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold uppercase ml-1 opacity-50">Message</label>
-                    <textarea value={draftTicker.text} onChange={(e) => { setDraftTicker(p => ({ ...p, text: e.target.value })); setIsTickerDirty(true); }} className="nexus-input min-h-[120px] resize-none" placeholder="Transmit high-priority alert..."/>
-                  </div>
-                  {draftTicker.type === 'link' && (
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-bold uppercase ml-1 opacity-50">Data Source URL</label>
-                      <input type="url" value={draftTicker.linkUrl} onChange={(e) => { setDraftTicker(p => ({ ...p, linkUrl: e.target.value })); setIsTickerDirty(true); }} className="nexus-input" placeholder="https://external.feed/api/v1"/>
-                    </div>
-                  )}
-                  
-                  <div className="pt-4 border-t border-[var(--border)] space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                      <div className="space-y-4">
-                        <label className="text-[10px] font-bold uppercase ml-1 opacity-50 flex justify-between">
-                          <span>Transmission Speed</span>
-                          <span className="text-sky-400">{draftTicker.speed}X</span>
-                        </label>
-                        <input type="range" min="1" max="10" value={draftTicker.speed} onChange={(e) => { setDraftTicker(p => ({ ...p, speed: parseInt(e.target.value) })); setIsTickerDirty(true); }} className="w-full accent-[var(--accent)] h-1 bg-white/10 rounded-full appearance-none cursor-pointer"/>
-                      </div>
-                    </div>
-
-                    <div className="p-4 bg-black/40 rounded-2xl border border-white/5 mt-4">
-                      <p className="text-[10px] font-bold uppercase opacity-30 mb-2">Live Preview</p>
-                      <div className="h-12 flex items-center overflow-hidden">
-                        <div className="flex gap-12 whitespace-nowrap animate-ticker" style={{ animationDuration: draftTicker.isActive ? `${Math.max(5, 60 - draftTicker.speed * 5)}s` : '0s' }}>
-                            <p className={`${draftTicker.fontSize} ${draftTicker.fontStyle} text-[var(--text)]`}>
-                                {draftTicker.text || 'BROADCAST ACTIVE // READY FOR DATA TRANSMISSION...'}
-                            </p>
-                            <p className={`${draftTicker.fontSize} ${draftTicker.fontStyle} text-[var(--text)]`}>
-                                {draftTicker.text || 'BROADCAST ACTIVE // READY FOR DATA TRANSMISSION...'}
-                            </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <button onClick={saveTicker} className="nexus-btn-primary w-full py-4 tracking-[4px]">Broadcast</button>
-               </div>
-            </Card>
-
-            <Card>
-               <h3 className="text-sm font-bold uppercase tracking-wider mb-8 text-[var(--text)]">Visual Formatting</h3>
-               <div className="space-y-8">
-                  <div className="space-y-4">
-                    <label className="text-[10px] font-bold uppercase ml-1 opacity-50 flex items-center gap-2"><Palette size={14}/> Font Size</label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {['text-xs', 'text-sm', 'text-base', 'text-lg', 'text-xl', 'text-2xl', 'text-4xl', 'text-6xl', 'text-8xl', 'text-9xl'].map(size => (
-                        <button 
-                          key={size}
-                          onClick={() => { setDraftTicker(p => ({ ...p, fontSize: size })); setIsTickerDirty(true); }}
-                          className={`py-2 rounded-lg text-[10px] font-bold border ${draftTicker.fontSize === size ? 'bg-[var(--accent)]/20 border-[var(--accent)] text-[var(--accent)]' : 'border-white/10 hover:border-white/30 text-[var(--text)]'}`}
-                        >
-                          {size.replace('text-', '').toUpperCase()}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <label className="text-[10px] font-bold uppercase ml-1 opacity-50 flex items-center gap-2"><TypeIcon size={14}/> Font Style</label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {[
-                        { label: 'Thin', val: 'font-thin' },
-                        { label: 'Normal', val: 'font-normal' },
-                        { label: 'Medium', val: 'font-medium' },
-                        { label: 'Semibold', val: 'font-semibold' },
-                        { label: 'Bold', val: 'font-bold' },
-                        { label: 'Extra Bold', val: 'font-extrabold' },
-                        { label: 'Black', val: 'font-black' },
-                        { label: 'Italic', val: 'italic' },
-                        { label: 'Bold Italic', val: 'font-bold italic' }
-                      ].map(style => (
-                        <button 
-                          key={style.val}
-                          onClick={() => { setDraftTicker(p => ({ ...p, fontStyle: style.val })); setIsTickerDirty(true); }}
-                          className={`py-2 rounded-lg text-[9px] font-bold border ${draftTicker.fontStyle === style.val ? 'bg-[var(--accent)]/20 border-[var(--accent)] text-[var(--accent)]' : 'border-white/10 hover:border-white/30 text-[var(--text)]'}`}
-                        >
-                          {style.label.toUpperCase()}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-               </div>
-            </Card>
-          </div>
-        );
+        return <TickerManager />;
 
       case 'screens':
         return (
