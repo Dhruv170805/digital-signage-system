@@ -138,6 +138,7 @@ const AdminDashboard = () => {
   const [templateName, setTemplateName] = useState('');
   const [currentLayout, setCurrentLayout] = useState([]);
   const [newSchedule, setNewSchedule] = useState({ screenId: '', templateId: '', mediaId: '', startTime: '', endTime: '' });
+  const [newScreen, setNewScreen] = useState({ name: '', location: '' });
   const [mediaMapping, setMediaMapping] = useState({});
   const [architectWidth, setArchitectWidth] = useState(0);
   const architectRef = useRef(null);
@@ -193,6 +194,16 @@ const AdminDashboard = () => {
       await axios.post(`${import.meta.env.VITE_API_URL}/api/media/${id}/${action}`, data);
       setShowModModal(false);
       setModFile(null);
+      fetchData();
+    } catch (err) { alert(err.message); }
+  };
+
+  const registerScreen = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post(`${import.meta.env.VITE_API_URL}/api/screens/register`, newScreen);
+      alert('Screen Registered');
+      setNewScreen({ name: '', location: '' });
       fetchData();
     } catch (err) { alert(err.message); }
   };
@@ -588,7 +599,7 @@ const AdminDashboard = () => {
 
                   <div className="space-y-4">
                     <label className="text-[10px] font-bold uppercase ml-1 opacity-50 flex items-center gap-2"><TypeIcon size={14}/> Font Style</label>
-                    <div className="grid grid-cols-1 gap-2">
+                    <div className="grid grid-cols-3 gap-2">
                       {[
                         { label: 'Thin', val: 'font-thin' },
                         { label: 'Normal', val: 'font-normal' },
@@ -603,16 +614,80 @@ const AdminDashboard = () => {
                         <button 
                           key={style.val}
                           onClick={() => setTicker(p => ({ ...p, fontStyle: style.val }))}
-                          className={`py-3 px-4 rounded-xl text-xs font-bold border text-left flex justify-between items-center ${ticker.fontStyle === style.val ? 'bg-white/10 border-white/30' : 'border-transparent hover:bg-white/5'}`}
+                          className={`py-2 rounded-lg text-[9px] font-bold border ${ticker.fontStyle === style.val ? 'bg-[var(--accent)]/20 border-[var(--accent)] text-[var(--accent)]' : 'border-white/10 hover:border-white/30'}`}
                         >
-                          {style.label}
-                          {ticker.fontStyle === style.val && <CheckCircle size={14} className="text-sky-400" />}
+                          {style.label.toUpperCase()}
                         </button>
                       ))}
                     </div>
                   </div>
                </div>
             </Card>
+          </div>
+        );
+
+      case 'screens':
+        return (
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 animate-fade-in">
+             <Card className="lg:col-span-1">
+                <div className="flex items-center gap-3 mb-8">
+                   <Tv className="w-4 h-4 text-sky-400" />
+                   <h3 className="text-xs font-bold uppercase tracking-wider">Register Terminal</h3>
+                </div>
+                <form onSubmit={registerScreen} className="space-y-6">
+                   <div className="space-y-1">
+                     <label className="text-[10px] font-bold uppercase ml-1 opacity-40">Terminal ID / Name</label>
+                     <input type="text" required className="nexus-input" placeholder="e.g., LOBBY-SCREEN-01" value={newScreen.name} onChange={(e) => setNewScreen(p => ({ ...p, name: e.target.value }))}/>
+                   </div>
+                   <div className="space-y-1">
+                     <label className="text-[10px] font-bold uppercase ml-1 opacity-40">Physical Location</label>
+                     <input type="text" required className="nexus-input" placeholder="e.g., North Wing Entrance" value={newScreen.location} onChange={(e) => setNewScreen(p => ({ ...p, location: e.target.value }))}/>
+                   </div>
+                   <button type="submit" className="nexus-btn-primary w-full py-4 font-black tracking-widest uppercase">PROVISION TERMINAL</button>
+                </form>
+                <div className="mt-8 p-4 bg-sky-500/10 border border-sky-500/20 rounded-2xl">
+                   <p className="text-[9px] font-bold text-sky-400 uppercase leading-relaxed">Terminals must be registered here before they can receive broadcasts.</p>
+                </div>
+             </Card>
+
+             <Card className="lg:col-span-3">
+                <div className="flex justify-between items-center mb-8">
+                   <h3 className="text-xs font-bold uppercase tracking-wider">Managed Terminals</h3>
+                   <span className="text-[10px] font-black text-slate-500 uppercase">TOTAL: {screens.length}</span>
+                </div>
+                <div className="overflow-hidden rounded-2xl border border-white/10">
+                   <table className="w-full text-left">
+                      <thead>
+                         <tr className="bg-white/5 text-[9px] font-black uppercase text-slate-500">
+                            <th className="py-4 px-6">Identity</th>
+                            <th className="py-4 px-6">Location</th>
+                            <th className="py-4 px-6">System Status</th>
+                            <th className="py-4 px-6">Last Activity</th>
+                         </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/5">
+                         {screens.map(s => (
+                           <tr key={s.id} className="hover:bg-white/5 transition-colors">
+                              <td className="py-5 px-6">
+                                 <p className="font-bold text-white uppercase text-sm tracking-tight">{s.name}</p>
+                                 <p className="text-[8px] font-bold text-sky-400/60 uppercase mt-0.5 tracking-widest">ID: {s.id.slice(-8)}</p>
+                              </td>
+                              <td className="py-5 px-6 text-[10px] font-bold uppercase text-slate-400">{s.location}</td>
+                              <td className="py-5 px-6">
+                                 <div className="flex items-center gap-2">
+                                    <div className={`w-1.5 h-1.5 rounded-full ${s.status === 'online' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-slate-700'}`} />
+                                    <span className={`text-[10px] font-black uppercase ${s.status === 'online' ? 'text-emerald-400' : 'text-slate-500'}`}>{s.status}</span>
+                                 </div>
+                              </td>
+                              <td className="py-5 px-6 text-[10px] font-bold tabular-nums text-slate-500">
+                                 {s.lastPing ? new Date(s.lastPing).toLocaleTimeString() : 'NEVER'}
+                              </td>
+                           </tr>
+                         ))}
+                      </tbody>
+                   </table>
+                </div>
+             </Card>
           </div>
         );
 
