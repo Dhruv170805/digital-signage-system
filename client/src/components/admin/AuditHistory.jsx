@@ -121,7 +121,7 @@ const AuditHistory = () => {
                         {getActionIcon(log.actionType)}
                       </div>
                       <div>
-                        <p className="font-black text-xs text-[var(--text)] uppercase tracking-tight">{log.actionType}</p>
+                        <p className="font-black text-xs text-text uppercase tracking-tight">{log.actionType}</p>
                         <p className="text-[9px] font-bold text-sky-400 uppercase tracking-widest mt-1">
                           {log.entityType}: {log.entityId ? log.entityId.slice(-8) : 'SYSTEM'}
                         </p>

@@ -99,7 +99,7 @@ const TickerManager = () => {
             <Card className="xl:col-span-1 border-indigo-500/20">
                 <div className="flex items-center gap-3 mb-8">
                     <TypeIcon className="w-5 h-5 text-indigo-400" />
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text)]">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-text">
                         {isEditing ? 'Edit Ticker' : 'Create Ticker'}
                     </h3>
                 </div>
@@ -111,7 +111,7 @@ const TickerManager = () => {
                         <div className="flex gap-2 p-1 bg-black/20 rounded-xl border border-[var(--border)]">
                             {['text', 'api'].map(t => (
                                 <button type="button" key={t} onClick={() => setDraftTicker({ ...draftTicker, type: t })} 
-                                    className={`flex-1 py-2 rounded-lg font-bold text-[10px] uppercase transition-all ${draftTicker.type === t ? 'bg-[var(--accent)] text-[var(--text)] shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>
+                                    className={`flex-1 py-2 rounded-lg font-bold text-[10px] uppercase transition-all ${draftTicker.type === t ? 'bg-[var(--accent)] text-text shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>
                                     {t}
                                 </button>
                             ))}
@@ -226,7 +226,7 @@ const TickerManager = () => {
             <Card className="xl:col-span-2">
                 <div className="flex items-center gap-3 mb-8">
                     <Layers className="w-5 h-5 text-sky-400" />
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text)]">Managed Tickers</h3>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-text">Managed Tickers</h3>
                 </div>
                 <div className="overflow-x-auto rounded-xl border border-white/10">
                     <table className="w-full text-left">
@@ -242,7 +242,7 @@ const TickerManager = () => {
                             {tickers.map(t => (
                                 <tr key={t.id || t._id} className={`hover:bg-white/5 transition-colors ${!t.isActive ? 'opacity-50' : ''}`}>
                                     <td className="py-5 px-6">
-                                        <p className="font-bold text-[var(--text)] uppercase text-xs tracking-tight truncate max-w-[200px]">{t.text}</p>
+                                        <p className="font-bold text-text uppercase text-xs tracking-tight truncate max-w-[200px]">{t.text}</p>
                                         <p className="text-[8px] font-bold text-sky-400/60 uppercase mt-1 tracking-widest flex items-center gap-2">
                                             {t.type} <MoveRight size={8}/> {t.direction} <MoveRight size={8}/> {t.speed}px/s
                                         </p>

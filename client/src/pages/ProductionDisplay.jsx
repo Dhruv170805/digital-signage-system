@@ -42,10 +42,10 @@ const ProductionDisplay = () => {
     return () => clearInterval(interval);
   }, []);
 
-  if (loading) return <div className="loading">Initializing Nexus Engine...</div>;
+  if (loading) return <div className="loading bg-bg text-text flex items-center justify-center min-h-screen">Initializing Nexus Engine...</div>;
 
   return (
-    <div className="display-container fullscreen">
+    <div className="display-container fullscreen bg-bg text-text">
       {playlist.length === 0 && (
         <div className="fallback-content">
           <img src="/logo-placeholder.png" alt="Fallback" />

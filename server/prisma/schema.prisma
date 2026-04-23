@@ -37,6 +37,9 @@ model Screen {
   lastSeen     DateTime?
   ipAddress    String?
   macAddress   String?       @unique
+  deviceToken  String?       @unique
+  isActive     Boolean       @default(true)
+  resolution   String?       // e.g. "1920x1080"
   groupId      String?       @db.ObjectId
   group        ScreenGroup?  @relation(fields: [groupId], references: [id])
   schedules    Schedule[]

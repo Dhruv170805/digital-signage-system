@@ -49,14 +49,14 @@ const Weather = ({ location }) => {
         <div className="w-8 h-8 rounded-xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
           <MapPin size={14} className="text-blue-400" />
         </div>
-        <span className="text-[10px] font-black uppercase tracking-[2px] text-white/60 truncate max-w-[150px]">{area}</span>
+        <span className="text-[10px] font-black uppercase tracking-[2px] text-text/60 truncate max-w-[150px]">{area}</span>
       </div>
       <div className="h-6 w-px bg-white/10" />
       <div className="flex items-center gap-3">
         <div className="w-8 h-8 rounded-xl bg-amber-500/10 flex items-center justify-center border border-amber-500/20">
           <CloudSun size={16} className="text-amber-400" />
         </div>
-        <span className="text-2xl font-black tracking-tighter text-white tabular-nums">{temp}°C</span>
+        <span className="text-2xl font-black tracking-tighter text-text tabular-nums">{temp}°C</span>
       </div>
     </div>
   );
@@ -371,7 +371,7 @@ const DisplayScreen = () => {
   const idleWallpaper = allMedia.find(m => (m.id === settings.idleWallpaperId || m._id === settings.idleWallpaperId));
 
   if (isInitialLoading) return (
-    <div className="fixed inset-0 bg-[#0B1220] flex items-center justify-center z-[100] font-sans">
+    <div className="fixed inset-0 bg-bg flex items-center justify-center z-[100] font-sans">
       <div className="text-center">
         <div className="relative w-32 h-32 mx-auto mb-10">
           <div className="absolute inset-0 border-4 border-blue-500/10 rounded-full" />
@@ -380,14 +380,14 @@ const DisplayScreen = () => {
              <Activity size={32} className="text-blue-500 animate-pulse" />
           </div>
         </div>
-        <h2 className="text-xl font-black text-white uppercase tracking-[12px] animate-pulse">Nexus Intelligence</h2>
-        <p className="text-[10px] text-white/20 uppercase font-black tracking-[4px] mt-4">Establishing Secure Node Connection</p>
+        <h2 className="text-xl font-black text-text uppercase tracking-[12px] animate-pulse">Nexus Intelligence</h2>
+        <p className="text-[10px] text-text/20 uppercase font-black tracking-[4px] mt-4">Establishing Secure Node Connection</p>
       </div>
     </div>
   );
 
   return (
-    <div className="fixed inset-0 w-full h-full bg-[#0B1220] overflow-hidden flex flex-col text-white select-none font-sans bg-drift">
+    <div className="fixed inset-0 w-full h-full bg-bg overflow-hidden flex flex-col text-text select-none font-sans bg-drift">
       {/* Cinematic Background Gradient */}
       <div className="fixed inset-0 pointer-events-none opacity-40">
         <div className="absolute top-[-20%] left-[-20%] w-[80%] h-[80%] bg-blue-600/20 rounded-full blur-[200px] animate-pulse" />
@@ -399,12 +399,12 @@ const DisplayScreen = () => {
         <div className="flex items-center gap-10">
           <div className="flex items-center gap-4">
             <div className={`w-4 h-4 rounded-full ${isSyncing ? 'bg-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.6)]' : 'bg-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.6)]'} animate-pulse`} />
-            <span className="text-[12px] font-black uppercase tracking-[12px] text-white/90">Live</span>
+            <span className="text-[12px] font-black uppercase tracking-[12px] text-text/90">Live</span>
           </div>
           {(screenInfo || searchParams.get('screenId')) && (
             <div className="px-6 py-2.5 bg-white/5 rounded-2xl border border-white/10 flex items-center gap-3">
-               <Monitor size={16} className="text-white/20" />
-               <span className="text-[12px] font-black text-white/40 uppercase tracking-[4px]">
+               <Monitor size={16} className="text-text/20" />
+               <span className="text-[12px] font-black text-text/40 uppercase tracking-[4px]">
                  {screenInfo ? screenInfo.name : searchParams.get('screenId').slice(-8)}
                </span>
             </div>
@@ -416,10 +416,10 @@ const DisplayScreen = () => {
           <div className="h-16 w-px bg-white/10" />
           <div className="flex items-center gap-6">
              <div className="text-right">
-                <p className="text-6xl font-black tracking-tighter tabular-nums leading-none text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.3)]">
+                <p className="text-6xl font-black tracking-tighter tabular-nums leading-none text-text drop-shadow-[0_0_20px_rgba(255,255,255,0.3)]">
                   {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
                 </p>
-                <p className="text-[12px] font-black uppercase tracking-[8px] text-white/20 mt-3 flex items-center justify-end gap-2">
+                <p className="text-[12px] font-black uppercase tracking-[8px] text-text/20 mt-3 flex items-center justify-end gap-2">
                    <ClockIcon size={12} /> {time.toLocaleDateString([], { weekday: 'long' })}
                 </p>
              </div>
@@ -451,8 +451,8 @@ const DisplayScreen = () => {
                   <div className="absolute inset-0 bg-blue-500/20 rounded-[40px] blur-2xl group-hover:blur-3xl transition-all" />
                   <Activity size={64} className="text-blue-500 relative z-10 animate-pulse" />
                 </div>
-                <h2 className="text-8xl font-black tracking-tighter uppercase text-white leading-none">Nexus Engine</h2>
-                <p className="text-2xl text-white/20 mt-6 uppercase tracking-[12px] font-black">Standing By for Transmission</p>
+                <h2 className="text-8xl font-black tracking-tighter uppercase text-text leading-none">Nexus Engine</h2>
+                <p className="text-2xl text-text/20 mt-6 uppercase tracking-[12px] font-black">Standing By for Transmission</p>
               </div>
             )}
           </div>

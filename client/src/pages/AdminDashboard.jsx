@@ -35,25 +35,39 @@ const Card = ({ children, className = "", title, icon: Icon, subtitle }) => (
   </div>
 );
 
-const StatWidget = ({ label, value, icon: Icon, color = "blue", trend }) => (
-  <div className="glass-card p-8 group relative overflow-hidden">
-    <div className={`absolute top-0 right-0 w-32 h-32 bg-${color}-500/10 rounded-full blur-3xl -mr-16 -mt-16 transition-all group-hover:bg-${color}-500/20`} />
-    <div className="relative z-10">
-      <div className="flex items-center justify-between mb-6">
-        <div className={`p-4 rounded-2xl bg-${color}-500/10 border border-${color}-500/20 text-${color}-400 shadow-inner group-hover:scale-110 transition-transform`}>
-          <Icon size={24} />
-        </div>
-        {trend && (
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase">
-            {trend}
+const StatWidget = ({ label, value, icon: Icon, color = "blue", trend }) => {
+  const colorMap = {
+    blue: 'bg-blue-500/10 border-blue-500/20 text-blue-400 group-hover:bg-blue-500/20',
+    emerald: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 group-hover:bg-emerald-500/20',
+    amber: 'bg-amber-500/10 border-amber-500/20 text-amber-400 group-hover:bg-amber-500/20',
+    sky: 'bg-sky-500/10 border-sky-500/20 text-sky-400 group-hover:bg-sky-500/20',
+    indigo: 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400 group-hover:bg-indigo-500/20',
+    rose: 'bg-rose-500/10 border-rose-500/20 text-rose-400 group-hover:bg-rose-500/20'
+  };
+
+  const currentStyles = colorMap[color] || colorMap.blue;
+  const bgGlow = currentStyles.split(' ')[0];
+
+  return (
+    <div className="glass-card p-8 group relative overflow-hidden">
+      <div className={`absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl -mr-16 -mt-16 transition-all ${bgGlow} opacity-50`} />
+      <div className="relative z-10">
+        <div className="flex items-center justify-between mb-6">
+          <div className={`p-4 rounded-2xl border shadow-inner group-hover:scale-110 transition-transform ${currentStyles}`}>
+            <Icon size={24} />
           </div>
-        )}
+          {trend && (
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase">
+              {trend}
+            </div>
+          )}
+        </div>
+        <p className="text-[10px] font-black text-white/30 uppercase tracking-[3px] mb-2">{label}</p>
+        <h2 className="text-4xl font-black text-white tracking-tighter tabular-nums">{value}</h2>
       </div>
-      <p className="text-[10px] font-black text-white/30 uppercase tracking-[3px] mb-2">{label}</p>
-      <h2 className="text-4xl font-black text-white tracking-tighter tabular-nums">{value}</h2>
     </div>
-  </div>
-);
+  );
+};
 
 const Badge = ({ label, type }) => {
   const colors = {
@@ -63,7 +77,7 @@ const Badge = ({ label, type }) => {
     reset: 'bg-amber-500/10 text-amber-400 border-amber-500/20'
   };
   return (
-    <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase border ${colors[type] || 'bg-white/5 text-[var(--text)]/40 border-white/10'}`}>
+    <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase border ${colors[type] || 'bg-white/5 text-text/40 border-white/10'}`}>
       {label}
     </span>
   );
@@ -78,11 +92,11 @@ const PreviewModal = ({ isOpen, onClose, file }) => {
       <div className="relative w-full h-full flex flex-col gap-6 animate-fade-in">
         <div className="flex justify-between items-center bg-white/5 p-4 rounded-2xl border border-white/10">
           <div>
-            <h3 className="text-xl font-black uppercase tracking-tighter text-[var(--text)]">{file.fileName}</h3>
+            <h3 className="text-xl font-black uppercase tracking-tighter text-text">{file.fileName}</h3>
             <p className="text-[10px] font-bold text-sky-400 uppercase tracking-widest">{file.fileType} • {new Date(file.uploadedAt).toLocaleString()}</p>
           </div>
-          <button onClick={onClose} className="p-3 bg-white/10 rounded-xl hover:bg-rose-500 hover:text-[var(--text)] transition-all">
-            <XCircle size={24} className="text-[var(--text)]"/>
+          <button onClick={onClose} className="p-3 bg-white/10 rounded-xl hover:bg-rose-500 hover:text-text transition-all">
+            <XCircle size={24} className="text-text"/>
           </button>
         </div>
         
@@ -128,13 +142,13 @@ const ModerationModal = ({ isOpen, onClose, file, onConfirm }) => {
     <div className="fixed inset-0 bg-black/90 backdrop-blur-xl z-[110] flex items-center justify-center p-6">
       <div className="glass max-w-lg w-full p-10 space-y-8 animate-fade-in border-white/10">
         <div className="flex justify-between items-center pb-6 border-b border-white/5">
-          <h3 className="text-2xl font-black uppercase tracking-tighter text-[var(--text)]">Asset Moderation</h3>
-          <button onClick={onClose} className="text-slate-500 hover:text-[var(--text)]"><XCircle /></button>
+          <h3 className="text-2xl font-black uppercase tracking-tighter text-text">Asset Moderation</h3>
+          <button onClick={onClose} className="text-slate-500 hover:text-text"><XCircle /></button>
         </div>
 
         <div className="flex gap-2 p-1 bg-black/40 rounded-2xl border border-white/5">
-          <button onClick={() => setAction('approve')} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${action === 'approve' ? 'bg-emerald-500 text-[var(--text)]' : 'text-slate-500 hover:text-slate-300'}`}>Approve</button>
-          <button onClick={() => setAction('reject')} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${action === 'reject' ? 'bg-rose-500 text-[var(--text)]' : 'text-slate-500 hover:text-slate-300'}`}>Reject</button>
+          <button onClick={() => setAction('approve')} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${action === 'approve' ? 'bg-emerald-500 text-text' : 'text-slate-500 hover:text-slate-300'}`}>Approve</button>
+          <button onClick={() => setAction('reject')} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${action === 'reject' ? 'bg-rose-500 text-text' : 'text-slate-500 hover:text-slate-300'}`}>Reject</button>
         </div>
 
         <div className="space-y-6">
@@ -185,6 +199,7 @@ const AdminDashboard = () => {
   const [pendingMedia, setPendingMedia] = useState([]);
   const [templates, setTemplates] = useState([]);
   const [screens, setScreens] = useState([]);
+  const [tickers, setTickers] = useState([]);
   const [ticker, setTicker] = useState({ text: '', speed: 5, isActive: 1, fontSize: 'text-4xl', fontStyle: 'font-normal' });
   const [draftTicker, setDraftTicker] = useState({ text: '', speed: 5, isActive: 1, fontSize: 'text-4xl', fontStyle: 'font-normal' });
   const [isTickerDirty, setIsTickerDirty] = useState(false);
@@ -572,11 +587,12 @@ const AdminDashboard = () => {
       case 'schedule':
         return (
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 animate-fade-in">
-             <Card className="lg:col-span-1 border-sky-500/10">
-                <div className="flex items-center gap-3 mb-8">
-                   <Calendar className="w-4 h-4 text-sky-400" />
-                   <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text)]">Broadcast System</h3>
-                </div>
+             <Card 
+               className="lg:col-span-1" 
+               title="Broadcast System" 
+               icon={Calendar} 
+               subtitle="Transmission Control"
+             >
                 <form onSubmit={createSchedule} className="space-y-6">
                    <div className="space-y-2">
                      <label className="text-[10px] font-bold uppercase ml-1 opacity-50">Screen</label>
@@ -638,11 +654,12 @@ const AdminDashboard = () => {
                 </form>
              </Card>
 
-             <Card className="lg:col-span-3 overflow-hidden">
-                <div className="flex justify-between items-center mb-8">
-                   <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text)]">Live Manifest</h3>
-                   <div className="px-3 py-1 bg-sky-500/10 border border-sky-500/20 rounded-full text-[8px] font-black text-sky-400 uppercase animate-pulse">Sync Active</div>
-                </div>
+             <Card 
+               className="lg:col-span-3 overflow-hidden" 
+               title="Live Manifest" 
+               icon={Activity} 
+               subtitle="Active Broadcast Queue"
+             >
                 <div className="overflow-x-auto">
                   <table className="w-full text-left">
                      <thead>
@@ -661,7 +678,7 @@ const AdminDashboard = () => {
                           return (
                             <tr key={s.id} className="hover:bg-white/5 transition-colors group">
                                <td className="py-5 px-6">
-                                  <p className="font-bold text-[var(--text)] uppercase text-xs tracking-tight">{t ? t.name : (m?.fileName || 'Asset Unknown')}</p>
+                                  <p className="font-bold text-text uppercase text-xs tracking-tight">{t ? t.name : (m?.fileName || 'Asset Unknown')}</p>
                                   <p className="text-[8px] font-bold text-sky-400/60 uppercase mt-1 tracking-widest">{t ? 'MULTI-FRAME ARRAY' : (m?.fileType || 'MEDIA')}</p>
                                </td>
                                <td className="py-5 px-6 text-[10px] font-black uppercase text-slate-400">{scr ? scr.name : 'GLOBAL'}</td>
@@ -676,7 +693,7 @@ const AdminDashboard = () => {
                                   </div>
                                </td>
                                <td className="py-5 px-6 text-right">
-                                  <button onClick={() => deleteSchedule(s.id)} className="p-2 bg-rose-500/10 text-rose-500 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-rose-500 hover:text-[var(--text)] transition-all"><Trash2 size={14}/></button>
+                                  <button onClick={() => deleteSchedule(s.id)} className="p-2 bg-rose-500/10 text-rose-500 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-rose-500 hover:text-text transition-all"><Trash2 size={14}/></button>
                                </td>
                             </tr>
                           );
@@ -694,11 +711,12 @@ const AdminDashboard = () => {
       case 'screens':
         return (
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 animate-fade-in">
-             <Card className="lg:col-span-1">
-                <div className="flex items-center gap-3 mb-8">
-                   <Tv className="w-4 h-4 text-sky-400" />
-                   <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text)]">Register Screen</h3>
-                </div>
+             <Card 
+               className="lg:col-span-1" 
+               title="Provision Unit" 
+               icon={Tv} 
+               subtitle="Terminal Registration"
+             >
                 <form onSubmit={registerScreen} className="space-y-6">
                    <div className="space-y-1">
                      <label className="text-[10px] font-bold uppercase ml-1 opacity-40">Screen ID / Name</label>
@@ -712,11 +730,12 @@ const AdminDashboard = () => {
                 </form>
              </Card>
 
-             <Card className="lg:col-span-3">
-                <div className="flex justify-between items-center mb-8">
-                   <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text)]">Managed Screens</h3>
-                   <span className="text-[10px] font-black text-slate-500 uppercase">TOTAL: {screens.length}</span>
-                </div>
+             <Card 
+               className="lg:col-span-3" 
+               title="Managed Terminals" 
+               icon={Monitor} 
+               subtitle={`Network Inventory: ${screens.length} Nodes`}
+             >
                 <div className="overflow-hidden rounded-2xl border border-white/10">
                    <table className="w-full text-left">
                       <thead>
@@ -731,7 +750,7 @@ const AdminDashboard = () => {
                          {screens.map(s => (
                            <tr key={s.id} className="hover:bg-white/5 transition-colors">
                               <td className="py-5 px-6">
-                                 <p className="font-bold text-[var(--text)] uppercase text-sm tracking-tight">{s.name}</p>
+                                 <p className="font-bold text-text uppercase text-sm tracking-tight">{s.name}</p>
                                  <p className="text-[8px] font-bold text-sky-400/60 uppercase mt-0.5 tracking-widest">ID: {s.id.slice(-8)}</p>
                               </td>
                               <td className="py-5 px-6 text-[10px] font-bold uppercase text-slate-400">{s.location}</td>
@@ -758,20 +777,21 @@ const AdminDashboard = () => {
         const rowHeight = architectWidth > 0 ? (architectWidth / 12) * (9/16) : 50;
         return (
           <div className="space-y-8 animate-fade-in">
-             <Card className="w-full">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
-                   <div>
-                     <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--text)]">Layout Architect</h3>
-                     <p className="text-[10px] font-bold text-sky-400 uppercase tracking-widest mt-1">Grid System: 12 x 12 Precision Mapping</p>
-                   </div>
+             <Card 
+               className="w-full" 
+               title="Layout Architect" 
+               icon={Palette} 
+               subtitle="Grid System: 12 x 12 Precision Mapping"
+             >
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8 mt-2">
                    <div className="flex flex-wrap gap-2">
-                     <button onClick={() => setCurrentLayout([{ i: 'Main', x: 0, y: 0, w: 12, h: 12 }])} className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-[10px] font-black uppercase text-emerald-400 hover:bg-emerald-500 hover:text-[var(--text)] transition-all">Fullscreen</button>
-                     <button onClick={() => setCurrentLayout([{ i: 'Left', x: 0, y: 0, w: 6, h: 12 }, { i: 'Right', x: 6, y: 0, w: 6, h: 12 }])} className="px-4 py-2 bg-sky-500/10 border border-sky-500/20 rounded-xl text-[10px] font-black uppercase text-sky-400 hover:bg-sky-500 hover:text-[var(--text)] transition-all">50/50 V</button>
-                     <button onClick={() => setCurrentLayout([{ i: 'Top', x: 0, y: 0, w: 12, h: 6 }, { i: 'Bottom', x: 0, y: 6, w: 12, h: 6 }])} className="px-4 py-2 bg-sky-500/10 border border-sky-500/20 rounded-xl text-[10px] font-black uppercase text-sky-400 hover:bg-sky-500 hover:text-[var(--text)] transition-all">50/50 H</button>
-                     <button onClick={() => setCurrentLayout([{ i: 'TL', x: 0, y: 0, w: 6, h: 6 }, { i: 'TR', x: 6, y: 0, w: 6, h: 6 }, { i: 'BL', x: 0, y: 6, w: 6, h: 6 }, { i: 'BR', x: 6, y: 6, w: 6, h: 6 }])} className="px-4 py-2 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-[10px] font-black uppercase text-indigo-400 hover:bg-indigo-500 hover:text-[var(--text)] transition-all">Quad</button>
-                     <button onClick={() => setCurrentLayout([{ i: 'Main', x: 0, y: 0, w: 9, h: 12 }, { i: 'Side', x: 9, y: 0, w: 3, h: 12 }])} className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-[10px] font-black uppercase text-emerald-400 hover:bg-emerald-500 hover:text-[var(--text)] transition-all">Sidebar</button>
-                     <button onClick={() => { if(window.confirm('Wipe current design?')) setCurrentLayout([]); }} className="px-4 py-2 bg-rose-500/10 border border-rose-500/20 rounded-xl text-[10px] font-black uppercase text-rose-400 hover:bg-rose-500 hover:text-[var(--text)] transition-all">Wipe</button>
-                     <button onClick={() => setCurrentLayout([...currentLayout, { i: `Frame${currentLayout.length+1}`, x: 0, y: 0, w: 4, h: 4 }])} className="px-5 py-2 bg-white text-black rounded-xl text-[10px] font-black uppercase hover:bg-sky-400 hover:text-[var(--text)] transition-all shadow-[0_0_20px_rgba(255,255,255,0.2)]">+ Add Frame</button>
+                     <button onClick={() => setCurrentLayout([{ i: 'Main', x: 0, y: 0, w: 12, h: 12 }])} className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-[10px] font-black uppercase text-emerald-400 hover:bg-emerald-500 hover:text-text transition-all">Fullscreen</button>
+                     <button onClick={() => setCurrentLayout([{ i: 'Left', x: 0, y: 0, w: 6, h: 12 }, { i: 'Right', x: 6, y: 0, w: 6, h: 12 }])} className="px-4 py-2 bg-sky-500/10 border border-sky-500/20 rounded-xl text-[10px] font-black uppercase text-sky-400 hover:bg-sky-500 hover:text-text transition-all">50/50 V</button>
+                     <button onClick={() => setCurrentLayout([{ i: 'Top', x: 0, y: 0, w: 12, h: 6 }, { i: 'Bottom', x: 0, y: 6, w: 12, h: 6 }])} className="px-4 py-2 bg-sky-500/10 border border-sky-500/20 rounded-xl text-[10px] font-black uppercase text-sky-400 hover:bg-sky-500 hover:text-text transition-all">50/50 H</button>
+                     <button onClick={() => setCurrentLayout([{ i: 'TL', x: 0, y: 0, w: 6, h: 6 }, { i: 'TR', x: 6, y: 0, w: 6, h: 6 }, { i: 'BL', x: 0, y: 6, w: 6, h: 6 }, { i: 'BR', x: 6, y: 6, w: 6, h: 6 }])} className="px-4 py-2 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-[10px] font-black uppercase text-indigo-400 hover:bg-indigo-500 hover:text-text transition-all">Quad</button>
+                     <button onClick={() => setCurrentLayout([{ i: 'Main', x: 0, y: 0, w: 9, h: 12 }, { i: 'Side', x: 9, y: 0, w: 3, h: 12 }])} className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-[10px] font-black uppercase text-emerald-400 hover:bg-emerald-500 hover:text-text transition-all">Sidebar</button>
+                     <button onClick={() => { if(window.confirm('Wipe current design?')) setCurrentLayout([]); }} className="px-4 py-2 bg-rose-500/10 border border-rose-500/20 rounded-xl text-[10px] font-black uppercase text-rose-400 hover:bg-rose-500 hover:text-text transition-all">Wipe</button>
+                     <button onClick={() => setCurrentLayout([...currentLayout, { i: `Frame${currentLayout.length+1}`, x: 0, y: 0, w: 4, h: 4 }])} className="px-5 py-2 bg-white text-black rounded-xl text-[10px] font-black uppercase hover:bg-sky-400 hover:text-text transition-all shadow-[0_0_20px_rgba(255,255,255,0.2)]">+ Add Frame</button>
                    </div>
                 </div>
                 <div ref={architectRef} className="bg-slate-950 border-4 border-white/10 rounded-[40px] relative overflow-hidden grid-bg shadow-[0_0_100px_rgba(0,0,0,0.5)] p-0" style={{ height: architectWidth > 0 ? (Math.floor(rowHeight) * 12) : 'auto', minHeight: '400px' }}>
@@ -812,7 +832,7 @@ const AdminDashboard = () => {
                     isBounded={true}
                   >
                       {currentLayout.map(z => (
-                        <div key={z.i} className="bg-slate-900/90 border border-sky-500/30 backdrop-blur-md flex flex-col items-center justify-center text-[var(--text)] group overflow-hidden rounded-xl shadow-2xl transition-all hover:border-sky-400">
+                        <div key={z.i} className="bg-slate-900/90 border border-sky-500/30 backdrop-blur-md flex flex-col items-center justify-center text-text group overflow-hidden rounded-xl shadow-2xl transition-all hover:border-sky-400">
                            <div className="drag-handle w-full bg-sky-500/20 backdrop-blur-md text-sky-200 flex justify-between items-center px-3 py-1.5 font-black uppercase tracking-widest text-[9px] border-b border-sky-500/20 cursor-grab active:cursor-grabbing">
                               <div className="flex items-center gap-2">
                                 <div className="grid grid-cols-2 gap-0.5 opacity-40">
@@ -826,7 +846,7 @@ const AdminDashboard = () => {
                            </div>
                            <div className="flex-1 flex flex-col items-center justify-center leading-none pointer-events-none p-4 w-full">
                               <div className="relative">
-                                <span className="font-black text-3xl tracking-tighter text-[var(--text)] drop-shadow-2xl">{z.w} : {z.h}</span>
+                                <span className="font-black text-3xl tracking-tighter text-text drop-shadow-2xl">{z.w} : {z.h}</span>
                                 <div className="absolute -inset-2 bg-sky-500/10 blur-xl rounded-full -z-10" />
                               </div>
                               <div className="mt-2 flex items-center gap-3">
@@ -849,9 +869,13 @@ const AdminDashboard = () => {
              </Card>
 
              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <Card className="p-5">
-                   <h3 className="text-[10px] font-black uppercase tracking-[2px] mb-4 pb-2 border-b border-white/10 text-[var(--text)]">Inspector</h3>
-                   <div className="space-y-4 max-h-[480px] overflow-y-auto pr-2 custom-scrollbar">
+                <Card 
+                  className="p-8" 
+                  title="Inspector" 
+                  icon={Info} 
+                  subtitle="Frame Coordinate Control"
+                >
+                   <div className="space-y-4 max-h-[480px] overflow-y-auto pr-2 custom-scrollbar mt-2">
                       {currentLayout.map((z, idx) => (
                         <div key={z.i} className="p-4 bg-white/5 border border-white/10 rounded-xl space-y-3">
                            <div className="flex justify-between items-center">
@@ -865,7 +889,7 @@ const AdminDashboard = () => {
                                     const next = [...currentLayout];
                                     next[idx].w = parseInt(e.target.value) || 1;
                                     setCurrentLayout(next);
-                                 }} className="w-full bg-black/40 border border-white/10 rounded-lg px-2 py-1 text-xs font-bold outline-none focus:border-sky-500/50 text-[var(--text)]"/>
+                                 }} className="w-full bg-black/40 border border-white/10 rounded-lg px-2 py-1 text-xs font-bold outline-none focus:border-sky-500/50 text-text"/>
                               </div>
                               <div className="space-y-1">
                                  <label className="text-[8px] font-black uppercase opacity-40">Height</label>
@@ -873,7 +897,7 @@ const AdminDashboard = () => {
                                     const next = [...currentLayout];
                                     next[idx].h = parseInt(e.target.value) || 1;
                                     setCurrentLayout(next);
-                                 }} className="w-full bg-black/40 border border-white/10 rounded-lg px-2 py-1 text-xs font-bold outline-none focus:border-sky-500/50 text-[var(--text)]"/>
+                                 }} className="w-full bg-black/40 border border-white/10 rounded-lg px-2 py-1 text-xs font-bold outline-none focus:border-sky-500/50 text-text"/>
                               </div>
                            </div>
                         </div>
@@ -881,16 +905,20 @@ const AdminDashboard = () => {
                    </div>
                 </Card>
 
-                <Card className="p-5">
-                   <h3 className="text-[10px] font-black uppercase tracking-[2px] mb-4 pb-2 border-b border-white/10 text-[var(--text)]">Library</h3>
-                   <div className="space-y-2 max-h-[480px] overflow-y-auto pr-2 custom-scrollbar">
+                <Card 
+                  className="p-8" 
+                  title="Library" 
+                  icon={FileText} 
+                  subtitle="Saved Layout Manifest"
+                >
+                   <div className="space-y-2 max-h-[480px] overflow-y-auto pr-2 custom-scrollbar mt-2">
                       {templates.map(t => (
                         <div key={t.id} className="p-3 bg-white/5 border border-white/10 rounded-xl flex justify-between items-center group hover:bg-white/10 transition-all cursor-pointer">
                            <div>
-                              <p className="text-[10px] font-extrabold truncate max-w-[120px] uppercase text-[var(--text)]">{t.name}</p>
+                              <p className="text-[10px] font-extrabold truncate max-w-[120px] uppercase text-text">{t.name}</p>
                               <p className="text-[8px] font-bold text-sky-400 opacity-60 uppercase">{safeParseJSON(t.layout).length} FRAMES</p>
                            </div>
-                           <button onClick={() => setCurrentLayout(safeParseJSON(t.layout))} className="text-[9px] font-black border border-white/20 px-3 py-1 rounded-lg hover:bg-white hover:text-black transition-all text-[var(--text)]">LOAD</button>
+                           <button onClick={() => setCurrentLayout(safeParseJSON(t.layout))} className="text-[9px] font-black border border-white/20 px-3 py-1 rounded-lg hover:bg-white hover:text-black transition-all text-text">LOAD</button>
                         </div>
                       ))}
                    </div>
@@ -903,12 +931,13 @@ const AdminDashboard = () => {
         return (
           <div className="animate-fade-in max-w-5xl mx-auto">
             {showUserForm ? (
-              <Card className="max-w-xl mx-auto p-10">
-                <div className="flex justify-between items-center mb-10">
-                   <h3 className="text-xl font-bold text-[var(--text)]">New Personnel</h3>
-                   <button onClick={() => setShowUserForm(false)} className="text-slate-500 hover:text-[var(--text)]"><XCircle size={24}/></button>
-                </div>
-                <form onSubmit={provisionUser} className="space-y-6">
+              <Card 
+                className="max-w-xl mx-auto p-10" 
+                title="Personnel Provisioning" 
+                icon={Plus} 
+                subtitle="New Station Operator"
+              >
+                <form onSubmit={provisionUser} className="space-y-6 mt-4">
                   <div className="space-y-1">
                     <label className="text-[10px] font-black uppercase opacity-40 ml-1">Legal Name</label>
                     <input type="text" required className="nexus-input" placeholder="Full Name" value={newUser.name} onChange={(e) => setNewUser(p => ({ ...p, name: e.target.value }))}/>
@@ -932,18 +961,18 @@ const AdminDashboard = () => {
                 </form>
               </Card>
             ) : (
-              <Card>
-                <div className="flex justify-between items-center mb-10">
-                   <div>
-                     <h3 className="text-xl font-bold text-[var(--text)]">User</h3>
-                     <p className="text-xs text-[var(--text-dim)] uppercase tracking-wider font-semibold mt-1">Total Authorized: {users.length}</p>
-                   </div>
-                   <button onClick={() => setShowUserForm(true)} className="nexus-btn-primary text-xs py-2 px-6 shadow-xl">+Add User</button>
+              <Card 
+                title="Personnel Directory" 
+                icon={UsersIcon} 
+                subtitle={`Total Authorized: ${users.length} Operators`}
+              >
+                <div className="flex justify-end mb-8 mt-[-60px]">
+                   <button onClick={() => setShowUserForm(true)} className="nexus-btn-primary text-xs py-2 px-6 shadow-xl">+ Add User</button>
                 </div>
                 <div className="overflow-hidden rounded-2xl border border-white/10">
                   <table className="w-full text-left">
                     <thead>
-                      <tr className="bg-white/5 text-[10px] uppercase font-black text-[var(--text-dim)]">
+                      <tr className="bg-white/5 text-[10px] uppercase font-black text-text-dim">
                         <th className="py-4 px-6">Identity</th>
                         <th className="py-4 px-6">Role</th>
                         <th className="py-4 px-6">System Status</th>
@@ -953,7 +982,7 @@ const AdminDashboard = () => {
                       {users.map(u => (
                         <tr key={u.id} className="hover:bg-white/5 transition-colors">
                           <td className="py-6 px-6">
-                             <p className="font-bold text-lg leading-none text-[var(--text)]">{u.name}</p>
+                             <p className="font-bold text-lg leading-none text-text">{u.name}</p>
                              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter mt-1">{u.email}</p>
                           </td>
                           <td className="py-6 px-6">
@@ -973,15 +1002,15 @@ const AdminDashboard = () => {
                                 {u.email !== getLoggedInUser()?.email && (
                                   <>
                                     {u.isLocked ? (
-                                      <button onClick={() => unlockUser(u.id)} className="p-2 bg-emerald-500/10 text-emerald-500 rounded-lg hover:bg-emerald-500 hover:text-[var(--text)] transition-colors" title="Unlock Account"><CheckCircle size={14}/></button>
+                                      <button onClick={() => unlockUser(u.id)} className="p-2 bg-emerald-500/10 text-emerald-500 rounded-lg hover:bg-emerald-500 hover:text-text transition-colors" title="Unlock Account"><CheckCircle size={14}/></button>
                                     ) : (
-                                      <button onClick={() => lockUser(u.id)} className="p-2 bg-amber-500/10 text-amber-500 rounded-lg hover:bg-amber-500 hover:text-[var(--text)] transition-colors" title="Lock Account"><Lock size={14}/></button>
+                                      <button onClick={() => lockUser(u.id)} className="p-2 bg-amber-500/10 text-amber-500 rounded-lg hover:bg-amber-500 hover:text-text transition-colors" title="Lock Account"><Lock size={14}/></button>
                                     )}
-                                    <button onClick={() => deleteUser(u.id)} className="p-2 bg-rose-500/10 text-rose-500 rounded-lg hover:bg-rose-500 hover:text-[var(--text)] transition-colors" title="Delete User"><Trash2 size={14}/></button>
+                                    <button onClick={() => deleteUser(u.id)} className="p-2 bg-rose-500/10 text-rose-500 rounded-lg hover:bg-rose-500 hover:text-text transition-colors" title="Delete User"><Trash2 size={14}/></button>
                                   </>
                                 )}
                                 {u.passwordResetRequested && (
-                                  <button onClick={() => approveReset(u.id)} className="p-2 bg-sky-500/10 text-sky-400 rounded-lg hover:bg-sky-500 hover:text-[var(--text)] transition-colors" title="Approve Reset"><Clock size={14}/></button>
+                                  <button onClick={() => approveReset(u.id)} className="p-2 bg-sky-500/10 text-sky-400 rounded-lg hover:bg-sky-500 hover:text-text transition-colors" title="Approve Reset"><Clock size={14}/></button>
                                 )}
                               </div>
                             </div>
@@ -998,11 +1027,12 @@ const AdminDashboard = () => {
       case 'settings':
         return (
           <div className="animate-fade-in max-w-4xl mx-auto space-y-8">
-            <Card>
-              <h3 className="text-lg font-bold mb-8 flex items-center gap-3 text-[var(--text)]">
-                <Monitor className="text-sky-400" /> Idle Screen
-              </h3>
-              <div className="space-y-6">
+            <Card 
+              title="Idle Screen" 
+              icon={Monitor} 
+              subtitle="Default Content Configuration"
+            >
+              <div className="space-y-6 mt-4">
                 <div className="p-6 bg-white/5 border border-white/10 rounded-2xl">
                   <label className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4 block">Global Default Media</label>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1019,16 +1049,18 @@ const AdminDashboard = () => {
               </div>
             </Card>
 
-            <Card className="border-rose-500/20">
-               <h3 className="text-lg font-bold mb-8 flex items-center gap-3 text-rose-400">
-                <AlertCircle /> System Maintenance
-              </h3>
-              <div className="flex items-center justify-between p-6 bg-rose-500/5 border border-rose-500/10 rounded-2xl">
+            <Card 
+              className="border-rose-500/20" 
+              title="System Maintenance" 
+              icon={AlertCircle} 
+              subtitle="Critical Operations"
+            >
+              <div className="flex items-center justify-between p-6 bg-rose-500/5 border border-rose-500/10 rounded-2xl mt-4">
                 <div>
                    <p className="font-bold text-rose-200">Reset Local Database</p>
                    <p className="text-xs text-rose-500/60 uppercase font-black mt-1">Permanently wipe all schedules and media records</p>
                 </div>
-                <button onClick={executeSystemReset} className="px-6 py-2.5 bg-rose-500 text-[var(--text)] rounded-xl font-black text-[10px] uppercase hover:bg-rose-600 transition-all">Execute Reset</button>
+                <button onClick={executeSystemReset} className="px-6 py-2.5 bg-rose-500 text-text rounded-xl font-black text-[10px] uppercase hover:bg-rose-600 transition-all">Execute Reset</button>
               </div>
             </Card>
           </div>
@@ -1039,7 +1071,7 @@ const AdminDashboard = () => {
               <div className="aspect-video bg-black rounded-[40px] overflow-hidden border border-white/10 shadow-2xl relative group shadow-sky-500/5">
                  <iframe src="/display" className="w-full h-full border-none pointer-events-none scale-[1.001]" title="Live Preview" />
                  <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm">
-                    <p className="text-[var(--text)] text-lg tracking-[12px] font-black animate-pulse uppercase">Monitoring Active</p>
+                    <p className="text-text text-lg tracking-[12px] font-black animate-pulse uppercase">Monitoring Active</p>
                  </div>
               </div>
            </div>
@@ -1086,7 +1118,7 @@ const AdminDashboard = () => {
             <div className="flex items-center gap-3 mb-4">
               <div className="p-2 bg-sky-500/20 rounded-lg">{getTabIcon()}</div>
             </div>
-            <h1 className="text-8xl font-black tracking-tighter leading-none text-[var(--text)] uppercase">{getTabLabel()}</h1>
+            <h1 className="text-8xl font-black tracking-tighter leading-none text-text uppercase">{getTabLabel()}</h1>
           </div>
         </header>
         {renderView()}
