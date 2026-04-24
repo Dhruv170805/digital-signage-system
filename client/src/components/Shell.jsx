@@ -4,7 +4,7 @@ import useAuthStore from '../store/useAuthStore';
 import api from '../services/api';
 import { 
   BarChart3, CheckSquare, Calendar, Type, LayoutGrid, Users, 
-  Tv, MonitorPlay, LogOut, Upload, FileText, Activity, History, Shield, User 
+  Tv, MonitorPlay, LogOut, Upload, FileText, Activity, History, Shield, User, Settings
 } from 'lucide-react';
 
 const Shell = ({ children, role, activeTab, setActiveTab }) => {
@@ -24,7 +24,8 @@ const Shell = ({ children, role, activeTab, setActiveTab }) => {
     { id: 'audit', label: 'History', icon: History },
     { id: 'live', label: 'Current Screen', icon: Tv },
     { id: 'users', label: 'Users', icon: Users },
-    { id: 'settings', label: 'Idle', icon: MonitorPlay },
+    { id: 'settings', label: 'Idle Screen', icon: MonitorPlay },
+    { id: 'system', label: 'System', icon: Settings },
   ];
 
   const userMenu = [

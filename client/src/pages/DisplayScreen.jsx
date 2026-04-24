@@ -285,10 +285,18 @@ const DisplayScreen = () => {
       );
     }
 
+    if (!item) return (
+        <div className="w-full h-full p-[3vw] animate-fade-in relative z-10">
+          <div className="w-full h-full glass overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.8)] relative border-white/5 bg-black">
+             {renderIdleContent()}
+          </div>
+        </div>
+    );
+
     const singleMedia = item.mediaId || item;
 
     return (
-      <div className="w-full h-full p-12 animate-fade-in relative z-10">
+      <div className="w-full h-full p-[3vw] animate-fade-in relative z-10">
         <div className="w-full h-full glass overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.8)] relative border-white/5 bg-black">
           <FrameManager 
             item={singleMedia} 
@@ -302,7 +310,59 @@ const DisplayScreen = () => {
     );
   };
 
+  const allMedia = manifest.media || [];
+  const idleConfig = manifest.idleConfig;
   const idleWallpaper = manifest.idleMedia || allMedia.find(m => (m.id === settings.idleWallpaperId || m._id === settings.idleWallpaperId));
+
+  const renderIdleContent = () => {
+    if (idleConfig) {
+        const { contentType, content, style } = idleConfig;
+        
+        if (contentType === 'color') {
+            return <div className="w-full h-full" style={{ backgroundColor: content.bgColor || '#000' }} />;
+        }
+        
+        if (contentType === 'text') {
+            return (
+                <div className="w-full h-full flex items-center justify-center p-[10vw]" style={{ backgroundColor: style.background || 'transparent' }}>
+                    <h2 
+                        className="font-black text-center leading-tight uppercase tracking-tighter drop-shadow-2xl"
+                        style={{ 
+                            fontSize: `${style.fontSize || 4}vw`, 
+                            color: style.color || '#fff',
+                            fontWeight: style.fontWeight || '900',
+                            textAlign: style.align || 'center'
+                        }}
+                    >
+                        {content.text}
+                    </h2>
+                </div>
+            );
+        }
+
+        if (contentType === 'video' || contentType === 'image') {
+            const mockMedia = {
+                filePath: content.url,
+                fileType: contentType,
+                fileName: 'Idle Content'
+            };
+            return <FrameManager item={mockMedia} />;
+        }
+    }
+
+    if (idleWallpaper) {
+        return <FrameManager item={idleWallpaper} />;
+    }
+
+    return (
+        <div className="w-full h-full flex flex-col items-center justify-center bg-black/40 backdrop-blur-3xl p-24">
+            <Activity className="text-blue-500/20 animate-pulse mb-8" size={160} />
+            <h2 className="text-4xl font-black text-white/20 uppercase tracking-[20px] text-center max-w-4xl leading-relaxed">
+                {settings.idleMessage || "Nexus Production Engine: Standby for Transmission"}
+            </h2>
+        </div>
+    );
+  };
 
   if (isInitialLoading) return (
     <div className="fixed inset-0 bg-bg flex items-center justify-center z-[100] font-sans">

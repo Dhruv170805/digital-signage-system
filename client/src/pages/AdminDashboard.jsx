@@ -4,7 +4,7 @@ import api from '../services/api';
 import Shell from '../components/Shell';
 import { 
   XCircle, Eye, Activity, LayoutGrid, CheckSquare, Calendar, FileText, 
-  Type as TypeIcon, Tv, Monitor, MonitorPlay, Users as UsersIcon
+  Type as TypeIcon, Tv, Monitor, MonitorPlay, Users as UsersIcon, Settings as SettingsIcon
 } from 'lucide-react';
 
 import DashboardOverview from '../components/admin/DashboardOverview';
@@ -14,6 +14,7 @@ import LayoutArchitect from '../components/admin/LayoutArchitect';
 import TerminalManager from '../components/admin/TerminalManager';
 import UserDirectory from '../components/admin/UserDirectory';
 import TickerManager from '../components/admin/TickerManager';
+import IdleScreenManager from '../components/admin/IdleScreenManager';
 import SystemSettings from '../components/admin/SystemSettings';
 import AuditHistory from '../components/admin/AuditHistory';
 import Card from '../components/admin/Card';
@@ -110,6 +111,8 @@ const AdminDashboard = () => {
       case 'ticker':
         return <TickerManager />;
       case 'settings':
+        return <IdleScreenManager />;
+      case 'system':
         return <SystemSettings settings={settings} approvedMedia={approvedMedia} fetchData={fetchData} />;
       case 'audit':
         return <AuditHistory />;
@@ -132,7 +135,8 @@ const AdminDashboard = () => {
     const labels = {
       dashboard: 'DASHBOARD', approve: 'APPLICATION', schedule: 'BROADCAST',
       templates: 'LAYOUT', ticker: 'TICKER', screens: 'SCREENS',
-      users: 'USERS', settings: 'IDLE', live: 'CURRENT SCREEN', audit: 'AUDIT'
+      users: 'USERS', settings: 'IDLE SCREEN', live: 'CURRENT SCREEN', audit: 'AUDIT',
+      system: 'SYSTEM'
     };
     return labels[activeTab] || activeTab.toUpperCase();
   };
@@ -147,6 +151,7 @@ const AdminDashboard = () => {
       case 'screens': return <Tv className="w-5 h-5 text-sky-400" />;
       case 'users': return <UsersIcon className="w-5 h-5 text-sky-400" />;
       case 'settings': return <MonitorPlay className="w-5 h-5 text-sky-400" />;
+      case 'system': return <SettingsIcon className="w-5 h-5 text-sky-400" />;
       case 'live': return <Tv className="w-5 h-5 text-sky-400" />;
       case 'audit': return <Activity className="w-5 h-5 text-sky-400" />;
       default: return <Monitor className="w-5 h-5 text-sky-400" />;

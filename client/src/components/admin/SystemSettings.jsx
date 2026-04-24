@@ -72,22 +72,61 @@ const SystemSettings = ({ settings, setSettings, approvedMedia, fetchData }) => 
   return (
     <div className="animate-fade-in max-w-4xl mx-auto space-y-8">
       <Card 
-        title="Idle Screen" 
+        title="Idle Transmission" 
         icon={Monitor} 
-        subtitle="Default Content Configuration"
+        subtitle="Default Content & Static Messaging"
       >
         <div className="space-y-6 mt-4">
-          <div className="p-6 bg-slate-50 border border-slate-200 rounded-2xl">
-            <label className="text-xs font-bold uppercase tracking-widest text-text-dim mb-4 block">Global Default Media</label>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <select className="nexus-input" value={settings.idleWallpaperId || ''} onChange={(e) => saveSettings('idleWallpaperId', e.target.value)}>
-                <option value="">System Default (Quotes)</option>
-                {approvedMedia.map(m => <option key={m._id || m.id} value={m._id || m.id}>{m.fileName} ({m.fileType})</option>)}
-              </select>
-              <div className="flex items-center gap-3 px-4 py-3 bg-sky-500/10 border border-sky-500/20 rounded-xl">
-                <Info className="text-sky-600 shrink-0" size={16} />
-                <p className="text-[10px] font-bold text-sky-600 uppercase leading-tight">This asset will play when no specific schedule is active.</p>
-              </div>
+          <div className="p-6 bg-slate-50 border border-slate-200 rounded-[32px] space-y-6">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+                <div>
+                    <p className="font-bold text-text uppercase text-xs">Targeted Content</p>
+                    <p className="text-[10px] font-bold text-text-dim uppercase tracking-widest mt-1">Assign fallback media to specific screens</p>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+               <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-slate-500 ml-1">Select Media</label>
+                  <select className="nexus-input" value={selectedIdleMedia} onChange={(e) => setIdleMedia(e.target.value)}>
+                    <option value="">System Default (Quotes)</option>
+                    {approvedMedia.map(m => <option key={m._id || m.id} value={m._id || m.id}>{m.fileName} ({m.fileType})</option>)}
+                  </select>
+               </div>
+
+               <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-slate-500 ml-1">Target Scope</label>
+                  <select className="nexus-input" value={idleTargetType} onChange={(e) => { setIdleTargetType(e.target.value); setIdleTargetId(''); }}>
+                    <option value="all">Global (All Screens)</option>
+                    <option value="screen">Specific Screen</option>
+                    <option value="group">Screen Group</option>
+                  </select>
+               </div>
+
+               {idleTargetType === 'screen' && (
+                <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-slate-500 ml-1">Choose Screen</label>
+                    <select className="nexus-input" value={idleTargetId} onChange={(e) => setIdleTargetId(e.target.value)}>
+                        <option value="">Select Target...</option>
+                        {screens.map(s => <option key={s._id || s.id} value={s._id || s.id}>{s.name}</option>)}
+                    </select>
+                </div>
+               )}
+
+               {idleTargetType === 'group' && (
+                <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-slate-500 ml-1">Group Identifier</label>
+                    <input type="text" placeholder="Group ID" className="nexus-input" value={idleTargetId} onChange={(e) => setIdleTargetId(e.target.value)} />
+                </div>
+               )}
+            </div>
+
+            <div className="flex items-center justify-between pt-4 border-t border-slate-200">
+               <div className="flex items-center gap-3 px-4 py-2 bg-sky-500/10 border border-sky-500/20 rounded-xl max-w-md">
+                 <Info className="text-sky-600 shrink-0" size={14} />
+                 <p className="text-[9px] font-bold text-sky-600 uppercase leading-tight">Idle content triggers automatically when no broadcasts are scheduled for the target.</p>
+               </div>
+               <button onClick={updateScreenIdleMedia} className="nexus-btn-primary px-8 tracking-[2px]">Apply Configuration</button>
             </div>
           </div>
         </div>

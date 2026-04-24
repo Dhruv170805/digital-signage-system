@@ -21,6 +21,7 @@ const tickerRoutes = require('./routes/tickerRoutes');
 const settingsRoutes = require('./routes/settingsRoutes');
 const templateRoutes = require('./routes/templateRoutes');
 const auditRoutes = require('./routes/auditRoutes');
+const idleRoutes = require('./routes/idleRoutes');
 
 const app = express();
 
@@ -69,6 +70,7 @@ app.use('/api/ticker', tickerRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/templates', templateRoutes);
 app.use('/api/audit', auditRoutes);
+app.use('/api/idle', idleRoutes);
 
 // Base route
 app.get('/', (req, res) => {
