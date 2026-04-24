@@ -4,30 +4,7 @@ import { Palette, XCircle, FileText, Info, AlertTriangle } from 'lucide-react';
 import api from '../../services/api';
 import { useTemplates } from '../../hooks/useAdminData';
 import toast from 'react-hot-toast';
-
-const Card = ({ children, className = "", title, icon, subtitle }) => {
-  const Icon = icon;
-  return (
-    <div className={`glass-card p-8 animate-fade-in ${className}`}>
-      {(title || Icon) && (
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            {Icon && (
-              <div className="w-12 h-12 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center text-accent shadow-inner">
-                <Icon size={24} />
-              </div>
-            )}
-            <div>
-              <h3 className="text-lg font-black text-text uppercase tracking-tighter leading-none">{title}</h3>
-              {subtitle && <p className="text-[10px] font-bold text-text-dim uppercase tracking-[2px] mt-1.5">{subtitle}</p>}
-            </div>
-          </div>
-        </div>
-      )}
-      {children}
-    </div>
-  );
-};
+import Card from './Card';
 
 const LayoutArchitect = ({ fetchData }) => {
   const { data: templates = [], refetch } = useTemplates();
@@ -242,7 +219,7 @@ const LayoutArchitect = ({ fetchData }) => {
           >
              <div className="space-y-2 max-h-[480px] overflow-y-auto pr-2 custom-scrollbar mt-2">
                 {templates.map(t => (
-                  <div key={t.id} className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex justify-between items-center group hover:bg-slate-100 transition-all cursor-pointer">
+                  <div key={t._id || t.id} className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex justify-between items-center group hover:bg-slate-100 transition-all cursor-pointer">
                      <div>
                         <p className="text-[10px] font-extrabold truncate max-w-[120px] uppercase text-text">{t.name}</p>
                         <p className="text-[8px] font-bold text-sky-600 opacity-60 uppercase">{safeParseJSON(t.layout).length} FRAMES</p>

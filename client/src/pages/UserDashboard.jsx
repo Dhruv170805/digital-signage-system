@@ -5,31 +5,11 @@ import Shell from '../components/Shell';
 import useAuthStore from '../store/useAuthStore';
 import { usePendingMedia, useMedia } from '../hooks/useAdminData';
 import toast from 'react-hot-toast';
+import Card from '../components/admin/Card';
 import { 
   Upload, FileText, Play, Image as ImageIcon, 
-  Clock, RefreshCw, Send, Monitor, Tv, Timer, CheckCircle
+  Clock, RefreshCw, Send, Monitor, Tv, Timer, CheckCircle, History
 } from 'lucide-react';
-
-const Card = ({ children, className = "", title, icon: Icon, subtitle }) => (
-  <div className={`glass-card p-8 animate-fade-in ${className}`}>
-    {(title || Icon) && (
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-4">
-          {Icon && (
-            <div className="w-12 h-12 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center text-blue-600 shadow-inner">
-              <Icon size={24} />
-            </div>
-          )}
-          <div>
-            <h3 className="text-lg font-black text-text uppercase tracking-tighter leading-none">{title}</h3>
-            {subtitle && <p className="text-[10px] font-bold text-text-dim uppercase tracking-[2px] mt-1.5">{subtitle}</p>}
-          </div>
-        </div>
-      </div>
-    )}
-    {children}
-  </div>
-);
 
 const StatWidget = ({ label, value, icon: WidgetIcon, color = "blue" }) => {
   const colorMap = {

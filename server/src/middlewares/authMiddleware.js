@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
+const { redisClient } = require('../config/redis');
 
-const authenticate = (req, res, next) => {
+const authenticate = async (req, res, next) => {
   const authHeader = req.headers.authorization;
 
   if (authHeader && authHeader.startsWith('Bearer')) {
@@ -10,7 +11,9 @@ const authenticate = (req, res, next) => {
       // Stateless validation (No DB hit!)
       const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret');
       
-      if (decoded.status === 'locked') {
+      // Immediate revocation check via Redis
+      const isLocked = await redisClient.get(`locked_user:${decoded.id}`);
+      if (isLocked || decoded.status === 'locked') {
         return res.status(403).json({ success: false, message: 'Account is locked' });
       }
 

@@ -16,6 +16,7 @@ import PersonnelDirectory from '../components/admin/PersonnelDirectory';
 import TickerManager from '../components/admin/TickerManager';
 import SystemSettings from '../components/admin/SystemSettings';
 import AuditHistory from '../components/admin/AuditHistory';
+import Card from '../components/admin/Card';
 
 import { 
   useScreens, useMedia, usePendingMedia, useTemplates, 
@@ -24,7 +25,7 @@ import {
 
 const PreviewModal = ({ isOpen, onClose, file }) => {
   if (!isOpen || !file) return null;
-  const src = `${import.meta.env.VITE_API_URL}/${file.filePath}`;
+  const src = file.filePath ? `${import.meta.env.VITE_API_URL}/${file.filePath}` : null;
   
   return (
     <div className="fixed inset-0 bg-black/95 backdrop-blur-xl z-[200] flex items-center justify-center p-12">
@@ -41,11 +42,11 @@ const PreviewModal = ({ isOpen, onClose, file }) => {
         
         <div className="flex-1 bg-black/40 rounded-[32px] border border-white/5 overflow-hidden shadow-2xl relative">
           {file.fileType === 'video' ? (
-            <video src={src} autoPlay controls className="w-full h-full object-contain" />
+            <video src={src || undefined} autoPlay controls className="w-full h-full object-contain" />
           ) : file.fileType === 'pdf' ? (
-            <iframe src={`${src}#toolbar=0`} className="w-full h-full border-none bg-white" title={file.fileName} />
+            <iframe src={src ? `${src}#toolbar=0` : undefined} className="w-full h-full border-none bg-white" title={file.fileName} />
           ) : (
-            <img src={src} alt="Preview" className="w-full h-full object-contain" />
+            <img src={src || undefined} alt="Preview" className="w-full h-full object-contain" />
           )}
         </div>
       </div>
@@ -109,7 +110,7 @@ const AdminDashboard = () => {
       case 'ticker':
         return <TickerManager />;
       case 'settings':
-        return <SystemSettings settings={settings} setSettings={setSettings} approvedMedia={approvedMedia} fetchData={fetchData} />;
+        return <SystemSettings settings={settings} approvedMedia={approvedMedia} fetchData={fetchData} />;
       case 'audit':
         return <AuditHistory />;
       case 'live':

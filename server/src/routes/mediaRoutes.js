@@ -19,6 +19,7 @@ const upload = multer({ storage });
 router.get('/', mediaController.getAll);
 router.get('/pending', protect, admin, mediaController.getPending);
 router.post('/upload', protect, upload.single('media'), mediaController.upload);
-router.put('/:id/approve', protect, admin, mediaController.approve);
+router.post('/:id/approve', protect, admin, mediaController.approve);
+router.post('/:id/reject', protect, admin, mediaController.reject);
 
 module.exports = router;

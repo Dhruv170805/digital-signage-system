@@ -3,30 +3,7 @@ import { Calendar, Activity, Trash2, AlertTriangle } from 'lucide-react';
 import api from '../../services/api';
 import { useScreens, useTemplates, useMedia, useTickers, useSchedules } from '../../hooks/useAdminData';
 import toast from 'react-hot-toast';
-
-const Card = ({ children, className = "", title, icon, subtitle }) => {
-  const Icon = icon;
-  return (
-    <div className={`glass-card p-8 animate-fade-in ${className}`}>
-      {(title || Icon) && (
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            {Icon && (
-              <div className="w-12 h-12 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center text-accent shadow-inner">
-                <Icon size={24} />
-              </div>
-            )}
-            <div>
-              <h3 className="text-lg font-black text-text uppercase tracking-tighter leading-none">{title}</h3>
-              {subtitle && <p className="text-[10px] font-bold text-text-dim uppercase tracking-[2px] mt-1.5">{subtitle}</p>}
-            </div>
-          </div>
-        </div>
-      )}
-      {children}
-    </div>
-  );
-};
+import Card from './Card';
 
 const BroadcastScheduler = ({ fetchData }) => {
   const { data: screens = [] } = useScreens();
@@ -163,14 +140,14 @@ const BroadcastScheduler = ({ fetchData }) => {
                </div>
              )}
 
-             <div className="grid grid-cols-2 gap-4">
+             <div className="space-y-4">
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold uppercase ml-1 opacity-50">From Date & Time</label>
-                  <input type="datetime-local" required className="nexus-input text-xs" value={newSchedule.startTime} onChange={(e) => setNewSchedule(p => ({ ...p, startTime: e.target.value }))}/>
+                  <input type="datetime-local" required className="nexus-input" value={newSchedule.startTime} onChange={(e) => setNewSchedule(p => ({ ...p, startTime: e.target.value }))}/>
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold uppercase ml-1 opacity-50">To Date & Time</label>
-                  <input type="datetime-local" required className="nexus-input text-xs" value={newSchedule.endTime} onChange={(e) => setNewSchedule(p => ({ ...p, endTime: e.target.value }))}/>
+                  <input type="datetime-local" required className="nexus-input" value={newSchedule.endTime} onChange={(e) => setNewSchedule(p => ({ ...p, endTime: e.target.value }))}/>
                 </div>
              </div>
              <button type="submit" className="nexus-btn-primary w-full tracking-[2px]">Broadcast</button>

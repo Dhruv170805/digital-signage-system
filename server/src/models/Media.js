@@ -7,6 +7,9 @@ const mediaSchema = new mongoose.Schema({
   size: { type: Number, required: true },
   path: { type: String, required: true },
   status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
+  requestedStartTime: { type: Date },
+  requestedEndTime: { type: Date },
+  rejectionReason: { type: String },
   uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 }, { timestamps: true });
 

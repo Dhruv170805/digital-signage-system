@@ -1,5 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import useAuthStore from '../store/useAuthStore';
+import api from '../services/api';
 import { 
   BarChart3, CheckSquare, Calendar, Type, LayoutGrid, Users, 
   Tv, MonitorPlay, LogOut, Upload, FileText, Activity, History, Shield, User 
@@ -7,13 +9,8 @@ import {
 
 const Shell = ({ children, role, activeTab, setActiveTab }) => {
   const navigate = useNavigate();
-  
-  const user = React.useMemo(() => {
-    try {
-      const u = localStorage.getItem('user');
-      return u ? JSON.parse(u) : null;
-    } catch { return null; }
-  }, []);
+  const user = useAuthStore((state) => state.user);
+  const logoutStore = useAuthStore((state) => state.logout);
 
   const userName = user?.name || 'Authorized Personnel';
 
@@ -38,9 +35,15 @@ const Shell = ({ children, role, activeTab, setActiveTab }) => {
 
   const menu = role === 'admin' ? adminMenu : userMenu;
 
-  const handleLogout = () => {
-    localStorage.clear();
-    navigate('/login');
+  const handleLogout = async () => {
+    try {
+      await api.post('/api/auth/logout');
+    } catch (err) {
+      console.error('Logout error:', err);
+    } finally {
+      logoutStore();
+      navigate('/login');
+    }
   };
 
   return (
@@ -116,7 +119,7 @@ const Shell = ({ children, role, activeTab, setActiveTab }) => {
             className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all duration-300 font-black text-[10px] uppercase tracking-widest border border-rose-500/20"
           >
             <LogOut size={14} />
-            Terminate
+            Log Out
           </button>
         </div>
       </aside>

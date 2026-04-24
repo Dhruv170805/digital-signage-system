@@ -84,18 +84,9 @@ class ScreenService {
   }
 
   async broadcastManifestUpdate() {
-    const socketService = require('./socketService');
-    const screens = await this.getAllScreens();
-    
-    // In a high-perf system, we'd use a worker queue here.
-    // For now, we'll iterate and push.
-    for (const screen of screens) {
-      const manifest = await this.getManifest(screen._id, screen.groupId);
-      socketService.notifyScreen(screen._id, 'manifestUpdate', {
-        screen,
-        ...manifest
-      });
-    }
+    const broadcastQueue = require('../workers/broadcastQueue');
+    await broadcastQueue.add('broadcastManifest', {});
+    console.log('Added broadcast task to BullMQ');
   }
 
   async getScreenByToken(deviceToken) {

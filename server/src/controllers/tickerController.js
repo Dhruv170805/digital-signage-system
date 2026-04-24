@@ -28,6 +28,16 @@ class TickerController {
     }
   }
 
+  async toggle(req, res, next) {
+    try {
+      const { isActive } = req.body;
+      const ticker = await tickerService.update(req.params.id, { isActive: !!isActive });
+      res.json(ticker);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async delete(req, res, next) {
     try {
       await tickerService.delete(req.params.id);

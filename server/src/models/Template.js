@@ -34,4 +34,15 @@ const templateSchema = new mongoose.Schema({
   frames: [frameSchema],
 }, { timestamps: true });
 
+templateSchema.pre('save', function(next) {
+  if (this.layout && (!this.frames || this.frames.length === 0)) {
+    try {
+      this.frames = JSON.parse(this.layout);
+    } catch (e) {
+      console.error('Failed to parse layout into frames:', e.message);
+    }
+  }
+  next();
+});
+
 module.exports = mongoose.model('Template', templateSchema);

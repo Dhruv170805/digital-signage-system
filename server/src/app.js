@@ -29,7 +29,7 @@ const allowedOrigins = [
   process.env.CLIENT_URL,
   'http://localhost:5173',
   'http://localhost:3000',
-  'http://localhost:5005'
+  'http://localhost:5006'
 ].filter(Boolean);
 
 app.use(cors({
@@ -58,7 +58,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 // Static files (uploads)
-app.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // API Routes
 app.use('/api/screens', screenRoutes);

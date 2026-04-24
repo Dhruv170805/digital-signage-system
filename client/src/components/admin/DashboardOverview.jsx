@@ -1,29 +1,6 @@
 import React from 'react';
 import { Tv, Calendar, Timer, CheckSquare, Activity, Monitor, ExternalLink, Plus, FileText } from 'lucide-react';
-
-const Card = ({ children, className = "", title, icon, subtitle }) => {
-  const Icon = icon;
-  return (
-    <div className={`glass-card p-8 animate-fade-in ${className}`}>
-      {(title || Icon) && (
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            {Icon && (
-              <div className="w-12 h-12 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center text-accent shadow-inner">
-                <Icon size={24} />
-              </div>
-            )}
-            <div>
-              <h3 className="text-lg font-black text-text uppercase tracking-tighter leading-none">{title}</h3>
-              {subtitle && <p className="text-[10px] font-bold text-text-dim uppercase tracking-[2px] mt-1.5">{subtitle}</p>}
-            </div>
-          </div>
-        </div>
-      )}
-      {children}
-    </div>
-  );
-};
+import Card from './Card';
 
 const StatWidget = ({ label, value, icon: Icon, color = "blue", trend }) => {
   const colorMap = {
@@ -107,7 +84,7 @@ const DashboardOverview = ({ screens, schedules, pendingMedia, media, setActiveT
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {screens.map(s => (
-                  <div key={s.id} className="p-6 bg-slate-50 border border-slate-200 rounded-[24px] flex items-center justify-between hover:bg-slate-100 transition-all group relative overflow-hidden">
+                  <div key={s._id || s.id} className="p-6 bg-slate-50 border border-slate-200 rounded-[24px] flex items-center justify-between hover:bg-slate-100 transition-all group relative overflow-hidden">
                     <div className={`absolute top-0 left-0 w-1 h-full ${s.status === 'online' ? 'bg-emerald-500' : 'bg-rose-500'} opacity-50`} />
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center relative">

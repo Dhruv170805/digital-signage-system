@@ -15,7 +15,7 @@ const ModerationModal = ({ isOpen, onClose, file, onConfirm }) => {
     if (action === 'reject' && !reason.trim()) {
       return toast.error('Please provide a reason for rejection.');
     }
-    onConfirm(file.id, action, action === 'approve' ? { startTime, endTime } : { reason });
+    onConfirm(file._id || file.id, action, action === 'approve' ? { startTime, endTime } : { reason });
   };
 
   return (
@@ -52,7 +52,7 @@ const ModerationModal = ({ isOpen, onClose, file, onConfirm }) => {
             <div className="space-y-1">
               <label className="text-[8px] font-black uppercase text-slate-400 ml-1">Reason for Rejection</label>
               <textarea 
-                className="nexus-input min-h-[120px] py-4 resize-none text-white" 
+                className="nexus-input min-h-[120px] py-4 resize-none text-slate-800" 
                 placeholder="Enter technical reason for non-compliance..."
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
@@ -108,17 +108,17 @@ const ModerationQueue = ({ pendingMedia, fetchData, setPreviewFile, setShowPrevi
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
            {pendingMedia.map(m => (
-             <div key={m.id} className="glass-card p-6 group relative overflow-hidden transition-all duration-500 hover:scale-[1.02]">
+             <div key={m._id || m.id} className="glass-card p-6 group relative overflow-hidden transition-all duration-500 hover:scale-[1.02]">
                 <div className="aspect-video bg-black rounded-2xl overflow-hidden mb-6 border border-slate-200 relative group-hover:border-slate-300 transition-all">
                    {m.fileType === 'video' ? (
-                     <video src={`${import.meta.env.VITE_API_URL}/${m.filePath}`} className="w-full h-full object-cover opacity-60 grayscale group-hover:grayscale-0 transition-all duration-700" />
+                     <video src={m.filePath ? `${import.meta.env.VITE_API_URL}/${m.filePath}` : undefined} className="w-full h-full object-cover opacity-60 grayscale group-hover:grayscale-0 transition-all duration-700" />
                    ) : m.fileType === 'pdf' ? (
                      <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900">
                         <File className="text-blue-500 opacity-40 mb-3" size={40} />
                         <span className="text-[10px] font-black text-blue-500/60 uppercase tracking-widest">Digital PDF</span>
                      </div>
                    ) : (
-                     <img src={`${import.meta.env.VITE_API_URL}/${m.filePath}`} className="w-full h-full object-cover opacity-60 grayscale group-hover:grayscale-0 transition-all duration-700" />
+                     <img src={m.filePath ? `${import.meta.env.VITE_API_URL}/${m.filePath}` : undefined} className="w-full h-full object-cover opacity-60 grayscale group-hover:grayscale-0 transition-all duration-700" />
                    )}
                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-500 translate-y-4 group-hover:translate-y-0">
@@ -147,7 +147,7 @@ const ModerationQueue = ({ pendingMedia, fetchData, setPreviewFile, setShowPrevi
            ))}
         </div>
       )}
-      <ModerationModal key={modFile?.id} isOpen={showModModal} onClose={() => { setShowModModal(false); setModFile(null); }} file={modFile} onConfirm={handleModeration} />
+      <ModerationModal key={modFile?._id || modFile?.id} isOpen={showModModal} onClose={() => { setShowModModal(false); setModFile(null); }} file={modFile} onConfirm={handleModeration} />
     </div>
   );
 };

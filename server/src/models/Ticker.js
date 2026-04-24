@@ -2,12 +2,28 @@ const mongoose = require('mongoose');
 
 const tickerSchema = new mongoose.Schema({
   text: { type: String, required: true },
-  speed: { type: Number, default: 5 },
-  direction: { type: String, enum: ['left', 'right', 'up', 'down'], default: 'left' },
-  fontColor: { type: String, default: '#FFFFFF' },
-  backgroundColor: { type: String, default: '#000000' },
-  fontSize: { type: String, default: 'text-2xl' },
-  priority: { type: Number, default: 1 },
-}, { timestamps: true });
+  type: { type: String, enum: ['text', 'api'], default: 'text' },
+  linkUrl: { type: String },
+  fontFamily: { type: String, default: 'sans-serif' },
+  fontSize: { type: String, default: 'text-4xl' },
+  fontWeight: { type: String, default: 'normal' },
+  fontStyle: { type: String, default: 'normal' },
+  color: { type: String, default: '#ffffff' },
+  backgroundColor: { type: String, default: 'rgba(0,0,0,0.4)' },
+  padding: { type: String, default: '0px 24px' },
+  direction: { type: String, enum: ['left-right', 'right-left', 'vertical'], default: 'right-left' },
+  speed: { type: Number, default: 50 },
+  loopControl: { type: String, default: 'infinite' },
+  targetType: { type: String, enum: ['global', 'screen'], default: 'global' },
+  targetIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Screen' }],
+  priority: { type: Number, default: 10 },
+  startTime: { type: String, default: '00:00' },
+  endTime: { type: String, default: '23:59' },
+  isActive: { type: Boolean, default: true },
+}, { 
+  timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
+});
 
 module.exports = mongoose.model('Ticker', tickerSchema);

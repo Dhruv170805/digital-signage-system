@@ -98,7 +98,17 @@ class AuthService {
   }
 
   async updateStatus(id, status) {
-    return await User.findByIdAndUpdate(id, { status }, { new: true });
+    const { redisClient } = require('../config/redis');
+    const updatedUser = await User.findByIdAndUpdate(id, { status }, { new: true });
+    
+    if (status === 'locked') {
+      // Set locked status in Redis with a TTL of 7 days
+      await redisClient.setex(`locked_user:${id}`, 7 * 24 * 60 * 60, 'true');
+    } else {
+      await redisClient.del(`locked_user:${id}`);
+    }
+    
+    return updatedUser;
   }
 
   async deleteUser(id) {

@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { AlertCircle } from 'lucide-react';
 
-const getMediaUrl = (filePath) => {
+const getMediaUrl = (filePath, zoneId) => {
   if (!filePath) return '';
   const apiBase = (import.meta.env.VITE_API_URL || '').replace(/\/api\/?$/, '').replace(/\/$/, '');
   const cleanPath = filePath.startsWith('/') ? filePath : `/${filePath}`;
-  return `${apiBase}${cleanPath}`.replace(/([^:]\/)\/+/g, "$1");
+  const url = `${apiBase}${cleanPath}`.replace(/([^:]\/)\/+/g, "$1");
+  return zoneId ? `${url}?z=${zoneId}` : url;
 };
 
-const FrameManager = ({ item, onMediaError }) => {
+const FrameManager = ({ item, zoneId, onMediaError }) => {
   const [currentMedia, setCurrentMedia] = useState(item);
   const [previousMedia, setPreviousMedia] = useState(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -33,7 +34,7 @@ const FrameManager = ({ item, onMediaError }) => {
   const renderMedia = (mediaItem, isFadingOut) => {
     if (!mediaItem) return null;
 
-    const src = getMediaUrl(mediaItem.filePath);
+    const src = getMediaUrl(mediaItem.filePath, zoneId) || undefined;
     const opacity = isFadingOut ? 0 : 1;
     const transitionClass = "transition-opacity duration-1000 absolute inset-0 w-full h-full";
 
@@ -57,7 +58,7 @@ const FrameManager = ({ item, onMediaError }) => {
       return (
         <iframe 
           key={`pdf-${mediaItem.id || mediaItem._id}`}
-          src={`${src}#toolbar=0&navpanes=0&scrollbar=0`} 
+          src={src ? `${src}#toolbar=0&navpanes=0&scrollbar=0` : undefined} 
           className={`${transitionClass} border-none bg-white pointer-events-none`}
           style={{ opacity, zIndex: isFadingOut ? 1 : 2 }}
           title={mediaItem.fileName} 

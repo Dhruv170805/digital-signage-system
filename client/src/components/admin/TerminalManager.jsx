@@ -3,30 +3,7 @@ import { Tv, Monitor } from 'lucide-react';
 import api from '../../services/api';
 import { useScreens } from '../../hooks/useAdminData';
 import toast from 'react-hot-toast';
-
-const Card = ({ children, className = "", title, icon, subtitle }) => {
-  const Icon = icon;
-  return (
-    <div className={`glass-card p-8 animate-fade-in ${className}`}>
-      {(title || Icon) && (
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            {Icon && (
-              <div className="w-12 h-12 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center text-accent shadow-inner">
-                <Icon size={24} />
-              </div>
-            )}
-            <div>
-              <h3 className="text-lg font-black text-text uppercase tracking-tighter leading-none">{title}</h3>
-              {subtitle && <p className="text-[10px] font-bold text-text-dim uppercase tracking-[2px] mt-1.5">{subtitle}</p>}
-            </div>
-          </div>
-        </div>
-      )}
-      {children}
-    </div>
-  );
-};
+import Card from './Card';
 
 const TerminalManager = ({ fetchData }) => {
   const { data: screens = [], refetch } = useScreens();
@@ -82,10 +59,10 @@ const TerminalManager = ({ fetchData }) => {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                    {screens.map(s => (
-                     <tr key={s.id} className="hover:bg-slate-50 transition-colors">
+                     <tr key={s._id || s.id} className="hover:bg-slate-50 transition-colors">
                         <td className="py-5 px-6">
                            <p className="font-bold text-text uppercase text-sm tracking-tight">{s.name}</p>
-                           <p className="text-[8px] font-bold text-sky-600/60 uppercase mt-0.5 tracking-widest">ID: {s.id.slice(-8)}</p>
+                           <p className="text-[8px] font-bold text-sky-600/60 uppercase mt-0.5 tracking-widest">ID: {(s._id || s.id).slice(-8)}</p>
                         </td>
                         <td className="py-5 px-6 text-[10px] font-bold uppercase text-text-dim">{s.location}</td>
                         <td className="py-5 px-6">

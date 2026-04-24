@@ -59,7 +59,10 @@ const DisplayScreen = () => {
     lastFetchRef.current = now;
 
     await Promise.resolve();
-    const token = localStorage.getItem('screenToken');
+    let token = localStorage.getItem('screenToken');
+    if (!token) {
+      token = searchParams.get("token");
+    }
 
     const authConfig = {
       headers: token ? { Authorization: `Bearer ${token}` } : {}
@@ -218,7 +221,9 @@ const DisplayScreen = () => {
       </div>
     );
     
-    const layout = item.layout ? safeParse(item.layout) : null;
+    // Support both flattened and nested (populated) structures
+    const layoutSource = item.layout || (item.templateId && item.templateId.layout);
+    const layout = layoutSource ? safeParse(layoutSource) : null;
     const mapping = item.mediaMapping ? safeParse(item.mediaMapping, {}) : {};
 
     // Multi-Frame Engine rendering
@@ -262,6 +267,7 @@ const DisplayScreen = () => {
                 ) : (
                   <FrameManager 
                     item={mappedMedia} 
+                    zoneId={zone.i}
                     onMediaError={() => {
                         // For multi-frame, we don't necessarily want to skip the WHOLE layout
                         // but maybe we should if the main frame fails.
@@ -319,7 +325,7 @@ const DisplayScreen = () => {
       </div>
 
       {/* Header */}
-      <div className="h-32 bg-black/40 backdrop-blur-3xl border-b border-white/5 flex items-center justify-between px-16 z-50">
+      <div className="h-56 bg-black/40 backdrop-blur-3xl border-b border-white/5 flex items-center justify-between px-24 z-50">
         <div className="flex items-center gap-10">
           <div className="flex items-center gap-4">
             <div className={`w-4 h-4 rounded-full ${isSyncing ? 'bg-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.6)]' : 'bg-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.6)]'} animate-pulse`} />
@@ -335,20 +341,20 @@ const DisplayScreen = () => {
           )}
         </div>
 
-        <div className="flex items-center gap-12">
+        <div className="flex items-center gap-16">
           <WeatherWidget location={screenInfo?.location} />
-          <div className="h-16 w-px bg-white/10" />
-          <div className="flex items-center gap-6">
+          <div className="h-24 w-px bg-white/10" />
+          <div className="flex items-center gap-8">
              <div className="text-right">
-                <p className="text-6xl font-black tracking-tighter tabular-nums leading-none text-text drop-shadow-[0_0_20px_rgba(255,255,255,0.3)]">
+                <p className="text-[7rem] font-black tracking-tighter tabular-nums leading-none text-text drop-shadow-[0_0_30px_rgba(255,255,255,0.3)]">
                   {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
                 </p>
-                <p className="text-[12px] font-black uppercase tracking-[8px] text-text/20 mt-3 flex items-center justify-end gap-2">
-                   <ClockIcon size={12} /> {time.toLocaleDateString([], { weekday: 'long' })}
+                <p className="text-2xl font-black uppercase tracking-[8px] text-text/40 mt-3 flex items-center justify-end gap-3">
+                   <ClockIcon size={20} className="text-blue-400" /> {time.toLocaleDateString([], { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                 </p>
              </div>
-             <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
-                <p className="text-2xl font-black text-blue-500 tabular-nums">{time.toLocaleTimeString([], { second: '2-digit' })}</p>
+             <div className="w-24 h-24 rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center shadow-2xl">
+                <p className="text-4xl font-black text-blue-500 tabular-nums">{time.toLocaleTimeString([], { second: '2-digit' })}</p>
              </div>
           </div>
         </div>

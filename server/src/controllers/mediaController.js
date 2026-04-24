@@ -47,6 +47,8 @@ class MediaController {
         size: req.file.size,
         path: req.file.path,
         status: req.user.role === 'admin' ? 'approved' : 'pending',
+        requestedStartTime: req.body.requestedStartTime || null,
+        requestedEndTime: req.body.requestedEndTime || null,
         uploadedBy: req.user.id
       });
       
@@ -71,9 +73,25 @@ class MediaController {
 
   approve = async (req, res, next) => {
     try {
-      const media = await mediaService.updateStatus(req.params.id, 'approved');
+      const updateData = { status: 'approved' };
+      if (req.body.startTime) updateData.requestedStartTime = req.body.startTime;
+      if (req.body.endTime) updateData.requestedEndTime = req.body.endTime;
+      
+      const media = await mediaService.updateStatus(req.params.id, updateData);
       const screenService = require('../services/screenService');
       await screenService.broadcastManifestUpdate();
+      res.json(this._formatMedia(media));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  reject = async (req, res, next) => {
+    try {
+      const media = await mediaService.updateStatus(req.params.id, { 
+        status: 'rejected', 
+        rejectionReason: req.body.reason 
+      });
       res.json(this._formatMedia(media));
     } catch (error) {
       next(error);

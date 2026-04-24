@@ -35,7 +35,9 @@ const TickerManager = () => {
             }
             refetchTickers();
             handleCancel();
-        } catch { toast.error('Failed to save ticker'); }
+        } catch (err) { 
+            toast.error(err.response?.data?.message || 'Failed to save ticker'); 
+        }
     };
 
     const handleDelete = async (id) => {
@@ -44,19 +46,23 @@ const TickerManager = () => {
             await api.delete(`/api/ticker/${id}`);
             toast.success('Ticker Deleted');
             refetchTickers();
-        } catch { toast.error('Failed to delete ticker'); }
+        } catch (err) { 
+            toast.error(err.response?.data?.message || 'Failed to delete ticker'); 
+        }
     };
 
     const handleToggle = async (id, isActive) => {
         try {
-            await api.put(`/api/ticker/${id}/toggle`, { isActive: isActive ? 1 : 0 });
+            await api.put(`/api/ticker/${id}/toggle`, { isActive });
             refetchTickers();
-        } catch { toast.error('Failed to toggle status'); }
+        } catch (err) { 
+            toast.error(err.response?.data?.message || 'Failed to toggle status'); 
+        }
     };
 
     const handleEdit = (t) => {
         setDraftTicker(t);
-        setEditId(t.id || t._id);
+        setEditId(t._id || t.id);
         setIsEditing(true);
     };
 
@@ -177,7 +183,7 @@ const TickerManager = () => {
                                     const options = Array.from(e.target.options);
                                     setDraftTicker({ ...draftTicker, targetIds: options.filter(o => o.selected).map(o => o.value) });
                                 }}>
-                                    {screens.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                    {screens.map(s => <option key={s._id || s.id} value={s.id}>{s.name}</option>)}
                                 </select>
                             </div>
                         )}
@@ -220,7 +226,7 @@ const TickerManager = () => {
                         </thead>
                         <tbody className="divide-y divide-white/5">
                             {tickers.map(t => (
-                                <tr key={t.id || t._id} className={`hover:bg-white/5 transition-colors ${!t.isActive ? 'opacity-50' : ''}`}>
+                                <tr key={t._id || t.id} className={`hover:bg-white/5 transition-colors ${!t.isActive ? 'opacity-50' : ''}`}>
                                     <td className="py-5 px-6">
                                         <p className="font-bold text-text uppercase text-xs tracking-tight truncate max-w-[200px]">{t.text}</p>
                                         <p className="text-[8px] font-bold text-sky-400 uppercase mt-1 tracking-widest flex items-center gap-2">
@@ -240,13 +246,13 @@ const TickerManager = () => {
                                     </td>
                                     <td className="py-5 px-6 text-right">
                                         <div className="flex justify-end gap-2">
-                                            <button onClick={() => handleToggle(t.id || t._id, !t.isActive)} className="p-2 bg-white/5 text-slate-400 rounded-lg hover:bg-white/10 transition-all">
+                                            <button onClick={() => handleToggle(t._id || t.id, !t.isActive)} className="p-2 bg-white/5 text-slate-400 rounded-lg hover:bg-white/10 transition-all">
                                                 {t.isActive ? <Pause size={14}/> : <Play size={14}/>}
                                             </button>
                                             <button onClick={() => handleEdit(t)} className="p-2 bg-blue-500/10 text-blue-400 rounded-lg hover:bg-blue-500/20 transition-all">
                                                 <Edit2 size={14}/>
                                             </button>
-                                            <button onClick={() => handleDelete(t.id || t._id)} className="p-2 bg-rose-500/10 text-rose-400 rounded-lg hover:bg-rose-500/20 transition-all">
+                                            <button onClick={() => handleDelete(t._id || t.id)} className="p-2 bg-rose-500/10 text-rose-400 rounded-lg hover:bg-rose-500/20 transition-all">
                                                 <Trash2 size={14}/>
                                             </button>
                                         </div>

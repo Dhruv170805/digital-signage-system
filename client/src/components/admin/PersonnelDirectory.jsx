@@ -3,30 +3,7 @@ import { Users as UsersIcon, Plus, CheckCircle, Lock, Trash2, Clock } from 'luci
 import api from '../../services/api';
 import useAuthStore from '../../store/useAuthStore';
 import toast from 'react-hot-toast';
-
-const Card = ({ children, className = "", title, icon, subtitle }) => {
-  const Icon = icon;
-  return (
-    <div className={`glass-card p-8 animate-fade-in ${className}`}>
-      {(title || Icon) && (
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            {Icon && (
-              <div className="w-12 h-12 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center text-accent shadow-inner">
-                <Icon size={24} />
-              </div>
-            )}
-            <div>
-              <h3 className="text-lg font-black text-text uppercase tracking-tighter leading-none">{title}</h3>
-              {subtitle && <p className="text-[10px] font-bold text-text-dim uppercase tracking-[2px] mt-1.5">{subtitle}</p>}
-            </div>
-          </div>
-        </div>
-      )}
-      {children}
-    </div>
-  );
-};
+import Card from './Card';
 
 const Badge = ({ label, type }) => {
   const colors = {
@@ -148,7 +125,7 @@ const PersonnelDirectory = ({ users, fetchData }) => {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {users.map(u => (
-                  <tr key={u.id} className="hover:bg-slate-50 transition-colors">
+                  <tr key={u._id || u.id} className="hover:bg-slate-50 transition-colors">
                     <td className="py-6 px-6">
                        <p className="font-bold text-lg leading-none text-text">{u.name}</p>
                        <p className="text-[10px] font-bold text-text-dim uppercase tracking-tighter mt-1">{u.email}</p>

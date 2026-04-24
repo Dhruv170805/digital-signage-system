@@ -2,30 +2,7 @@ import React from 'react';
 import { Monitor, AlertCircle, Info } from 'lucide-react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
-
-const Card = ({ children, className = "", title, icon, subtitle }) => {
-  const Icon = icon;
-  return (
-    <div className={`glass-card p-8 animate-fade-in ${className}`}>
-      {(title || Icon) && (
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            {Icon && (
-              <div className="w-12 h-12 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center text-accent shadow-inner">
-                <Icon size={24} />
-              </div>
-            )}
-            <div>
-              <h3 className="text-lg font-black text-text uppercase tracking-tighter leading-none">{title}</h3>
-              {subtitle && <p className="text-[10px] font-bold text-text-dim uppercase tracking-[2px] mt-1.5">{subtitle}</p>}
-            </div>
-          </div>
-        </div>
-      )}
-      {children}
-    </div>
-  );
-};
+import Card from './Card';
 
 const SystemSettings = ({ settings, setSettings, approvedMedia, fetchData }) => {
   const saveSettings = async (key, val) => {
@@ -59,7 +36,7 @@ const SystemSettings = ({ settings, setSettings, approvedMedia, fetchData }) => 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <select className="nexus-input" value={settings.idleWallpaperId || ''} onChange={(e) => saveSettings('idleWallpaperId', e.target.value)}>
                 <option value="">System Default (Quotes)</option>
-                {approvedMedia.map(m => <option key={m.id} value={m.id}>{m.fileName} ({m.fileType})</option>)}
+                {approvedMedia.map(m => <option key={m._id || m.id} value={m._id || m.id}>{m.fileName} ({m.fileType})</option>)}
               </select>
               <div className="flex items-center gap-3 px-4 py-3 bg-sky-500/10 border border-sky-500/20 rounded-xl">
                 <Info className="text-sky-600 shrink-0" size={16} />
