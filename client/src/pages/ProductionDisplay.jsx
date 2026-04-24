@@ -128,7 +128,7 @@ const MediaRenderer = ({ media }) => {
   }
 
   if (media.mimeType === 'application/pdf') {
-    return <iframe src={url} style={{ width: '100%', height: '100%', border: 'none' }} title="PDF Content" />;
+    return <iframe src={`${url}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`} style={{ width: '100%', height: '100%', border: 'none' }} title="PDF Content" className="object-fill" />;
   }
 
   return <div>Unsupported Media</div>;

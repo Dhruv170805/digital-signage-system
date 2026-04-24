@@ -17,6 +17,7 @@ router.post('/register', authenticate, authorize('admin'), authController.regist
 router.get('/users', authenticate, authorize('admin'), authController.getAllUsers);
 router.post('/users/:id/lock', authenticate, authorize('admin'), authController.lockUser);
 router.post('/users/:id/unlock', authenticate, authorize('admin'), authController.unlockUser);
+router.post('/users/:id/approve-reset', authenticate, authorize('admin'), authController.approveReset);
 router.delete('/users/:id', authenticate, authorize('admin'), authController.deleteUser);
 
 module.exports = router;

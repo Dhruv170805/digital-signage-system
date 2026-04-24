@@ -10,6 +10,7 @@ const screenSchema = new mongoose.Schema({
   isActive: { type: Boolean, default: true },
   resolution: { type: String, default: '1920x1080' },
   groupId: { type: mongoose.Schema.Types.ObjectId, ref: 'ScreenGroup' },
+  idleMediaId: { type: mongoose.Schema.Types.ObjectId, ref: 'Media' },
   lastSeen: { type: Date },
   telemetry: {
     cpuTemp: Number,

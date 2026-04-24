@@ -10,5 +10,6 @@ router.get('/manifest', screenAuth, screenController.getManifest);
 router.get('/:id', authenticate, screenController.getById);
 router.post('/register', authenticate, authorize('admin'), screenController.register);
 router.put('/:id', authenticate, authorize('admin'), screenController.update);
+router.post('/reset', authenticate, authorize('admin'), screenController.resetScreen);
 
 module.exports = router;

@@ -3,6 +3,7 @@ import api from '../../services/api';
 import { useTickers, useScreens } from '../../hooks/useAdminData';
 import toast from 'react-hot-toast';
 import { Type, Play, Pause, Trash2, Edit2, Zap, MoveRight, Layers, Clock } from 'lucide-react';
+import TickerEngine from '../display/TickerEngine';
 
 const Card = ({ children, className = "" }) => (
   <div className={`glass p-6 ${className}`}>{children}</div>
@@ -89,6 +90,21 @@ const TickerManager = () => {
                         {isEditing ? 'Edit Ticker' : 'Create Ticker'}
                     </h3>
                 </div>
+                
+                {/* Live Preview */}
+                <div className="mb-6">
+                    <h4 className="text-[10px] font-black uppercase text-slate-500 mb-2 tracking-widest">Live Preview</h4>
+                    <div className="w-full h-16 rounded-xl overflow-hidden border border-white/10 bg-black/50 relative shadow-inner">
+                        {draftTicker.text ? (
+                            <TickerEngine ticker={draftTicker} />
+                        ) : (
+                            <div className="w-full h-full flex items-center justify-center text-[10px] font-bold uppercase text-slate-500 tracking-[4px]">
+                                Enter text to preview
+                            </div>
+                        )}
+                    </div>
+                </div>
+
                 <form onSubmit={handleSave} className="space-y-6 max-h-[800px] overflow-y-auto pr-2 custom-scrollbar">
                     
                     {/* Content */}
@@ -103,9 +119,14 @@ const TickerManager = () => {
                             ))}
                         </div>
                         <div className="space-y-2">
-                            <label className="text-[10px] font-bold uppercase ml-1 opacity-50">Message / Endpoint</label>
-                            <textarea required value={draftTicker.text} onChange={(e) => setDraftTicker({ ...draftTicker, text: e.target.value })} 
-                                className="nexus-input min-h-[80px] resize-none" placeholder={draftTicker.type === 'api' ? 'https://api.url/data' : 'Enter message here...'}/>
+                            <label className="text-[10px] font-bold uppercase ml-1 opacity-50">{draftTicker.type === 'api' ? 'API URL' : 'Message'}</label>
+                            {draftTicker.type === 'api' ? (
+                                <input required type="url" value={draftTicker.linkUrl} onChange={(e) => setDraftTicker({ ...draftTicker, linkUrl: e.target.value })} 
+                                    className="nexus-input text-xs" placeholder="https://api.url/data"/>
+                            ) : (
+                                <textarea required value={draftTicker.text} onChange={(e) => setDraftTicker({ ...draftTicker, text: e.target.value })} 
+                                    className="nexus-input min-h-[80px] resize-none" placeholder="Enter message here... (Use newlines for multiple messages)"/>
+                            )}
                         </div>
                     </div>
 
@@ -114,8 +135,23 @@ const TickerManager = () => {
                         <h4 className="text-[10px] font-black uppercase text-pink-400 border-b border-white/10 pb-1 mt-6">2. Aesthetics</h4>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
+                                <label className="text-[10px] font-bold uppercase ml-1 opacity-50">Font Family</label>
+                                <select className="nexus-input text-xs" value={draftTicker.fontFamily} onChange={(e) => setDraftTicker({ ...draftTicker, fontFamily: e.target.value })}>
+                                    <option value="sans-serif">Sans Serif</option>
+                                    <option value="serif">Serif</option>
+                                    <option value="monospace">Monospace</option>
+                                    <option value="'Orbitron', sans-serif">Orbitron (Neon)</option>
+                                </select>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-bold uppercase ml-1 opacity-50">Padding (CSS)</label>
+                                <input type="text" value={draftTicker.padding} onChange={(e) => setDraftTicker({ ...draftTicker, padding: e.target.value })} className="nexus-input text-xs" placeholder="e.g. 0px 40px"/>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
                                 <label className="text-[10px] font-bold uppercase ml-1 opacity-50">Text Color</label>
-                                <input type="color" value={draftTicker.color} onChange={(e) => setDraftTicker({ ...draftTicker, color: e.target.value })} className="w-full h-10 bg-transparent rounded cursor-pointer"/>
+                                <input type="color" value={draftTicker.color} onChange={(e) => setDraftTicker({ ...draftTicker, color: e.target.value })} className="w-full h-10 bg-transparent rounded cursor-pointer border border-white/10"/>
                             </div>
                             <div className="space-y-2">
                                 <label className="text-[10px] font-bold uppercase ml-1 opacity-50">Background</label>
@@ -157,6 +193,15 @@ const TickerManager = () => {
                                 <label className="text-[10px] font-bold uppercase ml-1 opacity-50">Speed (px/s)</label>
                                 <input type="number" value={draftTicker.speed} onChange={(e) => setDraftTicker({ ...draftTicker, speed: Number(e.target.value) })} className="nexus-input text-xs"/>
                             </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-bold uppercase ml-1 opacity-50">Loop Control</label>
+                                <select className="nexus-input text-xs" value={draftTicker.loopControl} onChange={(e) => setDraftTicker({ ...draftTicker, loopControl: e.target.value })}>
+                                    <option value="infinite">Infinite</option>
+                                    <option value="1">Once</option>
+                                    <option value="3">3 Times</option>
+                                    <option value="5">5 Times</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
 
@@ -183,7 +228,7 @@ const TickerManager = () => {
                                     const options = Array.from(e.target.options);
                                     setDraftTicker({ ...draftTicker, targetIds: options.filter(o => o.selected).map(o => o.value) });
                                 }}>
-                                    {screens.map(s => <option key={s._id || s.id} value={s.id}>{s.name}</option>)}
+                                    {screens.map(s => <option key={s._id || s.id} value={s._id || s.id}>{s.name}</option>)}
                                 </select>
                             </div>
                         )}

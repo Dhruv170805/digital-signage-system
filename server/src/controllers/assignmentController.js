@@ -1,4 +1,5 @@
 const assignmentService = require('../services/assignmentService');
+const loggerService = require('../services/loggerService');
 
 class AssignmentController {
   async getAll(req, res, next) {
@@ -50,14 +51,26 @@ class AssignmentController {
       if (data.startTime) data.startTime = data.startTime.padStart(5, '0');
       if (data.endTime) data.endTime = data.endTime.padStart(5, '0');
       
+      // Approval Logic
+      data.status = req.user.role === 'admin' ? 'approved' : 'pending';
+      
       const assignment = await assignmentService.createAssignment(data);
       
-      // Targeted Manifest Push
-      const screenService = require('../services/screenService');
-      if (assignment.isGlobal) {
-        await screenService.broadcastManifestUpdate();
-      } else if (assignment.screenId) {
-        await screenService.pushManifestToScreen(assignment.screenId);
+      await loggerService.logAudit(req.user.id, 'SCHEDULE', 'Assignment', assignment._id, { 
+        target: assignment.isGlobal ? 'Global' : (assignment.screenId || assignment.groupId), 
+        media: assignment.mediaId, 
+        template: assignment.templateId,
+        status: assignment.status
+      });
+
+      // Targeted Manifest Push (only if approved)
+      if (assignment.status === 'approved') {
+        const screenService = require('../services/screenService');
+        if (assignment.isGlobal) {
+          await screenService.broadcastManifestUpdate();
+        } else if (assignment.screenId) {
+          await screenService.pushManifestToScreen(assignment.screenId);
+        }
       }
 
       res.status(201).json(assignment);
@@ -71,6 +84,10 @@ class AssignmentController {
       const assignment = await assignmentService.getAssignmentById(req.params.id);
       await assignmentService.deleteAssignment(req.params.id);
       
+      await loggerService.logAudit(req.user.id, 'TERMINATE', 'Assignment', req.params.id, { 
+        target: assignment ? (assignment.isGlobal ? 'Global' : (assignment.screenId || assignment.groupId)) : 'Unknown'
+      });
+
       // Targeted Manifest Push
       const screenService = require('../services/screenService');
       if (assignment) {
@@ -82,6 +99,40 @@ class AssignmentController {
       }
 
       res.json({ message: 'Assignment deleted' });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async approve(req, res, next) {
+    try {
+      const Assignment = require('../models/Assignment');
+      const assignment = await Assignment.findByIdAndUpdate(req.params.id, { status: 'approved' }, { new: true });
+      if (!assignment) return res.status(404).json({ message: 'Assignment not found' });
+
+      await loggerService.logAudit(req.user.id, 'APPROVE', 'Assignment', assignment._id, { name: assignment.name });
+      
+      const screenService = require('../services/screenService');
+      if (assignment.isGlobal) await screenService.broadcastManifestUpdate();
+      else if (assignment.screenId) await screenService.pushManifestToScreen(assignment.screenId);
+      
+      res.json(assignment);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async reject(req, res, next) {
+    try {
+      const Assignment = require('../models/Assignment');
+      const assignment = await Assignment.findByIdAndUpdate(req.params.id, { 
+        status: 'rejected', 
+        rejectionReason: req.body.reason 
+      }, { new: true });
+      if (!assignment) return res.status(404).json({ message: 'Assignment not found' });
+
+      await loggerService.logAudit(req.user.id, 'REJECT', 'Assignment', assignment._id, { name: assignment.name, reason: req.body.reason });
+      res.json(assignment);
     } catch (error) {
       next(error);
     }

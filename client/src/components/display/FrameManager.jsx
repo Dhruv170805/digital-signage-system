@@ -13,6 +13,26 @@ const FrameManager = ({ item, zoneId, onMediaError }) => {
   const [currentMedia, setCurrentMedia] = useState(item);
   const [previousMedia, setPreviousMedia] = useState(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [textContents, setTextContents] = useState({});
+
+  useEffect(() => {
+    const fetchText = async (media) => {
+        const id = media._id || media.id;
+        if (textContents[id]) return;
+        try {
+            const apiBase = (import.meta.env.VITE_API_URL || '').replace(/\/api\/?$/, '').replace(/\/$/, '');
+            const res = await fetch(`${apiBase}/${media.filePath}`);
+            const text = await res.text();
+            setTextContents(prev => ({ ...prev, [id]: text }));
+        } catch (e) {
+            console.error('Failed to fetch text content:', e);
+            setTextContents(prev => ({ ...prev, [id]: 'Error loading text content.' }));
+        }
+    };
+
+    if (item?.fileType === 'text') fetchText(item);
+    if (previousMedia?.fileType === 'text') fetchText(previousMedia);
+  }, [item, previousMedia, textContents]);
 
   useEffect(() => {
     const currentId = currentMedia?.id || currentMedia?._id;
@@ -54,13 +74,29 @@ const FrameManager = ({ item, zoneId, onMediaError }) => {
       );
     }
     
+    if (mediaItem.fileType === 'text') {
+      return (
+        <div 
+          key={`txt-${mediaItem.id || mediaItem._id}`}
+          className={`${transitionClass} flex items-center justify-center p-[5vw] bg-slate-900`}
+          style={{ opacity, zIndex: isFadingOut ? 1 : 2 }}
+        >
+           <div className="w-full h-full glass p-[4vw] rounded-[40px] border-white/10 shadow-2xl flex items-center justify-center overflow-auto custom-scrollbar">
+              <pre className="text-[min(5vw,4rem)] font-black text-white whitespace-pre-wrap font-sans text-center leading-tight tracking-tighter uppercase drop-shadow-2xl">
+                {textContents[mediaItem.id || mediaItem._id] || 'Loading...'}
+              </pre>
+           </div>
+        </div>
+      );
+    }
+
     if (mediaItem.fileType === 'pdf') {
       return (
         <iframe 
           key={`pdf-${mediaItem.id || mediaItem._id}`}
-          src={src ? `${src}#toolbar=0&navpanes=0&scrollbar=0` : undefined} 
-          className={`${transitionClass} border-none bg-white pointer-events-none`}
-          style={{ opacity, zIndex: isFadingOut ? 1 : 2 }}
+          src={src ? `${src}#toolbar=0&navpanes=0&scrollbar=0&view=FitH` : undefined} 
+          className={`${transitionClass} border-none bg-white pointer-events-none object-fill`}
+          style={{ opacity, zIndex: isFadingOut ? 1 : 2, width: '100%', height: '100%' }}
           title={mediaItem.fileName} 
         />
       );

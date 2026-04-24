@@ -7,6 +7,7 @@ const userSchema = new mongoose.Schema({
   password: { type: String, required: true },
   role: { type: String, enum: ['admin', 'user'], default: 'user' },
   status: { type: String, enum: ['active', 'locked'], default: 'active' },
+  passwordResetRequested: { type: Boolean, default: false },
   tokenVersion: { type: Number, default: 0 },
 }, { 
   timestamps: true,

@@ -32,8 +32,16 @@ class SocketService {
 
       socket.on('screenPing', async (data) => {
         const { token, screenId, telemetry } = data;
+        let screen = null;
         if (token) {
-            await screenService.updateHeartbeat(token, telemetry);
+            screen = await screenService.updateHeartbeat(token, telemetry);
+        } else if (screenId) {
+            screen = await screenService.getScreenById(screenId);
+        }
+
+        if (screen) {
+            socket.join(`screen:${screen._id}`);
+            if (screen.groupId) socket.join(`group:${screen.groupId}`);
         }
       });
 

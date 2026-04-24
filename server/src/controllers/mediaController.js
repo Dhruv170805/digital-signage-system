@@ -1,4 +1,5 @@
 const mediaService = require('../services/mediaService');
+const loggerService = require('../services/loggerService');
 
 class MediaController {
   _formatMedia = (media) => {
@@ -8,6 +9,7 @@ class MediaController {
     let fileType = 'image';
     if (media.mimeType && media.mimeType.includes('pdf')) fileType = 'pdf';
     else if (media.mimeType && media.mimeType.includes('video')) fileType = 'video';
+    else if (media.mimeType && media.mimeType.includes('text')) fileType = 'text';
 
     return {
       ...media.toObject(),
@@ -53,6 +55,8 @@ class MediaController {
       });
       
       mediaCreated = true;
+      
+      await loggerService.logAudit(req.user.id, 'UPLOAD', 'Media', media._id, { filename: media.originalName, status: media.status });
 
       if (media.status === 'approved') {
         const screenService = require('../services/screenService');
@@ -78,6 +82,9 @@ class MediaController {
       if (req.body.endTime) updateData.requestedEndTime = req.body.endTime;
       
       const media = await mediaService.updateStatus(req.params.id, updateData);
+      
+      await loggerService.logAudit(req.user.id, 'APPROVE', 'Media', media._id, { filename: media.originalName });
+
       const screenService = require('../services/screenService');
       await screenService.broadcastManifestUpdate();
       res.json(this._formatMedia(media));
@@ -92,6 +99,9 @@ class MediaController {
         status: 'rejected', 
         rejectionReason: req.body.reason 
       });
+      
+      await loggerService.logAudit(req.user.id, 'REJECT', 'Media', media._id, { filename: media.originalName, reason: req.body.reason });
+
       res.json(this._formatMedia(media));
     } catch (error) {
       next(error);

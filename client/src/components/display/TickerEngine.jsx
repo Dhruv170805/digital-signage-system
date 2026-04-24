@@ -1,20 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { Zap } from 'lucide-react';
 
-const TickerContent = ({ ticker }) => (
-  <div className="flex items-center gap-32 px-16">
-      <span className="tracking-tight uppercase font-black">
-          {ticker.text}
-      </span>
-      {ticker.type === 'link' && ticker.linkUrl && (
-          <div className="px-6 py-2 bg-white/10 rounded-2xl border border-white/20 backdrop-blur-md">
-              <span className="text-[12px] font-black text-blue-400 uppercase tracking-[4px] flex items-center gap-3" style={{ fontSize: '1rem' }}>
-                  <Zap size={14} className="animate-pulse" /> {ticker.linkUrl.replace(/^https?:\/\//, '')}
-              </span>
-          </div>
-      )}
-  </div>
-);
+const TickerContent = ({ ticker }) => {
+  const messages = ticker.text ? ticker.text.split('\n').filter(m => m.trim() !== '') : [];
+  
+  return (
+    <div className="flex items-center">
+        {messages.map((msg, idx) => (
+          <React.Fragment key={idx}>
+            <span className="tracking-tight uppercase font-black px-16">
+                {msg}
+            </span>
+            {idx < messages.length - 1 && (
+              <span className="text-blue-500 opacity-50 px-8 font-black"> • </span>
+            )}
+          </React.Fragment>
+        ))}
+        {ticker.type === 'link' && ticker.linkUrl && (
+            <div className="px-6 py-2 bg-white/10 rounded-2xl border border-white/20 backdrop-blur-md ml-16">
+                <span className="text-[12px] font-black text-blue-400 uppercase tracking-[4px] flex items-center gap-3" style={{ fontSize: '1rem' }}>
+                    <Zap size={14} className="animate-pulse" /> {ticker.linkUrl.replace(/^https?:\/\//, '')}
+                </span>
+            </div>
+        )}
+    </div>
+  );
+};
 
 const TickerEngine = ({ ticker }) => {
   const containerRef = React.useRef(null);

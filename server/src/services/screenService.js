@@ -55,19 +55,22 @@ class ScreenService {
     const tickerService = require('./tickerService');
     const configService = require('./configService');
     const mediaService = require('./mediaService');
+    const Screen = require('../models/Screen');
 
-    const [playlist, tickers, settings, media] = await Promise.all([
+    const [playlist, tickers, settings, media, screen] = await Promise.all([
       assignmentService.getActiveAssignmentsForScreen(screenId, groupId),
       tickerService.getActive(),
       configService.getFullConfig(),
-      mediaService.getAllApproved()
+      mediaService.getAllApproved(),
+      Screen.findById(screenId).populate('idleMediaId')
     ]);
 
     return {
       playlist,
       tickers,
       settings,
-      media
+      media,
+      idleMedia: screen?.idleMediaId
     };
   }
 

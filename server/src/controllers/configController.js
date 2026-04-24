@@ -1,12 +1,14 @@
+const configService = require('../services/configService');
+const loggerService = require('../services/loggerService');
+const screenService = require('../services/screenService');
 const Assignment = require('../models/Assignment');
 const Media = require('../models/Media');
 
 class ConfigController {
   async getAll(req, res, next) {
     try {
-      // Mocking global settings if they don't have a model yet, or use a Setting model
-      // For now, let's just return an empty object or basic info
-      res.json({ systemName: 'Nexus Digital Signage' });
+      const config = await configService.getFullConfig();
+      res.json(config);
     } catch (error) {
       next(error);
     }
@@ -14,7 +16,17 @@ class ConfigController {
 
   async update(req, res, next) {
     try {
-      res.json({ message: 'Settings updated' });
+      const updates = req.body;
+      for (const [key, value] of Object.entries(updates)) {
+        await configService.setConfig(key, value);
+      }
+      
+      await loggerService.logAudit(req.user.id, 'UPDATE_SETTINGS', 'System', null, { keys: Object.keys(updates) });
+      
+      // Notify all screens about global setting changes
+      await screenService.broadcastManifestUpdate();
+      
+      res.json({ message: 'Settings updated successfully' });
     } catch (error) {
       next(error);
     }
@@ -24,6 +36,11 @@ class ConfigController {
     try {
       await Assignment.deleteMany({});
       await Media.deleteMany({});
+      
+      await loggerService.logAudit(req.user.id, 'WIPE_SYSTEM', 'System', null, { details: 'Full database purge executed' });
+      
+      await screenService.broadcastManifestUpdate();
+      
       res.json({ message: 'System wiped successfully' });
     } catch (error) {
       next(error);

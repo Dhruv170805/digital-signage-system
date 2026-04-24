@@ -1,40 +1,45 @@
 import { create } from 'zustand';
 
 const useBuilderStore = create((set) => ({
-  templateName: 'New Template',
-  frames: [],
+  templateName: '',
+  frames: [], // [{ i, x, y, w, h, type, zIndex }]
   selectedFrameId: null,
 
   setTemplateName: (name) => set({ templateName: name }),
+  
+  setFrames: (frames) => set({ frames }),
 
-  addFrame: () => set((state) => ({
-    frames: [
-      ...state.frames,
-      {
-        id: Date.now(),
-        name: `Frame ${state.frames.length + 1}`,
-        coordinateX: 10,
-        coordinateY: 10,
-        width: 30,
-        height: 20,
-        zIndex: 1,
-        allowedTypes: 'image,video'
-      }
-    ]
-  })),
+  addFrame: () => set((state) => {
+    const id = `Frame-${Date.now()}`;
+    return {
+      frames: [
+        ...state.frames,
+        {
+          i: id,
+          x: 10,
+          y: 10,
+          w: 30,
+          h: 20,
+          zIndex: state.frames.length + 1,
+          type: 'media'
+        }
+      ],
+      selectedFrameId: id
+    };
+  }),
 
   updateFrame: (id, updates) => set((state) => ({
-    frames: state.frames.map(f => f.id === id ? { ...f, ...updates } : f)
+    frames: state.frames.map(f => f.i === id ? { ...f, ...updates } : f)
   })),
 
   removeFrame: (id) => set((state) => ({
-    frames: state.frames.filter(f => f.id !== id),
+    frames: state.frames.filter(f => f.i !== id),
     selectedFrameId: state.selectedFrameId === id ? null : state.selectedFrameId
   })),
 
   selectFrame: (id) => set({ selectedFrameId: id }),
 
-  resetBuilder: () => set({ frames: [], templateName: 'New Template', selectedFrameId: null })
+  resetBuilder: () => set({ frames: [], templateName: '', selectedFrameId: null })
 }));
 
 export default useBuilderStore;

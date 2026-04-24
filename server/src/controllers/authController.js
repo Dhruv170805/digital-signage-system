@@ -1,4 +1,5 @@
 const authService = require('../services/authService');
+const loggerService = require('../services/loggerService');
 
 class AuthController {
   async login(req, res, next) {
@@ -59,6 +60,7 @@ class AuthController {
   async register(req, res, next) {
     try {
       const user = await authService.register(req.body);
+      await loggerService.logAudit(req.user.id, 'REGISTER_USER', 'User', user._id, { name: user.name, email: user.email });
       res.status(201).json(user);
     } catch (error) {
       next(error);
@@ -76,7 +78,8 @@ class AuthController {
 
   async lockUser(req, res, next) {
     try {
-      await authService.updateStatus(req.params.id, 'locked');
+      const user = await authService.updateStatus(req.params.id, 'locked');
+      await loggerService.logAudit(req.user.id, 'LOCK_USER', 'User', user._id, { email: user.email });
       res.json({ message: 'User locked' });
     } catch (error) {
       next(error);
@@ -85,8 +88,20 @@ class AuthController {
 
   async unlockUser(req, res, next) {
     try {
-      await authService.updateStatus(req.params.id, 'active');
+      const user = await authService.updateStatus(req.params.id, 'active');
+      await loggerService.logAudit(req.user.id, 'UNLOCK_USER', 'User', user._id, { email: user.email });
       res.json({ message: 'User unlocked' });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async approveReset(req, res, next) {
+    try {
+      const { newPassword } = req.body;
+      const user = await authService.resetPassword(req.params.id, newPassword);
+      await loggerService.logAudit(req.user.id, 'APPROVE_RESET', 'User', user._id, { email: user.email });
+      res.json({ message: 'Password reset approved' });
     } catch (error) {
       next(error);
     }
@@ -94,7 +109,11 @@ class AuthController {
 
   async deleteUser(req, res, next) {
     try {
+      const user = await authService.getUserById(req.params.id);
       await authService.deleteUser(req.params.id);
+      if (user) {
+        await loggerService.logAudit(req.user.id, 'DELETE_USER', 'User', req.params.id, { email: user.email });
+      }
       res.json({ message: 'User deleted' });
     } catch (error) {
       next(error);

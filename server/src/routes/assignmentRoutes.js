@@ -11,7 +11,9 @@ router.get('/me', screenAuth, (req, res, next) => {
   assignmentController.getActive(req, res, next);
 });
 router.get('/active', assignmentController.getActive);
-router.post('/', authenticate, authorize('admin'), assignmentController.create);
+router.post('/', authenticate, assignmentController.create);
+router.post('/:id/approve', authenticate, authorize('admin'), assignmentController.approve);
+router.post('/:id/reject', authenticate, authorize('admin'), assignmentController.reject);
 router.delete('/:id', authenticate, authorize('admin'), assignmentController.delete);
 
 module.exports = router;

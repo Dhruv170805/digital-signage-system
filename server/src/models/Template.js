@@ -2,10 +2,10 @@ const mongoose = require('mongoose');
 
 const frameSchema = new mongoose.Schema({
   i: { type: String, required: true },
-  x: { type: Number, required: true, min: 0, max: 11 },
-  y: { type: Number, required: true, min: 0, max: 11 },
-  w: { type: Number, required: true, min: 1, max: 12 },
-  h: { type: Number, required: true, min: 1, max: 12 },
+  x: { type: Number, required: true, min: 0, max: 100 },
+  y: { type: Number, required: true, min: 0, max: 100 },
+  w: { type: Number, required: true, min: 1, max: 100 },
+  h: { type: Number, required: true, min: 1, max: 100 },
   type: { type: String, enum: ['media', 'ticker', 'widget'], default: 'media' },
   zIndex: { type: Number, default: 1 },
 });
@@ -18,31 +18,22 @@ const templateSchema = new mongoose.Schema({
     validate: {
       validator: function(v) {
         try {
+          if (!v) return true;
           const parsed = JSON.parse(v);
           if (!Array.isArray(parsed)) return false;
-          // Mathematical validation: prevent grid blowout at DB layer
+          // Percentage validation: coordinates + dimensions should not exceed 100%
           return parsed.every(zone => 
+            zone.i && typeof zone.i === 'string' &&
             typeof zone.x === 'number' && typeof zone.y === 'number' && 
             typeof zone.w === 'number' && typeof zone.h === 'number' &&
-            zone.w + zone.x <= 12 && zone.w >= 1 && zone.h >= 1
+            zone.w >= 1 && zone.h >= 1
           );
         } catch { return false; }
       },
-      message: 'Invalid layout JSON or bounds blowout.'
+      message: 'Invalid layout JSON format or missing required fields (i, x, y, w, h).'
     }
   }, 
   frames: [frameSchema],
 }, { timestamps: true });
-
-templateSchema.pre('save', function(next) {
-  if (this.layout && (!this.frames || this.frames.length === 0)) {
-    try {
-      this.frames = JSON.parse(this.layout);
-    } catch (e) {
-      console.error('Failed to parse layout into frames:', e.message);
-    }
-  }
-  next();
-});
 
 module.exports = mongoose.model('Template', templateSchema);

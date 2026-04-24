@@ -12,7 +12,7 @@ const BroadcastScheduler = ({ fetchData }) => {
   const { data: tickers = [] } = useTickers();
   const { data: schedules = [], refetch } = useSchedules();
 
-  const [newSchedule, setNewSchedule] = useState({ screenId: '', templateId: '', mediaId: '', startTime: '', endTime: '' });
+  const [newSchedule, setNewSchedule] = useState({ screenId: '', templateId: '', mediaId: '', startTime: '', endTime: '', priority: 1, duration: 10 });
   const [mediaMapping, setMediaMapping] = useState({});
 
   const approvedMedia = media.filter(m => m.status === 'approved');
@@ -29,7 +29,7 @@ const BroadcastScheduler = ({ fetchData }) => {
     try {
       await api.post(`/api/schedule`, data);
       toast.success('Broadcast Scheduled');
-      setNewSchedule({ screenId: '', templateId: '', mediaId: '', startTime: '', endTime: '' });
+      setNewSchedule({ screenId: '', templateId: '', mediaId: '', startTime: '', endTime: '', priority: 1, duration: 10 });
       setMediaMapping({});
       refetch();
       if (fetchData) fetchData();
@@ -98,10 +98,10 @@ const BroadcastScheduler = ({ fetchData }) => {
                             key={z.i} 
                             className={`absolute border flex items-center justify-center transition-all cursor-help ${isMapped ? 'bg-sky-500/20 border-sky-400 shadow-[0_0_15px_rgba(56,189,248,0.2)]' : 'bg-slate-900/50 border-slate-700'}`}
                             style={{
-                                left: `${(z.x / 12) * 100}%`,
-                                top: `${(z.y / 12) * 100}%`,
-                                width: `${(z.w / 12) * 100}%`,
-                                height: `${(z.h / 12) * 100}%`
+                                left: `${z.x}%`,
+                                top: `${z.y}%`,
+                                width: `${z.w}%`,
+                                height: `${z.h}%`
                             }}
                             title={`Zone: ${z.i}`}
                           >
@@ -150,6 +150,18 @@ const BroadcastScheduler = ({ fetchData }) => {
                   <input type="datetime-local" required className="nexus-input" value={newSchedule.endTime} onChange={(e) => setNewSchedule(p => ({ ...p, endTime: e.target.value }))}/>
                 </div>
              </div>
+
+             <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold uppercase ml-1 opacity-50">Duration (sec)</label>
+                  <input type="number" min="1" required className="nexus-input" value={newSchedule.duration} onChange={(e) => setNewSchedule(p => ({ ...p, duration: Number(e.target.value) }))}/>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold uppercase ml-1 opacity-50">Priority Level</label>
+                  <input type="number" min="1" required className="nexus-input" value={newSchedule.priority} onChange={(e) => setNewSchedule(p => ({ ...p, priority: Number(e.target.value) }))}/>
+                </div>
+             </div>
+
              <button type="submit" className="nexus-btn-primary w-full tracking-[2px]">Broadcast</button>
           </form>
        </Card>

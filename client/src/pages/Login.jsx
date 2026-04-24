@@ -91,7 +91,7 @@ const Login = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="nexus-input pl-14 h-16 bg-slate-50 hover:bg-slate-100/80 transition-all border-slate-200 focus:border-accent/50 rounded-2xl text-text placeholder:text-slate-400" 
-                  placeholder=" personnel@nexus.sys"
+                  placeholder=" user@nexus.sys"
                   required
                 />
               </div>

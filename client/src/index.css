@@ -110,9 +110,19 @@
 }
 
 /* Animations */
-@keyframes ticker {
+@keyframes ticker-rtl {
   from { transform: translateX(0); }
   to { transform: translateX(-50%); }
+}
+
+@keyframes ticker-ltr {
+  from { transform: translateX(-50%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes ticker-vertical {
+  from { transform: translateY(0); }
+  to { transform: translateY(-50%); }
 }
 
 @keyframes fadeIn {

@@ -25,6 +25,14 @@ export const usePendingMedia = () => useQuery({
   }
 });
 
+export const usePendingAssignments = () => useQuery({
+  queryKey: ['pendingAssignments'],
+  queryFn: async () => {
+    const res = await api.get('/api/schedule');
+    return res.data.filter(a => a.status === 'pending');
+  }
+});
+
 export const useTemplates = () => useQuery({
   queryKey: ['templates'],
   queryFn: async () => {

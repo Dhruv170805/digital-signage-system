@@ -12,7 +12,7 @@ const Shell = ({ children, role, activeTab, setActiveTab }) => {
   const user = useAuthStore((state) => state.user);
   const logoutStore = useAuthStore((state) => state.logout);
 
-  const userName = user?.name || 'Authorized Personnel';
+  const userName = user?.name || 'Authorized User';
 
   const adminMenu = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutGrid },
@@ -109,7 +109,7 @@ const Shell = ({ children, role, activeTab, setActiveTab }) => {
               {role === 'admin' ? <Shield size={18} className="text-blue-500" /> : <User size={18} className="text-emerald-500" />}
             </div>
             <div className="flex-1 overflow-hidden">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[2px] mb-0.5">Personnel</p>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[2px] mb-0.5">User</p>
               <p className="text-xs font-black text-text truncate uppercase">{userName}</p>
             </div>
           </div>

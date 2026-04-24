@@ -19,7 +19,7 @@ const Badge = ({ label, type }) => {
   );
 };
 
-const PersonnelDirectory = ({ users, fetchData }) => {
+const UserDirectory = ({ users, fetchData }) => {
   const [showUserForm, setShowUserForm] = useState(false);
   const [newUser, setNewUser] = useState({ name: '', email: '', password: '', role: 'user' });
   const loggedInUser = useAuthStore((state) => state.user);
@@ -52,7 +52,7 @@ const PersonnelDirectory = ({ users, fetchData }) => {
   };
 
   const deleteUser = async (id) => {
-    if (!window.confirm('Purge personnel records?')) return;
+    if (!window.confirm('Purge user records?')) return;
     try {
       await api.delete(`/api/auth/users/${id}`);
       toast.success('Record Purged');
@@ -77,7 +77,7 @@ const PersonnelDirectory = ({ users, fetchData }) => {
       {showUserForm ? (
         <Card 
           className="max-w-xl mx-auto p-10" 
-          title="Personnel Provisioning" 
+          title="User Provisioning" 
           icon={Plus} 
           subtitle="New Station Operator"
         >
@@ -107,7 +107,7 @@ const PersonnelDirectory = ({ users, fetchData }) => {
         </Card>
       ) : (
         <Card 
-          title="Personnel Directory" 
+          title="User Directory" 
           icon={UsersIcon} 
           subtitle={`Total Authorized: ${users.length} Operators`}
         >
@@ -147,15 +147,15 @@ const PersonnelDirectory = ({ users, fetchData }) => {
                           {u.email !== loggedInUser?.email && (
                             <>
                               {u.isLocked ? (
-                                <button onClick={() => unlockUser(u.id)} className="p-2 bg-emerald-500/10 text-emerald-500 rounded-lg hover:bg-emerald-500 hover:text-white transition-colors" title="Unlock Account"><CheckCircle size={14}/></button>
+                                <button onClick={() => unlockUser(u._id || u.id)} className="p-2 bg-emerald-500/10 text-emerald-500 rounded-lg hover:bg-emerald-500 hover:text-white transition-colors" title="Unlock Account"><CheckCircle size={14}/></button>
                               ) : (
-                                <button onClick={() => lockUser(u.id)} className="p-2 bg-amber-500/10 text-amber-500 rounded-lg hover:bg-amber-500 hover:text-white transition-colors" title="Lock Account"><Lock size={14}/></button>
+                                <button onClick={() => lockUser(u._id || u.id)} className="p-2 bg-amber-500/10 text-amber-500 rounded-lg hover:bg-amber-500 hover:text-white transition-colors" title="Lock Account"><Lock size={14}/></button>
                               )}
-                              <button onClick={() => deleteUser(u.id)} className="p-2 bg-rose-500/10 text-rose-500 rounded-lg hover:bg-rose-500 hover:text-white transition-colors" title="Delete User"><Trash2 size={14}/></button>
+                              <button onClick={() => deleteUser(u._id || u.id)} className="p-2 bg-rose-500/10 text-rose-500 rounded-lg hover:bg-rose-500 hover:text-white transition-colors" title="Delete User"><Trash2 size={14}/></button>
                             </>
                           )}
                           {u.passwordResetRequested && (
-                            <button onClick={() => approveReset(u.id)} className="p-2 bg-sky-500/10 text-sky-600 rounded-lg hover:bg-sky-500 hover:text-white transition-colors" title="Approve Reset"><Clock size={14}/></button>
+                            <button onClick={() => approveReset(u._id || u.id)} className="p-2 bg-sky-500/10 text-sky-600 rounded-lg hover:bg-sky-500 hover:text-white transition-colors" title="Approve Reset"><Clock size={14}/></button>
                           )}
                         </div>
                       </div>
@@ -171,4 +171,4 @@ const PersonnelDirectory = ({ users, fetchData }) => {
   );
 };
 
-export default PersonnelDirectory;
+export default UserDirectory;

@@ -97,6 +97,10 @@ class AuthService {
     return await User.find({}, '-password');
   }
 
+  async getUserById(id) {
+    return await User.findById(id, '-password');
+  }
+
   async updateStatus(id, status) {
     const { redisClient } = require('../config/redis');
     const updatedUser = await User.findByIdAndUpdate(id, { status }, { new: true });
@@ -109,6 +113,21 @@ class AuthService {
     }
     
     return updatedUser;
+  }
+
+  async resetPassword(id, newPassword) {
+    const user = await User.findById(id);
+    if (!user) throw new Error('User not found');
+    
+    user.password = newPassword;
+    user.passwordResetRequested = false;
+    await user.save();
+    
+    // Revoke all tokens on password change
+    user.tokenVersion += 1;
+    await user.save();
+    
+    return user;
   }
 
   async deleteUser(id) {

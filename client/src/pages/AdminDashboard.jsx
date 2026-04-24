@@ -12,7 +12,7 @@ import ModerationQueue from '../components/admin/ModerationQueue';
 import BroadcastScheduler from '../components/admin/BroadcastScheduler';
 import LayoutArchitect from '../components/admin/LayoutArchitect';
 import TerminalManager from '../components/admin/TerminalManager';
-import PersonnelDirectory from '../components/admin/PersonnelDirectory';
+import UserDirectory from '../components/admin/UserDirectory';
 import TickerManager from '../components/admin/TickerManager';
 import SystemSettings from '../components/admin/SystemSettings';
 import AuditHistory from '../components/admin/AuditHistory';
@@ -98,7 +98,7 @@ const AdminDashboard = () => {
           </div>
         );
       case 'approve':
-        return <ModerationQueue pendingMedia={pendingMedia} fetchData={fetchData} setPreviewFile={setPreviewFile} setShowPreview={setShowPreview} />;
+        return <ModerationQueue fetchData={fetchData} setPreviewFile={setPreviewFile} setShowPreview={setShowPreview} />;
       case 'schedule':
         return <BroadcastScheduler screens={screens} templates={templates} approvedMedia={approvedMedia} tickers={tickers} schedules={schedules} fetchData={fetchData} />;
       case 'templates':
@@ -106,7 +106,7 @@ const AdminDashboard = () => {
       case 'screens':
         return <TerminalManager screens={screens} fetchData={fetchData} />;
       case 'users':
-        return <PersonnelDirectory users={users} fetchData={fetchData} />;
+        return <UserDirectory users={users} fetchData={fetchData} />;
       case 'ticker':
         return <TickerManager />;
       case 'settings':

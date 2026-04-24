@@ -39,7 +39,12 @@ const assignmentSchema = new mongoose.Schema({
     }
   },   // HH:mm
   daysOfWeek: [Number],        // [0, 1, 2, 3, 4, 5, 6]
+  duration: { type: Number, default: 10 },     // duration per item in seconds
+  loopCount: { type: Number, default: 0 },     // 0 means infinite loop
+  repeatPerDay: { type: Number, default: 0 },  // 0 means play continuously within window
   
+  status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
+  rejectionReason: { type: String },
   isActive: { type: Boolean, default: true },
 }, { timestamps: true });
 

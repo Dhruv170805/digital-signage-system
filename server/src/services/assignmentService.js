@@ -29,6 +29,7 @@ class AssignmentService {
 
     const query = {
       isActive: true,
+      status: 'approved',
       startDate: { $lte: now },
       endDate: { $gte: now },
       $or: [
@@ -45,15 +46,15 @@ class AssignmentService {
       .populate('mediaId')
       .populate('templateId')
       .populate('tickerId')
-      .sort({ priority: -1, updatedAt: -1 }); // Issue 3.2 Fix: Use updatedAt as tie-breaker
+      .sort({ priority: -1, updatedAt: -1 });
 
-    return assignments.filter(a => {
+    const validAssignments = assignments.filter(a => {
       // Days of week check
       if (a.daysOfWeek && a.daysOfWeek.length > 0) {
         if (!a.daysOfWeek.includes(currentDay)) return false;
       }
 
-      // Time window check (Issue 3.1 Fix: Support midnight crossing)
+      // Time window check
       if (a.startTime && a.endTime) {
         if (a.startTime <= a.endTime) {
           // Normal daylight hours (e.g., 09:00 - 17:00)
@@ -66,6 +67,12 @@ class AssignmentService {
 
       return true;
     });
+
+    if (validAssignments.length === 0) return [];
+
+    // Only return the highest priority assignments (so emergency broadcasts preempt regular playlists)
+    const highestPriority = validAssignments[0].priority;
+    return validAssignments.filter(a => a.priority === highestPriority);
   }
 }
 

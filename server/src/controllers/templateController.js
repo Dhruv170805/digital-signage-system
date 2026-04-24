@@ -1,4 +1,5 @@
 const templateService = require('../services/templateService');
+const loggerService = require('../services/loggerService');
 
 class TemplateController {
   async getAll(req, res, next) {
@@ -23,6 +24,7 @@ class TemplateController {
   async create(req, res, next) {
     try {
       const template = await templateService.create(req.body);
+      await loggerService.logAudit(req.user.id, 'CREATE_LAYOUT', 'Template', template._id, { name: template.name });
       res.status(201).json(template);
     } catch (error) {
       next(error);
@@ -32,6 +34,7 @@ class TemplateController {
   async update(req, res, next) {
     try {
       const template = await templateService.update(req.params.id, req.body);
+      await loggerService.logAudit(req.user.id, 'UPDATE_LAYOUT', 'Template', template._id, { name: template.name });
       res.json(template);
     } catch (error) {
       next(error);
@@ -40,7 +43,9 @@ class TemplateController {
 
   async delete(req, res, next) {
     try {
+      const template = await templateService.getById(req.params.id);
       await templateService.delete(req.params.id);
+      await loggerService.logAudit(req.user.id, 'DELETE_LAYOUT', 'Template', req.params.id, { name: template ? template.name : 'Unknown' });
       res.json({ message: 'Template deleted' });
     } catch (error) {
       next(error);

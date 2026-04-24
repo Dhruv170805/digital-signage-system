@@ -172,6 +172,15 @@ const DisplayScreen = () => {
     socket.on('tickerUpdate', fetchData);
     socket.on('connect', () => {
         console.log("🟢 Socket connected, syncing manifest...");
+        const token = localStorage.getItem('screenToken');
+        const screenId = searchParams.get('screenId');
+        const telemetry = getTelemetry();
+
+        if (token) {
+            socket.emit('screenPing', { token, telemetry });
+        } else if (screenId) {
+            socket.emit('screenPing', { screenId, telemetry });
+        }
         fetchData();
     });
 
@@ -235,16 +244,11 @@ const DisplayScreen = () => {
             const mappedMedia = allMedia.find(m => (m.id === mappedMediaId || m._id === mappedMediaId)) || 
                                 (item.populatedMapping && item.populatedMapping[zone.i]);
             
-            // Issue 1.1 Fix: Clamp coordinates and dimensions to prevent overflow
-            const rawX = Math.max(0, Math.min(zone.x || 0, 11));
-            const rawY = Math.max(0, Math.min(zone.y || 0, 11));
-            const rawW = Math.max(1, Math.min(zone.w || 12, 12 - rawX));
-            const rawH = Math.max(1, Math.min(zone.h || 12, 12 - rawY));
-
-            const left = (rawX / 12) * 100;
-            const top = (rawY / 12) * 100;
-            const width = (rawW / 12) * 100;
-            const height = (rawH / 12) * 100;
+            // Support % based positioning (0-100)
+            const left = Math.max(0, Math.min(zone.x || 0, 100));
+            const top = Math.max(0, Math.min(zone.y || 0, 100));
+            const width = Math.max(1, Math.min(zone.w || 100, 100 - left));
+            const height = Math.max(1, Math.min(zone.h || 100, 100 - top));
             
             const zIndex = zone.zIndex || 1;
 
@@ -298,7 +302,7 @@ const DisplayScreen = () => {
     );
   };
 
-  const idleWallpaper = allMedia.find(m => (m.id === settings.idleWallpaperId || m._id === settings.idleWallpaperId));
+  const idleWallpaper = manifest.idleMedia || allMedia.find(m => (m.id === settings.idleWallpaperId || m._id === settings.idleWallpaperId));
 
   if (isInitialLoading) return (
     <div className="fixed inset-0 bg-bg flex items-center justify-center z-[100] font-sans">
@@ -325,36 +329,36 @@ const DisplayScreen = () => {
       </div>
 
       {/* Header */}
-      <div className="h-56 bg-black/40 backdrop-blur-3xl border-b border-white/5 flex items-center justify-between px-24 z-50">
-        <div className="flex items-center gap-10">
-          <div className="flex items-center gap-4">
-            <div className={`w-4 h-4 rounded-full ${isSyncing ? 'bg-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.6)]' : 'bg-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.6)]'} animate-pulse`} />
-            <span className="text-[12px] font-black uppercase tracking-[12px] text-text/90">Live</span>
+      <div className="h-[12vh] min-h-[80px] bg-black/40 backdrop-blur-3xl border-b border-white/5 flex items-center justify-between px-[4vw] z-50">
+        <div className="flex items-center gap-[2vw]">
+          <div className="flex items-center gap-[1vw]">
+            <div className={`w-[1vw] h-[1vw] min-w-[12px] min-h-[12px] rounded-full ${isSyncing ? 'bg-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.6)]' : 'bg-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.6)]'} animate-pulse`} />
+            <span className="text-[min(1.5vw,1rem)] font-black uppercase tracking-[min(0.5vw,4px)] text-white/50 whitespace-nowrap">Live</span>
           </div>
           {(screenInfo || searchParams.get('screenId')) && (
-            <div className="px-6 py-2.5 bg-white/5 rounded-2xl border border-white/10 flex items-center gap-3">
-               <Monitor size={16} className="text-text/20" />
-               <span className="text-[12px] font-black text-text/40 uppercase tracking-[4px]">
+            <div className="px-[1.5vw] py-[0.5vh] bg-white/5 rounded-2xl border border-white/10 flex items-center gap-[0.5vw]">
+               <Monitor size={16} className="text-text/20 w-[1.5vw] h-[1.5vw] min-w-[14px] min-h-[14px]" />
+               <span className="text-[min(1vw,0.75rem)] font-black text-text/40 uppercase tracking-[min(0.2vw,4px)]">
                  {screenInfo ? screenInfo.name : searchParams.get('screenId').slice(-8)}
                </span>
             </div>
           )}
         </div>
 
-        <div className="flex items-center gap-16">
+        <div className="flex items-center gap-[3vw]">
           <WeatherWidget location={screenInfo?.location} />
-          <div className="h-24 w-px bg-white/10" />
-          <div className="flex items-center gap-8">
+          <div className="h-[6vh] w-px bg-white/10" />
+          <div className="flex items-center gap-[2vw]">
              <div className="text-right">
-                <p className="text-[7rem] font-black tracking-tighter tabular-nums leading-none text-text drop-shadow-[0_0_30px_rgba(255,255,255,0.3)]">
+                <p className="text-[min(6vw,6rem)] font-black tracking-tighter tabular-nums leading-none text-text drop-shadow-[0_0_30px_rgba(255,255,255,0.3)]">
                   {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
                 </p>
-                <p className="text-2xl font-black uppercase tracking-[8px] text-text/40 mt-3 flex items-center justify-end gap-3">
-                   <ClockIcon size={20} className="text-blue-400" /> {time.toLocaleDateString([], { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                <p className="text-[min(1.2vw,1rem)] font-black uppercase tracking-[min(0.5vw,8px)] text-text/40 mt-[1vh] flex items-center justify-end gap-[0.5vw]">
+                   <ClockIcon size={20} className="text-blue-400 w-[1.5vw] h-[1.5vw] min-w-[14px] min-h-[14px]" /> {time.toLocaleDateString([], { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                 </p>
              </div>
-             <div className="w-24 h-24 rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center shadow-2xl">
-                <p className="text-4xl font-black text-blue-500 tabular-nums">{time.toLocaleTimeString([], { second: '2-digit' })}</p>
+             <div className="w-[6vw] h-[6vw] min-w-[60px] min-h-[60px] rounded-[1.5vw] bg-white/5 border border-white/10 flex items-center justify-center shadow-2xl">
+                <p className="text-[min(2vw,2rem)] font-black text-blue-500 tabular-nums">{time.toLocaleTimeString([], { second: '2-digit' })}</p>
              </div>
           </div>
         </div>
