@@ -3,8 +3,25 @@ const jwt = require('jsonwebtoken');
 
 class AuthService {
   async login(email, password) {
+    console.log(`🔐 Attempting login for: ${email}`);
     const user = await User.findOne({ email });
-    if (user && (await user.matchPassword(password))) {
+    
+    if (!user) {
+      console.log('❌ User not found in DB');
+      throw new Error('Invalid email or password');
+    }
+
+    console.log(`👤 User found: ${user.email}, Status: ${user.status}, Role: ${user.role}`);
+    
+    const isMatch = await user.matchPassword(password);
+    console.log(`🔑 Password match: ${isMatch}`);
+
+    if (isMatch) {
+      if (user.status === 'locked') {
+        console.log('🚫 Account is locked');
+        throw new Error('Account is locked. Contact administrator.');
+      }
+
       const payload = { 
         id: user._id, 
         role: user.role, 

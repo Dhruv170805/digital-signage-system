@@ -1,12 +1,13 @@
 /* eslint-disable no-unused-vars */
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import React, { useState } from 'react';
+import api from '../services/api';
 import Shell from '../components/Shell';
+import useAuthStore from '../store/useAuthStore';
+import { usePendingMedia, useMedia } from '../hooks/useAdminData';
 import toast from 'react-hot-toast';
 import { 
   Upload, FileText, Play, Image as ImageIcon, 
-  CheckCircle2, Clock, XCircle, AlertCircle, 
-  History, Send, Monitor, RefreshCw, Calendar, Tv, Timer, CheckCircle
+  Clock, RefreshCw, Send, Monitor, Tv, Timer, CheckCircle
 } from 'lucide-react';
 
 const Card = ({ children, className = "", title, icon: Icon, subtitle }) => (
@@ -57,50 +58,22 @@ const StatWidget = ({ label, value, icon: WidgetIcon, color = "blue" }) => {
 
 const UserDashboard = () => {
   const [activeTab, setActiveTab] = useState('upload');
-  const [myFiles, setMyFiles] = useState([]);
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
-  
   const [requestedStartTime, setRequestedStartTime] = useState('');
   const [requestedEndTime, setRequestedEndTime] = useState('');
   
-  const user = React.useMemo(() => {
-    try {
-      const u = localStorage.getItem('user');
-      return u ? JSON.parse(u) : null;
-    } catch { return null; }
-  }, []);
+  const user = useAuthStore((state) => state.user);
+  
+  const { data: pendingMedia = [], refetch: refetchPending } = usePendingMedia();
+  const { data: approvedMedia = [], refetch: refetchApproved } = useMedia();
 
-  const getAuthHeaders = () => ({
-    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-  });
-
-  useEffect(() => {
-    if (!user) return;
-    let isMounted = true;
-    const fetch = async () => {
-      try {
-        const [pendingRes, approvedRes] = await Promise.allSettled([
-          axios.get(`${import.meta.env.VITE_API_URL}/api/media/pending`, getAuthHeaders()),
-          axios.get(`${import.meta.env.VITE_API_URL}/api/media`, getAuthHeaders())
-        ]);
-
-        if (isMounted) {
-          const pending = pendingRes.status === 'fulfilled' ? pendingRes.value.data : [];
-          const approved = approvedRes.status === 'fulfilled' ? approvedRes.value.data : [];
-          const combined = [...pending, ...approved];
-          setMyFiles(combined.filter(f => f.uploaderId === user.id).sort((a,b) => new Date(b.uploadedAt) - new Date(a.uploadedAt)));
-        }
-      } catch (err) { console.error(err); }
-    };
-    fetch();
-    const interval = setInterval(fetch, 30000);
-    return () => { 
-      isMounted = false; 
-      clearInterval(interval);
-    };
-  }, [user, refreshKey]);
+  const myFiles = React.useMemo(() => {
+    const combined = [...pendingMedia, ...approvedMedia];
+    return combined
+      .filter(f => (f.uploaderId === user?.id || f.uploadedBy === user?.id))
+      .sort((a,b) => new Date(b.createdAt || b.uploadedAt) - new Date(a.createdAt || a.uploadedAt));
+  }, [pendingMedia, approvedMedia, user?.id]);
 
   const handleUpload = async (e) => {
     e.preventDefault();
@@ -115,12 +88,12 @@ const UserDashboard = () => {
     formData.append('requestedEndTime', requestedEndTime);
 
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL}/api/media/upload`, formData, getAuthHeaders());
+      await api.post(`/api/media/upload`, formData);
       toast.success('Transmission Successful. Wait for Admin Approval.');
       setFile(null);
       setRequestedStartTime('');
       setRequestedEndTime('');
-      setRefreshKey(prev => prev + 1);
+      refetchPending();
     } catch (err) {
       toast.error(err.response?.data?.error || 'Transmission failed. Contact Operations.');
     } finally {
@@ -130,9 +103,10 @@ const UserDashboard = () => {
 
   const handleResubmit = async (id) => {
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL}/api/media/${id}/resubmit`, {}, getAuthHeaders());
+      await api.post(`/api/media/${id}/resubmit`, {});
       toast.success('Legacy asset re-submitted for approval.');
-      setRefreshKey(prev => prev + 1);
+      refetchPending();
+      refetchApproved();
       setActiveTab('myfiles');
     } catch {
       toast.error('Re-submission failed.');
@@ -140,11 +114,7 @@ const UserDashboard = () => {
   };
 
   const getTabLabel = () => {
-    const labels = {
-      upload: 'UPLOAD',
-      myfiles: 'HISTORY',
-      live: 'PREVIEW'
-    };
+    const labels = { upload: 'UPLOAD', myfiles: 'HISTORY', live: 'PREVIEW' };
     return labels[activeTab] || activeTab.toUpperCase();
   };
 
@@ -169,7 +139,7 @@ const UserDashboard = () => {
             </div>
 
             <Card title="Asset Transmission" icon={Upload} subtitle="Broadcast Node Submission">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 text-text">
                 <div className="space-y-6">
                   <div 
                     className={`border-2 border-dashed rounded-[32px] p-12 text-center transition-all cursor-pointer group relative overflow-hidden h-full flex flex-col justify-center ${
@@ -179,7 +149,7 @@ const UserDashboard = () => {
                   >
                     <input id="media-upload" type="file" className="hidden" onChange={(e) => setFile(e.target.files[0])} />
                     <div className="w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-6 bg-slate-100 border border-slate-200 group-hover:scale-110 transition-transform relative z-10 shadow-inner">
-                      <Upload className={`w-8 h-8 ${file ? 'text-blue-600' : 'text-text-dim'}`} />
+                      <Upload className={`w-8 h-8 ${file ? 'text-blue-600' : 'text-slate-400'}`} />
                     </div>
                     {file ? (
                       <div className="space-y-2 relative z-10">
@@ -189,7 +159,7 @@ const UserDashboard = () => {
                     ) : (
                       <div className="space-y-2 relative z-10">
                         <p className="text-xl font-black text-text uppercase tracking-tighter">Initialize Payload</p>
-                        <p className="text-text-dim text-[10px] font-black uppercase tracking-[2px]">PDF, MP4, WEBM, JPG</p>
+                        <p className="text-slate-500 text-[10px] font-black uppercase tracking-[2px]">PDF, MP4, WEBM, JPG</p>
                       </div>
                     )}
                   </div>
@@ -197,11 +167,11 @@ const UserDashboard = () => {
 
                 <div className="space-y-8">
                   <div className="space-y-6">
-                    <h3 className="text-xs font-black text-text-dim uppercase tracking-[4px] ml-1">Protocol Timing</h3>
+                    <h3 className="text-xs font-black text-slate-500 uppercase tracking-[4px] ml-1">Protocol Timing</h3>
                     <form onSubmit={handleUpload} className="space-y-8">
                       <div className="grid grid-cols-1 gap-6">
                         <div className="space-y-3">
-                          <label className="text-[10px] font-black uppercase text-text-dim tracking-[2px] ml-1">Window Activation</label>
+                          <label className="text-[10px] font-black uppercase text-slate-500 tracking-[2px] ml-1">Window Activation</label>
                           <input 
                             type="datetime-local" 
                             required 
@@ -211,7 +181,7 @@ const UserDashboard = () => {
                           />
                         </div>
                         <div className="space-y-3">
-                          <label className="text-[10px] font-black uppercase text-text-dim tracking-[2px] ml-1">Window Deactivation</label>
+                          <label className="text-[10px] font-black uppercase text-slate-500 tracking-[2px] ml-1">Window Deactivation</label>
                           <input 
                             type="datetime-local" 
                             required 
@@ -225,13 +195,13 @@ const UserDashboard = () => {
                       <button type="submit" disabled={!file || !requestedStartTime || !requestedEndTime || uploading} className="nexus-btn-primary w-full h-16 flex items-center justify-center gap-4 group/btn rounded-[20px]">
                         {uploading ? (
                           <>
-                            <RefreshCw className="w-5 h-5 animate-spin" />
-                            <span className="text-xs font-black uppercase tracking-[4px]">Transmitting...</span>
+                            <RefreshCw className="w-5 h-5 animate-spin text-white" />
+                            <span className="text-xs font-black uppercase tracking-[4px] text-white">Transmitting...</span>
                           </>
                         ) : (
                           <>
-                            <span className="text-xs font-black uppercase tracking-[4px]">Authorize Transmission</span>
-                            <Send className="w-5 h-5 group-hover/btn:translate-x-1 group-hover/btn:-translate-y-1 transition-transform" />
+                            <span className="text-xs font-black uppercase tracking-[4px] text-white">Authorize Transmission</span>
+                            <Send className="w-5 h-5 group-hover/btn:translate-x-1 group-hover/btn:-translate-y-1 transition-transform text-white" />
                           </>
                         )}
                       </button>
@@ -245,17 +215,17 @@ const UserDashboard = () => {
 
       case 'myfiles':
         return (
-          <Card title="Operational History" icon={History} subtitle="Asset Transmission Logs">
+          <Card title="Operational History" icon={RefreshCw} subtitle="Asset Transmission Logs">
             {myFiles.length === 0 ? (
               <div className="text-center py-32 bg-slate-50 border border-dashed border-slate-200 rounded-[40px]">
-                 <History className="w-20 h-20 mx-auto mb-6 text-text-dim/20" />
-                 <p className="font-black uppercase tracking-[6px] text-xs text-text-dim">No transmission records detected</p>
+                 <RefreshCw className="w-20 h-20 mx-auto mb-6 text-slate-300" />
+                 <p className="font-black uppercase tracking-[6px] text-xs text-slate-500">No transmission records detected</p>
               </div>
             ) : (
-              <div className="overflow-x-auto rounded-[24px] border border-slate-200 bg-white">
+              <div className="overflow-x-auto rounded-[24px] border border-slate-200 bg-white text-text">
                 <table className="w-full text-left">
                   <thead>
-                    <tr className="bg-slate-50 text-[10px] uppercase font-black text-text-dim tracking-widest">
+                    <tr className="bg-slate-50 text-[10px] uppercase font-black text-slate-500 tracking-widest">
                       <th className="py-6 px-8">Payload Manifest</th>
                       <th className="py-6 px-8">Activation</th>
                       <th className="py-6 px-8">Security Window</th>
@@ -265,7 +235,7 @@ const UserDashboard = () => {
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {myFiles.map(f => (
-                      <tr key={f.id} className="group hover:bg-slate-50 transition-colors">
+                      <tr key={f.id || f._id} className="group hover:bg-slate-50 transition-colors">
                         <td className="py-8 px-8">
                           <div className="flex items-center gap-5">
                             <div className="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center border border-slate-200 group-hover:border-blue-500/30 transition-colors shadow-inner">
@@ -275,26 +245,26 @@ const UserDashboard = () => {
                             </div>
                             <div>
                                <p className="text-base font-black text-text uppercase tracking-tighter">{f.fileName}</p>
-                               <p className="text-[10px] font-black uppercase text-text-dim tracking-[2px] mt-1">{f.fileType}</p>
+                               <p className="text-[10px] font-black uppercase text-slate-500 tracking-[2px] mt-1">{f.fileType}</p>
                             </div>
                           </div>
                         </td>
                         <td className="py-8 px-8">
-                          <p className="text-[11px] font-black text-text uppercase tabular-nums">{new Date(f.uploadedAt).toLocaleDateString()}</p>
-                          <p className="text-[10px] font-black text-text-dim uppercase mt-1 tabular-nums">{new Date(f.uploadedAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</p>
+                          <p className="text-[11px] font-black text-text uppercase tabular-nums">{new Date(f.createdAt || f.uploadedAt).toLocaleDateString()}</p>
+                          <p className="text-[10px] font-black text-slate-500 uppercase mt-1 tabular-nums">{new Date(f.createdAt || f.uploadedAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</p>
                         </td>
                         <td className="py-8 px-8">
                           {f.requestedStartTime ? (
                             <div className="space-y-1.5">
                                <p className="text-[9px] font-black text-blue-600/60 uppercase tracking-widest flex items-center gap-2">
-                                  <div className="w-1 h-1 rounded-full bg-blue-600" /> ON: {new Date(f.requestedStartTime).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'})}
+                                  <span className="w-1 h-1 rounded-full bg-blue-600" /> ON: {new Date(f.requestedStartTime).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'})}
                                </p>
                                <p className="text-[9px] font-black text-rose-600/60 uppercase tracking-widest flex items-center gap-2">
-                                  <div className="w-1 h-1 rounded-full bg-rose-600" /> OFF: {new Date(f.requestedEndTime).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'})}
+                                  <span className="w-1 h-1 rounded-full bg-rose-600" /> OFF: {new Date(f.requestedEndTime).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'})}
                                </p>
                             </div>
                           ) : (
-                            <span className="text-[10px] font-black text-text-dim uppercase italic tracking-widest">Immediate Deployment</span>
+                            <span className="text-[10px] font-black text-slate-500 uppercase italic tracking-widest">Immediate Deployment</span>
                           )}
                         </td>
                         <td className="py-8 px-8 text-center">
@@ -310,9 +280,9 @@ const UserDashboard = () => {
                         </td>
                         <td className="py-8 px-8 text-right">
                            <button 
-                             onClick={() => handleResubmit(f.id)}
+                             onClick={() => handleResubmit(f.id || f._id)}
                              title="Protocol Re-Submission"
-                             className="w-12 h-12 flex items-center justify-center bg-slate-50 border border-slate-200 text-text-dim rounded-2xl hover:bg-blue-600 hover:border-blue-600 hover:text-white hover:shadow-[0_0_20px_rgba(37,99,235,0.4)] transition-all active:scale-90"
+                             className="w-12 h-12 flex items-center justify-center bg-slate-50 border border-slate-200 text-slate-500 rounded-2xl hover:bg-blue-600 hover:border-blue-600 hover:text-white hover:shadow-[0_0_20px_rgba(37,99,235,0.4)] transition-all active:scale-90"
                            >
                              <RefreshCw size={20} />
                            </button>
@@ -332,7 +302,7 @@ const UserDashboard = () => {
               <div className="aspect-video bg-black rounded-[60px] overflow-hidden border border-white/5 shadow-2xl relative group shadow-blue-500/5">
                  <iframe src="/display" className="w-full h-full border-none pointer-events-none scale-[1.001]" title="Live Preview" />
                  <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-700 backdrop-blur-md">
-                    <div className="w-20 h-20 bg-blue-500/10 rounded-full flex items-center justify-center mb-6 border border-blue-500/20 animate-pulse-glow">
+                    <div className="w-20 h-20 bg-blue-500/10 rounded-full flex items-center justify-center mb-6 border border-blue-500/20">
                        <Tv size={32} className="text-blue-500" />
                     </div>
                     <p className="text-white text-lg tracking-[16px] font-black uppercase">Live Monitoring</p>

@@ -1,4 +1,5 @@
 const screenService = require('./screenService');
+const weatherService = require('./weatherService');
 
 class SocketService {
   constructor() {
@@ -7,9 +8,13 @@ class SocketService {
 
   init(io) {
     this.io = io;
+    weatherService.init(io);
 
     this.io.on('connection', (socket) => {
       console.log('New socket connection:', socket.id);
+
+      // Send cached weather immediately upon connection
+      socket.emit('weatherUpdate', Object.fromEntries(weatherService.weatherCache));
 
       socket.on('heartbeat', async (data) => {
         const { macAddress, ipAddress, telemetry } = data;

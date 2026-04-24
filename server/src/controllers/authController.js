@@ -19,6 +19,10 @@ class AuthController {
 
       res.json({ accessToken, user });
     } catch (error) {
+      // Return 401 for invalid credentials
+      if (error.message === 'Invalid email or password') {
+        return res.status(401).json({ success: false, message: error.message });
+      }
       next(error);
     }
   }

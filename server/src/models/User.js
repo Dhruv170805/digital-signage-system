@@ -29,6 +29,11 @@ userSchema.pre('save', async function (next) {
 });
 
 userSchema.methods.matchPassword = async function (enteredPassword) {
+  console.log(`Verifying password... Stored length: ${this.password.length}`);
+  if (!this.password.startsWith('$2')) {
+    console.warn('⚠️ WARNING: Stored password does not look like a Bcrypt hash!');
+    return enteredPassword === this.password; // Temporary fallback for plain text
+  }
   return await bcrypt.compare(enteredPassword, this.password);
 };
 

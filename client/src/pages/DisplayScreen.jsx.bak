@@ -7,10 +7,247 @@ import {
   CloudSun, MapPin, AlertCircle, Zap, Activity, Monitor, Clock as ClockIcon, RefreshCw
 } from 'lucide-react';
 import FrameManager from '../components/display/FrameManager';
-import WeatherWidget from '../components/display/WeatherWidget';
-import TickerEngine from '../components/display/TickerEngine';
 
+// --- Weather Component ---
+const Weather = ({ location }) => {
+  const [temp, setTemp] = useState('--');
+  const [area, setArea] = useState(location || 'Detecting...');
+  const apiKey = import.meta.env.VITE_OPENWEATHER_API_KEY;
 
+  const fetchWeather = useCallback(async () => {
+    await Promise.resolve();
+    try {
+      let city = location || '';
+      if (!city) {
+        try {
+          const geoRes = await axios.get('https://ipapi.co/json/');
+          if (geoRes.data?.city) {
+            city = geoRes.data.city;
+            setArea(city);
+          }
+        } catch { /* empty */ }
+      }
+
+      if (apiKey && city) {
+        const url = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&units=metric&appid=${apiKey}`;
+        const res = await axios.get(url);
+        setTemp(Math.round(res.data.main.temp));
+        setArea(res.data.name);
+      } else {
+        const res = await axios.get(`https://wttr.in/${encodeURIComponent(city)}?format=%t+%C`);
+        setTemp(res.data.split(' ')[0].replace('+', ''));
+      }
+    } catch { /* empty */ }
+  }, [location, apiKey]);
+
+  useEffect(() => {
+    fetchWeather();
+    const interval = setInterval(fetchWeather, 600000);
+    return () => clearInterval(interval);
+  }, [fetchWeather]);
+
+  return (
+    <div className="flex items-center gap-6 px-6 py-2 bg-white/5 rounded-[20px] border border-white/10 backdrop-blur-3xl shadow-2xl">
+      <div className="flex items-center gap-3">
+        <div className="w-8 h-8 rounded-xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
+          <MapPin size={14} className="text-blue-400" />
+        </div>
+        <span className="text-[10px] font-black uppercase tracking-[2px] text-text/60 truncate max-w-[150px]">{area}</span>
+      </div>
+      <div className="h-6 w-px bg-white/10" />
+      <div className="flex items-center gap-3">
+        <div className="w-8 h-8 rounded-xl bg-amber-500/10 flex items-center justify-center border border-amber-500/20">
+          <CloudSun size={16} className="text-amber-400" />
+        </div>
+        <span className="text-2xl font-black tracking-tighter text-text tabular-nums">{temp}°C</span>
+      </div>
+    </div>
+  );
+};
+
+// --- Media Item Component ---
+const MediaItem = ({ item, onMediaError }) => {
+  const videoRef = React.useRef(null);
+  const [hasError, setHasError] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
+
+  const apiBase = (import.meta.env.VITE_API_URL || '').replace(/\/api\/?$/, '').replace(/\/$/, '');
+  const filePath = item?.filePath?.startsWith('/') ? item.filePath : `/${item?.filePath || ''}`;
+  const src = `${apiBase}${filePath}`.replace(/([^:]\/)\/+/g, "$1");
+
+  const handleError = () => {
+    setHasError(true);
+    if (onMediaError) onMediaError();
+  };
+
+  useEffect(() => {
+    if (item?.fileType === 'pdf') {
+      setIsValidating(true);
+      fetch(src, { method: 'HEAD' })
+        .then(res => {
+          if (!res.ok) handleError();
+        })
+        .catch(() => handleError())
+        .finally(() => setIsValidating(false));
+    }
+  }, [src, item?.fileType]);
+
+  useEffect(() => {
+    const videoElement = videoRef.current;
+    return () => {
+      if (videoElement) {
+        videoElement.pause();
+        videoElement.src = "";
+        videoElement.load();
+      }
+    };
+  }, []);
+
+  if (!item || hasError) return (
+    <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900/50 gap-4">
+      <div className="w-16 h-16 rounded-full bg-rose-500/10 flex items-center justify-center border border-rose-500/20">
+        <AlertCircle className="text-rose-500/50" size={32} />
+      </div>
+      <span className="text-[10px] font-black text-rose-500/40 uppercase tracking-[6px]">
+        {hasError ? 'Playback Failed' : 'Asset Missing'}
+      </span>
+    </div>
+  );
+
+  if (isValidating) return (
+    <div className="w-full h-full flex items-center justify-center bg-black/20">
+      <RefreshCw className="animate-spin text-blue-500/30" size={32} />
+    </div>
+  );
+
+  if (item.fileType === 'video') {
+    return (
+      <div className="w-full h-full relative bg-black">
+        <video 
+          ref={videoRef}
+          src={src} 
+          autoPlay 
+          muted 
+          loop 
+          playsInline
+          onError={handleError}
+          className="w-full h-full object-fill shadow-2xl" 
+        />
+      </div>
+    );
+  }
+  
+  if (item.fileType === 'pdf') {
+    return <iframe src={`${src}#toolbar=0&navpanes=0&scrollbar=0`} className="w-full h-full border-none bg-white shadow-2xl pointer-events-none" title={item.fileName} />;
+  }
+
+  return (
+    <img 
+      src={src} 
+      alt={item.fileName} 
+      onError={handleError}
+      className="w-full h-full object-fill bg-black shadow-2xl" 
+    />
+  );
+};
+
+const TickerContent = ({ ticker }) => (
+    <div className="flex items-center gap-32 px-16">
+        <span className="tracking-tight uppercase font-black">
+            {ticker.text}
+        </span>
+        {ticker.type === 'link' && ticker.linkUrl && (
+            <div className="px-6 py-2 bg-white/10 rounded-2xl border border-white/20 backdrop-blur-md">
+                <span className="text-[12px] font-black text-blue-400 uppercase tracking-[4px] flex items-center gap-3" style={{ fontSize: '1rem' }}>
+                    <Zap size={14} className="animate-pulse" /> {ticker.linkUrl.replace(/^https?:\/\//, '')}
+                </span>
+            </div>
+        )}
+    </div>
+);
+
+// --- Advanced Ticker Component ---
+const TickerDisplay = ({ ticker }) => {
+    const containerRef = React.useRef(null);
+    const contentRef = React.useRef(null);
+    const [clones, setClones] = useState(4);
+
+    useEffect(() => {
+        if (!ticker) return;
+        
+        const updateClones = () => {
+            if (containerRef.current && contentRef.current) {
+                const viewportWidth = containerRef.current.parentElement?.offsetWidth || window.innerWidth;
+                const textWidth = contentRef.current.offsetWidth || 500;
+                // Add enough clones to cover the screen plus a buffer for seamless loop
+                const needed = Math.ceil(viewportWidth / textWidth) + 2;
+                setClones(needed);
+            }
+        };
+
+        const observer = new ResizeObserver(updateClones);
+        if (containerRef.current?.parentElement) {
+            observer.observe(containerRef.current.parentElement);
+        }
+        
+        // Initial calculation
+        updateClones();
+        
+        return () => observer.disconnect();
+    }, [ticker]);
+
+    if (!ticker) return null;
+
+    const fontSizeMap = {
+        'text-xs': '0.75rem',
+        'text-sm': '0.875rem',
+        'text-base': '1rem',
+        'text-lg': '1.125rem',
+        'text-xl': '1.25rem',
+        'text-2xl': '1.5rem',
+        'text-3xl': '1.875rem',
+        'text-4xl': '2.25rem',
+        'text-5xl': '3rem',
+        'text-6xl': '3.75rem',
+        'text-7xl': '4.5rem',
+        'text-8xl': '6rem',
+        'text-9xl': '8rem',
+    };
+
+    const resolvedFontSize = fontSizeMap[ticker.fontSize] || ticker.fontSize || '2.25rem';
+
+    const style = {
+        fontFamily: ticker.fontFamily || 'sans-serif',
+        color: ticker.color || '#ffffff',
+        backgroundColor: ticker.backgroundColor || 'transparent',
+        padding: ticker.padding || '0px',
+        fontWeight: ticker.fontWeight || 'bold',
+        fontSize: resolvedFontSize
+    };
+
+    const isVertical = ticker.direction === 'vertical';
+    const animationName = ticker.direction === 'left-right' ? 'ticker-ltr' : (isVertical ? 'ticker-vertical' : 'ticker-rtl');
+    const animDuration = Math.max(5, 100 - (ticker.speed || 50)) + 's';
+
+    return (
+        <div className="w-full h-full flex items-center overflow-hidden relative shadow-inner" style={{ backgroundColor: style.backgroundColor }}>
+            <div 
+                ref={containerRef}
+                className="whitespace-nowrap absolute flex items-center"
+                style={{
+                    animation: `${animationName} ${animDuration} linear infinite`,
+                    ...style
+                }}
+            >
+                {[...Array(clones)].map((_, i) => (
+                    <div key={i} ref={i === 0 ? contentRef : null}>
+                        <TickerContent ticker={ticker} />
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
 
 // --- Main Display Screen ---
 const DisplayScreen = () => {
@@ -134,13 +371,6 @@ const DisplayScreen = () => {
         } else if (screenId) {
             socket.emit('screenPing', { screenId, telemetry });
         }
-
-        // Memory Leak Prevention: Force reload at 3 AM
-        const now = new Date();
-        if (now.getHours() === 3 && now.getMinutes() === 0 && now.getSeconds() < 10) {
-            console.log("🕒 3 AM Maintenance: Purging memory via hard reload...");
-            window.location.reload();
-        }
     }, 10000);
 
     // Delta-based Push Logic
@@ -258,9 +488,9 @@ const DisplayScreen = () => {
                 }}
               >
                 {zone.type === 'ticker' ? (
-                  <TickerEngine ticker={tickers.find(t => (t.id === mappedMediaId || t._id === mappedMediaId))} />
+                  <TickerDisplay ticker={tickers.find(t => (t.id === mappedMediaId || t._id === mappedMediaId))} />
                 ) : (
-                  <FrameManager 
+                  <MediaItem 
                     item={mappedMedia} 
                     onMediaError={() => {
                         // For multi-frame, we don't necessarily want to skip the WHOLE layout
@@ -280,7 +510,7 @@ const DisplayScreen = () => {
     return (
       <div className="w-full h-full p-12 animate-fade-in relative z-10">
         <div className="w-full h-full glass overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.8)] relative border-white/5 bg-black">
-          <FrameManager 
+          <MediaItem 
             item={singleMedia} 
             onMediaError={() => {
                 console.log("⚠️ Fullscreen media failed, skipping...");
@@ -336,7 +566,7 @@ const DisplayScreen = () => {
         </div>
 
         <div className="flex items-center gap-12">
-          <WeatherWidget location={screenInfo?.location} />
+          <Weather location={screenInfo?.location} />
           <div className="h-16 w-px bg-white/10" />
           <div className="flex items-center gap-6">
              <div className="text-right">
@@ -357,7 +587,7 @@ const DisplayScreen = () => {
       {/* Main Content Area */}
       <div className="flex-1 relative overflow-hidden z-10">
         {playlist.length > 0 && currentIdx < playlist.length ? (
-          <div className="w-full h-full relative transition-all duration-1000">
+          <div key={playlist[currentIdx]?.id} className="w-full h-full relative transition-all duration-1000">
             {renderMediaContent(playlist[currentIdx])}
           </div>
         ) : (
@@ -365,7 +595,7 @@ const DisplayScreen = () => {
             {idleWallpaper ? (
               <div className="w-full h-full p-16 bg-black">
                 <div className="w-full h-full glass overflow-hidden relative shadow-2xl border-white/5">
-                  <FrameManager item={idleWallpaper} />
+                  <MediaItem item={idleWallpaper} />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40 pointer-events-none" />
                   </div>
               </div>
@@ -388,7 +618,7 @@ const DisplayScreen = () => {
           <div className="h-32 flex items-center overflow-hidden z-50 border-t border-white/5 bg-black/60 backdrop-blur-3xl relative">
              <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-black to-transparent z-10" />
              <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-black to-transparent z-10" />
-             <TickerEngine ticker={tickers[currentTickerIdx]} />
+             <TickerDisplay ticker={tickers[currentTickerIdx]} />
           </div>
       )}
     </div>
