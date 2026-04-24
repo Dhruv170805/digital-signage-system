@@ -5,48 +5,11 @@ import toast from 'react-hot-toast';
 import Card from './Card';
 import { useScreens } from '../../hooks/useAdminData';
 
-const SystemSettings = ({ settings, setSettings, approvedMedia, fetchData }) => {
+const SystemSettings = ({ fetchData }) => {
   const { data: screens = [] } = useScreens();
   const [resetTargetType, setResetTargetType] = useState('all');
   const [resetTargetId, setResetTargetId] = useState('');
   
-  const [idleTargetType, setIdleTargetType] = useState('all');
-  const [idleTargetId, setIdleTargetId] = useState('');
-  const [selectedIdleMedia, setIdleMedia] = useState(settings.idleWallpaperId || '');
-
-  const saveSettings = async (key, val) => {
-    try {
-      await api.post(`/api/settings`, { [key]: val });
-      fetchData();
-      toast.success('Global Idle Media Updated');
-    } catch (err) { toast.error(err.response?.data?.error || err.message); }
-  };
-
-  const updateScreenIdleMedia = async () => {
-    try {
-      if (idleTargetType === 'all') {
-        await saveSettings('idleWallpaperId', selectedIdleMedia);
-      } else if (idleTargetType === 'screen') {
-        if (!idleTargetId) return toast.error('Select a screen');
-        await api.put(`/api/screens/${idleTargetId}`, { idleMediaId: selectedIdleMedia || null });
-        toast.success('Screen Idle Media Updated');
-        fetchData();
-      } else if (idleTargetType === 'group') {
-          // Bulk update screens in group (or we could add idleMediaId to ScreenGroup)
-          // For simplicity, let's update all screens with this groupId
-          const groupScreens = screens.filter(s => s.groupId?._id === idleTargetId || s.groupId === idleTargetId);
-          await Promise.all(groupScreens.map(s => 
-            api.put(`/api/screens/${s._id}`, { idleMediaId: selectedIdleMedia || null })
-          ));
-          toast.success('Group Idle Media Updated');
-          fetchData();
-      }
-      
-      const screenService = require('../../../../server/src/services/screenService'); // This is client side, can't require server service.
-      // We should rely on the backend to broadcast.
-    } catch (err) { toast.error(err.response?.data?.error || err.message); }
-  };
-
   const executeSystemReset = async () => {
     if (!window.confirm('CRITICAL: Reset the selected target? This will clear assignments and stop playback.')) return;
     try {
@@ -71,67 +34,6 @@ const SystemSettings = ({ settings, setSettings, approvedMedia, fetchData }) => 
 
   return (
     <div className="animate-fade-in max-w-4xl mx-auto space-y-8">
-      <Card 
-        title="Idle Transmission" 
-        icon={Monitor} 
-        subtitle="Default Content & Static Messaging"
-      >
-        <div className="space-y-6 mt-4">
-          <div className="p-6 bg-slate-50 border border-slate-200 rounded-[32px] space-y-6">
-            <div className="flex items-center justify-between border-b border-slate-200 pb-4">
-                <div>
-                    <p className="font-bold text-text uppercase text-xs">Targeted Content</p>
-                    <p className="text-[10px] font-bold text-text-dim uppercase tracking-widest mt-1">Assign fallback media to specific screens</p>
-                </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-               <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase text-slate-500 ml-1">Select Media</label>
-                  <select className="nexus-input" value={selectedIdleMedia} onChange={(e) => setIdleMedia(e.target.value)}>
-                    <option value="">System Default (Quotes)</option>
-                    {approvedMedia.map(m => <option key={m._id || m.id} value={m._id || m.id}>{m.fileName} ({m.fileType})</option>)}
-                  </select>
-               </div>
-
-               <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase text-slate-500 ml-1">Target Scope</label>
-                  <select className="nexus-input" value={idleTargetType} onChange={(e) => { setIdleTargetType(e.target.value); setIdleTargetId(''); }}>
-                    <option value="all">Global (All Screens)</option>
-                    <option value="screen">Specific Screen</option>
-                    <option value="group">Screen Group</option>
-                  </select>
-               </div>
-
-               {idleTargetType === 'screen' && (
-                <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-slate-500 ml-1">Choose Screen</label>
-                    <select className="nexus-input" value={idleTargetId} onChange={(e) => setIdleTargetId(e.target.value)}>
-                        <option value="">Select Target...</option>
-                        {screens.map(s => <option key={s._id || s.id} value={s._id || s.id}>{s.name}</option>)}
-                    </select>
-                </div>
-               )}
-
-               {idleTargetType === 'group' && (
-                <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-slate-500 ml-1">Group Identifier</label>
-                    <input type="text" placeholder="Group ID" className="nexus-input" value={idleTargetId} onChange={(e) => setIdleTargetId(e.target.value)} />
-                </div>
-               )}
-            </div>
-
-            <div className="flex items-center justify-between pt-4 border-t border-slate-200">
-               <div className="flex items-center gap-3 px-4 py-2 bg-sky-500/10 border border-sky-500/20 rounded-xl max-w-md">
-                 <Info className="text-sky-600 shrink-0" size={14} />
-                 <p className="text-[9px] font-bold text-sky-600 uppercase leading-tight">Idle content triggers automatically when no broadcasts are scheduled for the target.</p>
-               </div>
-               <button onClick={updateScreenIdleMedia} className="nexus-btn-primary px-8 tracking-[2px]">Apply Configuration</button>
-            </div>
-          </div>
-        </div>
-      </Card>
-
       <Card 
         className="border-rose-500/20" 
         title="System Reset" 

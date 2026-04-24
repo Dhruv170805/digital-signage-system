@@ -73,10 +73,10 @@ export const useSettings = () => useQuery({
   }
 });
 
-export const useAuditLogs = () => useQuery({
-  queryKey: ['auditLogs'],
+export const useHistoryLogs = () => useQuery({
+  queryKey: ['historyLogs'],
   queryFn: async () => {
-    const res = await api.get('/api/audit');
+    const res = await api.get('/api/history');
     return res.data;
   },
   refetchInterval: 30000 // Refresh logs every 30s

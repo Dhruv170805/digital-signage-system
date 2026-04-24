@@ -1,5 +1,5 @@
 const Screen = require('../models/Screen');
-const crypto = require('crypto');
+const { generateDeviceToken } = require('../utils/generateToken');
 
 class ScreenService {
   async getAllScreens() {
@@ -11,9 +11,14 @@ class ScreenService {
   }
 
   async registerScreen(data) {
-    const deviceToken = crypto.randomBytes(32).toString('hex');
+    const deviceToken = generateDeviceToken();
+    
+    // Auto-generate screenId if not provided (e.g., screen-1714032000)
+    const screenId = data.screenId || `screen-${Math.floor(Date.now() / 1000)}`;
+
     const screen = new Screen({
       ...data,
+      screenId,
       deviceToken,
       status: 'online',
       lastSeen: new Date(),
@@ -23,6 +28,10 @@ class ScreenService {
 
   async updateScreen(id, data) {
     return await Screen.findByIdAndUpdate(id, data, { new: true });
+  }
+
+  async deleteScreen(id) {
+    return await Screen.findByIdAndDelete(id);
   }
 
   async updateHeartbeat(deviceToken, telemetry = {}) {
@@ -58,12 +67,11 @@ class ScreenService {
     const idleService = require('./idleService');
     const Screen = require('../models/Screen');
 
-    const [playlist, tickers, settings, media, screen, idleConfig] = await Promise.all([
+    const [playlist, tickers, settings, media, idleConfig] = await Promise.all([
       assignmentService.getActiveAssignmentsForScreen(screenId, groupId),
       tickerService.getActive(),
       configService.getFullConfig(),
       mediaService.getAllApproved(),
-      Screen.findById(screenId).populate('idleMediaId'),
       idleService.getIdleContent(screenId, groupId)
     ]);
 
@@ -72,7 +80,6 @@ class ScreenService {
       tickers,
       settings,
       media,
-      idleMedia: screen?.idleMediaId,
       idleConfig
     };
   }

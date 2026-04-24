@@ -75,7 +75,7 @@ const Login = () => {
             <span className="text-[10px] uppercase tracking-[6px] font-black text-text-dim relative z-10">Nexus Operations</span>
           </div>
           <h1 className="text-6xl font-black text-text tracking-tighter mb-4 uppercase">Identity</h1>
-          <p className="text-[10px] font-black text-text-dim uppercase tracking-[4px]">Secure Terminal Access Required</p>
+          <p className="text-[10px] font-black text-text-dim uppercase tracking-[4px]">Secure Screen Access Required</p>
         </div>
 
         <div className="glass p-12 shadow-[0_32px_64px_-20px_rgba(15,23,42,0.15)] border-slate-200/60 relative group rounded-[40px] bg-white/70">

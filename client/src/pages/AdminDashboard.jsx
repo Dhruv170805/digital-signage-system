@@ -11,12 +11,12 @@ import DashboardOverview from '../components/admin/DashboardOverview';
 import ModerationQueue from '../components/admin/ModerationQueue';
 import BroadcastScheduler from '../components/admin/BroadcastScheduler';
 import LayoutArchitect from '../components/admin/LayoutArchitect';
-import TerminalManager from '../components/admin/TerminalManager';
+import ScreenManager from '../components/admin/ScreenManager';
 import UserDirectory from '../components/admin/UserDirectory';
 import TickerManager from '../components/admin/TickerManager';
 import IdleScreenManager from '../components/admin/IdleScreenManager';
 import SystemSettings from '../components/admin/SystemSettings';
-import AuditHistory from '../components/admin/AuditHistory';
+import SystemHistory from '../components/admin/SystemHistory';
 import Card from '../components/admin/Card';
 
 import { 
@@ -93,8 +93,8 @@ const AdminDashboard = () => {
         return (
           <div className="space-y-10 animate-fade-in">
             <DashboardOverview screens={screens} schedules={schedules} pendingMedia={pendingMedia} media={media} setActiveTab={setActiveTab} />
-            <Card title="Network Activity" icon={Activity} subtitle="System Audit Records">
-               <AuditHistory />
+            <Card title="Network Activity" icon={Activity} subtitle="System Activity Logs">
+               <SystemHistory />
             </Card>
           </div>
         );
@@ -105,7 +105,7 @@ const AdminDashboard = () => {
       case 'templates':
         return <LayoutArchitect templates={templates} fetchData={fetchData} />;
       case 'screens':
-        return <TerminalManager screens={screens} fetchData={fetchData} />;
+        return <ScreenManager screens={screens} fetchData={fetchData} />;
       case 'users':
         return <UserDirectory users={users} fetchData={fetchData} />;
       case 'ticker':
@@ -113,9 +113,10 @@ const AdminDashboard = () => {
       case 'settings':
         return <IdleScreenManager />;
       case 'system':
-        return <SystemSettings settings={settings} approvedMedia={approvedMedia} fetchData={fetchData} />;
-      case 'audit':
-        return <AuditHistory />;
+        return <SystemSettings fetchData={fetchData} />;
+
+      case 'history':
+        return <SystemHistory />;
       case 'live':
         return (
            <div className="animate-fade-in px-4">
@@ -135,7 +136,7 @@ const AdminDashboard = () => {
     const labels = {
       dashboard: 'DASHBOARD', approve: 'APPLICATION', schedule: 'BROADCAST',
       templates: 'LAYOUT', ticker: 'TICKER', screens: 'SCREENS',
-      users: 'USERS', settings: 'IDLE SCREEN', live: 'CURRENT SCREEN', audit: 'AUDIT',
+      users: 'USERS', settings: 'IDLE SCREEN', live: 'CURRENT SCREEN', history: 'HISTORY',
       system: 'SYSTEM'
     };
     return labels[activeTab] || activeTab.toUpperCase();
@@ -153,7 +154,7 @@ const AdminDashboard = () => {
       case 'settings': return <MonitorPlay className="w-5 h-5 text-sky-400" />;
       case 'system': return <SettingsIcon className="w-5 h-5 text-sky-400" />;
       case 'live': return <Tv className="w-5 h-5 text-sky-400" />;
-      case 'audit': return <Activity className="w-5 h-5 text-sky-400" />;
+      case 'history': return <Activity className="w-5 h-5 text-sky-400" />;
       default: return <Monitor className="w-5 h-5 text-sky-400" />;
     }
   };

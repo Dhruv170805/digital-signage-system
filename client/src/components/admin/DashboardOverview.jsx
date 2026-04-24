@@ -41,7 +41,8 @@ const DashboardOverview = ({ screens, schedules, pendingMedia, media, setActiveT
     <div className="space-y-10 animate-fade-in">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatWidget 
-          label="Active Terminals" 
+          label="Active Screens"
+ 
           value={screens.filter(s => s.status === 'online').length} 
           icon={Tv} 
           trend={`${screens.length} TOTAL`} 
@@ -71,7 +72,7 @@ const DashboardOverview = ({ screens, schedules, pendingMedia, media, setActiveT
           className="lg:col-span-2" 
           title="Operational Status" 
           icon={Activity} 
-          subtitle="Live Terminal Monitoring"
+          subtitle="Live Screen Monitoring"
         >
           <div className="space-y-4">
             {screens.length === 0 ? (

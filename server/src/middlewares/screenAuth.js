@@ -1,28 +1,36 @@
-const screenService = require('../services/screenService');
+const Screen = require('../models/Screen');
 
-module.exports = async function screenAuth(req, res, next) {
-  const authHeader = req.headers.authorization;
-  const token = authHeader && authHeader.split(" ")[1];
-
-  if (!token) {
-    return res.status(401).json({ error: "No device token provided" });
-  }
-
+/**
+ * Middleware to authenticate a physical screen via deviceToken
+ */
+const screenAuth = async (req, res, next) => {
   try {
-    const screen = await screenService.getScreenByToken(token);
-
-    if (!screen) {
-      return res.status(401).json({ error: "Invalid device token" });
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Device token required' });
     }
 
+    const deviceToken = authHeader.split(' ')[1];
+    
+    // Find screen and populate group info
+    const screen = await Screen.findOne({ deviceToken, isActive: true }).populate('groupId');
+    
+    if (!screen) {
+      return res.status(401).json({ error: 'Invalid or inactive device token' });
+    }
+
+    // Attach screen to request
     req.screen = screen;
 
-    // Update last seen (heartbeat logic can be moved to service)
-    await screenService.updateHeartbeat(token);
+    // Update lastSeen and status asynchronously
+    screen.lastSeen = new Date();
+    screen.status = 'online';
+    await screen.save();
 
     next();
-  } catch (err) {
-    console.error('Screen auth error:', err);
-    res.status(500).json({ error: "Server error during screen authentication" });
+  } catch (error) {
+    res.status(500).json({ error: 'Identity verification failure' });
   }
 };
+
+module.exports = screenAuth;

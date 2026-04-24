@@ -17,22 +17,29 @@ const broadcastWorker = new Worker('broadcastQueue', async (job) => {
   const configService = require('../services/configService');
   const mediaService = require('../services/mediaService');
   const assignmentService = require('../services/assignmentService');
+  const idleService = require('../services/idleService');
 
   const [screens, tickers, settings, media] = await Promise.all([
-    Screen.find().populate('groupId'),
+    Screen.find().populate('groupId').populate('idleMediaId'),
     tickerService.getActive(),
     configService.getFullConfig(),
     mediaService.getAllApproved()
   ]);
 
   for (const screen of screens) {
-    const playlist = await assignmentService.getActiveAssignmentsForScreen(screen._id, screen.groupId);
+    const [playlist, idleConfig] = await Promise.all([
+        assignmentService.getActiveAssignmentsForScreen(screen._id, screen.groupId),
+        idleService.getIdleContent(screen._id, screen.groupId)
+    ]);
+
     ioEmitter.to(`screen:${screen._id}`).emit('manifestUpdate', {
       screen,
       playlist,
       tickers,
       settings,
-      media
+      media,
+      idleMedia: screen.idleMediaId,
+      idleConfig
     });
   }
 

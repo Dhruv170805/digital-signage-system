@@ -21,7 +21,7 @@ const Shell = ({ children, role, activeTab, setActiveTab }) => {
     { id: 'templates', label: 'Layout', icon: FileText },
     { id: 'ticker', label: 'Ticker', icon: Type },
     { id: 'screens', label: 'Screens', icon: Tv },
-    { id: 'audit', label: 'History', icon: History },
+    { id: 'history', label: 'History', icon: History },
     { id: 'live', label: 'Current Screen', icon: Tv },
     { id: 'users', label: 'Users', icon: Users },
     { id: 'settings', label: 'Idle Screen', icon: MonitorPlay },
@@ -71,7 +71,7 @@ const Shell = ({ children, role, activeTab, setActiveTab }) => {
           <div className="p-4 rounded-2xl bg-slate-100/50 border border-slate-200/60 flex items-center gap-3">
             <div className={`w-2 h-2 rounded-full animate-live ${role === 'admin' ? 'bg-blue-500' : 'bg-emerald-500'}`} />
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-              {role === 'admin' ? 'Root Terminal' : 'User Station'}
+              {role === 'admin' ? 'Root Screen' : 'User Screen'}
             </span>
           </div>
         </div>

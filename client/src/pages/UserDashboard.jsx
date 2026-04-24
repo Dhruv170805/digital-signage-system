@@ -118,7 +118,7 @@ const UserDashboard = () => {
                <StatWidget label="Pending" value={myFiles.filter(f => f.status === 'pending').length} icon={Timer} color="amber" />
             </div>
 
-            <Card title="Asset Transmission" icon={Upload} subtitle="Broadcast Node Submission">
+            <Card title="Asset Transmission" icon={Upload} subtitle="Broadcast Screen Submission">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 text-text">
                 <div className="space-y-6">
                   <div 
@@ -305,7 +305,8 @@ const UserDashboard = () => {
                 {getTabIcon()}
              </div>
              <div>
-               <p className="text-[10px] tracking-[6px] font-black uppercase text-blue-600">Node Operator</p>
+               <p className="text-[10px] tracking-[6px] font-black uppercase text-blue-600">Screen Operator</p>
+
                <h1 className="text-6xl font-black tracking-tighter text-text leading-none uppercase mt-1">{getTabLabel()}</h1>
              </div>
           </div>

@@ -41,8 +41,25 @@ class ScreenController {
     }
   }
 
+  async delete(req, res, next) {
+    try {
+      const screen = await screenService.deleteScreen(req.params.id);
+      if (!screen) return res.status(404).json({ message: 'Screen not found' });
+      await loggerService.logAudit(req.user.id, 'DELETE', 'Screen', req.params.id, { name: screen.name });
+      res.json({ message: 'Screen deleted successfully' });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async getMe(req, res) {
-    res.json(req.screen);
+    const { screenId, name, groupId } = req.screen;
+    res.json({
+      screenId,
+      name,
+      groupName: groupId?.name || 'Unassigned',
+      status: "online"
+    });
   }
 
   async getManifest(req, res, next) {

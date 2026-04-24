@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Monitor, Plus, Trash2, Layers, Type, Video, Image as ImageIcon, Palette, Save, AlertTriangle, MonitorPlay } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Monitor, Plus, Trash2, Layers, Type, Video, Image as ImageIcon, Palette, Save, AlertTriangle, MonitorPlay, Upload, RefreshCw } from 'lucide-react';
 import api from '../../services/api';
 import { useScreens } from '../../hooks/useAdminData';
 import toast from 'react-hot-toast';
@@ -10,11 +10,13 @@ const IdleScreenManager = () => {
   const [configs, setConfigs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [media, setMedia] = useState([]);
+  const fileInputRef = useRef(null);
+  const [uploading, setUploading] = useState(false);
 
   const [draft, setDraft] = useState({
     name: '',
     targetType: 'all',
-    targetId: '',
+    targetIds: [],
     contentType: 'image',
     content: { url: '', text: '', bgColor: '#000000' },
     style: { fontSize: 4, color: '#ffffff', align: 'center', fontWeight: '900', background: 'transparent' },
@@ -36,6 +38,35 @@ const IdleScreenManager = () => {
 
   useEffect(() => { fetchConfigs(); }, []);
 
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('media', file);
+    
+    setUploading(true);
+    try {
+        const res = await api.post('/api/media/upload', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        toast.success('Asset Uploaded & Approved');
+        await fetchConfigs(); // Refresh media list
+        
+        // Auto-select the new asset
+        if (res.data.fileType === 'video') {
+            setDraft(prev => ({ ...prev, contentType: 'video', content: { ...prev.content, url: res.data.filePath } }));
+        } else {
+            setDraft(prev => ({ ...prev, contentType: 'image', content: { ...prev.content, url: res.data.filePath } }));
+        }
+    } catch (err) {
+        toast.error(err.response?.data?.message || 'Upload failed');
+    } finally {
+        setUploading(false);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
   const saveConfig = async () => {
     if (!draft.name) return toast.error('Name is required');
     try {
@@ -47,7 +78,7 @@ const IdleScreenManager = () => {
         toast.success('Config Created');
       }
       setDraft({
-        name: '', targetType: 'all', targetId: '', contentType: 'image',
+        name: '', targetType: 'all', targetIds: [], contentType: 'image',
         content: { url: '', text: '', bgColor: '#000000' },
         style: { fontSize: 4, color: '#ffffff', align: 'center', fontWeight: '900', background: 'transparent' },
         priority: 10, isActive: true
@@ -89,7 +120,7 @@ const IdleScreenManager = () => {
               </div>
               <div className="space-y-1">
                 <label className="text-[10px] font-black uppercase opacity-40 ml-1">Target Scope</label>
-                <select className="nexus-input" value={draft.targetType} onChange={(e) => setDraft({...draft, targetType: e.target.value, targetId: '', priority: e.target.value === 'screen' ? 100 : e.target.value === 'group' ? 50 : 10})}>
+                <select className="nexus-input" value={draft.targetType} onChange={(e) => setDraft({...draft, targetType: e.target.value, targetIds: [], priority: e.target.value === 'screen' ? 100 : e.target.value === 'group' ? 50 : 10})}>
                   <option value="all">Global</option>
                   <option value="group">Group</option>
                   <option value="screen">Specific Screen</option>
@@ -99,15 +130,18 @@ const IdleScreenManager = () => {
 
             {draft.targetType !== 'all' && (
               <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase opacity-40 ml-1">Select {draft.targetType}</label>
+                <label className="text-[10px] font-black uppercase opacity-40 ml-1">Select {draft.targetType}s</label>
                 {draft.targetType === 'screen' ? (
-                    <select className="nexus-input" value={draft.targetId} onChange={(e) => setDraft({...draft, targetId: e.target.value})}>
-                        <option value="">Choose Screen...</option>
+                    <select multiple className="nexus-input h-32" value={draft.targetIds} onChange={(e) => {
+                        const options = Array.from(e.target.options);
+                        setDraft({...draft, targetIds: options.filter(o => o.selected).map(o => o.value) });
+                    }}>
                         {screens.map(s => <option key={s._id} value={s._id}>{s.name}</option>)}
                     </select>
                 ) : (
-                    <input type="text" className="nexus-input" placeholder="Group ID" value={draft.targetId} onChange={(e) => setDraft({...draft, targetId: e.target.value})} />
+                    <input type="text" className="nexus-input" placeholder="Group IDs (comma separated)" value={draft.targetIds.join(', ')} onChange={(e) => setDraft({...draft, targetIds: e.target.value.split(',').map(s => s.trim()).filter(Boolean)})} />
                 )}
+                <p className="text-[8px] font-bold text-slate-400 mt-1 uppercase tracking-widest">Hold CMD/CTRL to select multiple</p>
               </div>
             )}
 
@@ -123,12 +157,32 @@ const IdleScreenManager = () => {
                 ) : draft.contentType === 'color' ? (
                     <input type="color" className="w-full h-12 rounded-xl cursor-pointer border border-slate-200" value={draft.content.bgColor} onChange={(e) => setDraft({...draft, content: {...draft.content, bgColor: e.target.value}})} />
                 ) : (
-                    <select className="nexus-input" value={draft.content.url} onChange={(e) => setDraft({...draft, content: {...draft.content, url: e.target.value}})}>
-                        <option value="">Select Asset...</option>
-                        {media.filter(m => draft.contentType === 'video' ? m.fileType === 'video' : m.fileType === 'image').map(m => (
-                            <option key={m._id} value={m.filePath}>{m.fileName}</option>
-                        ))}
-                    </select>
+                    <div className="space-y-4">
+                        <select className="nexus-input" value={draft.content.url} onChange={(e) => setDraft({...draft, content: {...draft.content, url: e.target.value}})}>
+                            <option value="">Select Existing Asset...</option>
+                            {media.filter(m => draft.contentType === 'video' ? m.fileType === 'video' : m.fileType === 'image').map(m => (
+                                <option key={m._id} value={m.filePath}>{m.fileName}</option>
+                            ))}
+                        </select>
+                        
+                        <div className="relative">
+                            <input 
+                                type="file" 
+                                ref={fileInputRef}
+                                className="hidden" 
+                                accept={draft.contentType === 'video' ? 'video/*' : 'image/*'} 
+                                onChange={handleFileUpload}
+                            />
+                            <button 
+                                onClick={() => fileInputRef.current?.click()}
+                                disabled={uploading}
+                                className="w-full py-3 bg-white border border-dashed border-slate-300 rounded-xl text-[10px] font-black uppercase text-slate-500 hover:border-sky-500 hover:text-sky-500 transition-all flex items-center justify-center gap-2"
+                            >
+                                {uploading ? <RefreshCw className="animate-spin" size={14}/> : <Upload size={14}/>}
+                                {uploading ? 'Processing...' : `Upload New ${draft.contentType}`}
+                            </button>
+                        </div>
+                    </div>
                 )}
             </div>
 
@@ -172,7 +226,7 @@ const IdleScreenManager = () => {
                            </td>
                            <td className="py-6 px-6">
                               <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase border ${c.targetType === 'screen' ? 'bg-indigo-50 text-indigo-500 border-indigo-100' : c.targetType === 'group' ? 'bg-amber-50 text-amber-600 border-amber-100' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
-                                 {c.targetType === 'screen' ? screens.find(s => s._id === c.targetId)?.name || 'Unknown Screen' : c.targetType === 'group' ? `Group: ${c.targetId}` : 'Global'}
+                                 {c.targetType === 'screen' ? `${c.targetIds?.length || 0} Screens` : c.targetType === 'group' ? `${c.targetIds?.length || 0} Groups` : 'Global'}
                               </span>
                            </td>
                            <td className="py-6 px-6">

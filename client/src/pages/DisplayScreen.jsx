@@ -25,6 +25,8 @@ const DisplayScreen = () => {
   const [currentTickerIdx, setCurrentTickerIdx] = useState(0);
 
   const [settings, setSettings] = useState({ idleWallpaperId: '' });
+  const [idleMedia, setIdleMedia] = useState(null);
+  const [idleConfig, setIdleConfig] = useState(null);
   const [time, setTime] = useState(new Date());
   const [isSyncing, setIsSyncing] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
@@ -36,9 +38,11 @@ const DisplayScreen = () => {
     const token = searchParams.get("token");
     if (token) {
       localStorage.setItem("screenToken", token);
+      console.log("🔑 New device token anchored to localStorage");
       // Clean URL
       const newUrl = window.location.pathname;
       window.history.replaceState({}, document.title, newUrl);
+      window.location.reload(); // Refresh to apply token to initial fetch
     }
   }, [searchParams]);
 
@@ -60,9 +64,6 @@ const DisplayScreen = () => {
 
     await Promise.resolve();
     let token = localStorage.getItem('screenToken');
-    if (!token) {
-      token = searchParams.get("token");
-    }
 
     const authConfig = {
       headers: token ? { Authorization: `Bearer ${token}` } : {}
@@ -73,7 +74,7 @@ const DisplayScreen = () => {
       // Use the new Manifest-Only API (Issue 4.2 Fix)
       if (token) {
         const manifestRes = await axios.get(`${import.meta.env.VITE_API_URL}/api/screens/manifest`, authConfig);
-        const { screen, playlist: newPlaylist, tickers: newTickers, settings: newSettings, media: newMedia } = manifestRes.data;
+        const { screen, playlist: newPlaylist, tickers: newTickers, settings: newSettings, media: newMedia, idleMedia: newIdleMedia, idleConfig: newIdleConfig } = manifestRes.data;
         
         setScreenInfo(screen);
 
@@ -89,6 +90,8 @@ const DisplayScreen = () => {
         setTickers(newTickers);
         setSettings(newSettings);
         setAllMedia(newMedia);
+        setIdleMedia(newIdleMedia);
+        setIdleConfig(newIdleConfig);
       } else {
         // Fallback for screens without tokens (legacy or initial setup)
         const screenId = searchParams.get('screenId');
@@ -149,7 +152,7 @@ const DisplayScreen = () => {
     // Delta-based Push Logic
     socket.on('manifestUpdate', (manifest) => {
         console.log("⚡ Received instant manifest push from server");
-        const { screen, playlist: newPlaylist, tickers: newTickers, settings: newSettings, media: newMedia } = manifest;
+        const { screen, playlist: newPlaylist, tickers: newTickers, settings: newSettings, media: newMedia, idleMedia: newIdleMedia, idleConfig: newIdleConfig } = manifest;
         
         setScreenInfo(screen);
 
@@ -164,6 +167,8 @@ const DisplayScreen = () => {
         setTickers(newTickers);
         setSettings(newSettings);
         setAllMedia(newMedia);
+        setIdleMedia(newIdleMedia);
+        setIdleConfig(newIdleConfig);
     });
 
     // Legacy fallback listeners
@@ -310,10 +315,6 @@ const DisplayScreen = () => {
     );
   };
 
-  const allMedia = manifest.media || [];
-  const idleConfig = manifest.idleConfig;
-  const idleWallpaper = manifest.idleMedia || allMedia.find(m => (m.id === settings.idleWallpaperId || m._id === settings.idleWallpaperId));
-
   const renderIdleContent = () => {
     if (idleConfig) {
         const { contentType, content, style } = idleConfig;
@@ -350,15 +351,11 @@ const DisplayScreen = () => {
         }
     }
 
-    if (idleWallpaper) {
-        return <FrameManager item={idleWallpaper} />;
-    }
-
     return (
         <div className="w-full h-full flex flex-col items-center justify-center bg-black/40 backdrop-blur-3xl p-24">
             <Activity className="text-blue-500/20 animate-pulse mb-8" size={160} />
             <h2 className="text-4xl font-black text-white/20 uppercase tracking-[20px] text-center max-w-4xl leading-relaxed">
-                {settings.idleMessage || "Nexus Production Engine: Standby for Transmission"}
+                Nexus Production Engine: Standby for Transmission
             </h2>
         </div>
     );
@@ -375,7 +372,7 @@ const DisplayScreen = () => {
           </div>
         </div>
         <h2 className="text-xl font-black text-text uppercase tracking-[12px] animate-pulse">Nexus Intelligence</h2>
-        <p className="text-[10px] text-text/20 uppercase font-black tracking-[4px] mt-4">Establishing Secure Node Connection</p>
+        <p className="text-[10px] text-text/20 uppercase font-black tracking-[4px] mt-4">Establishing Secure Screen Connection</p>
       </div>
     </div>
   );
@@ -432,23 +429,12 @@ const DisplayScreen = () => {
           </div>
         ) : (
           <div className="w-full h-full relative z-10 animate-fade-in flex items-center justify-center">
-            {idleWallpaper ? (
-              <div className="w-full h-full p-16 bg-black">
-                <div className="w-full h-full glass overflow-hidden relative shadow-2xl border-white/5">
-                  <FrameManager item={idleWallpaper} />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40 pointer-events-none" />
-                  </div>
+            <div className="w-full h-full p-16 bg-black">
+              <div className="w-full h-full glass overflow-hidden relative shadow-2xl border-white/5">
+                {renderIdleContent()}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40 pointer-events-none" />
               </div>
-            ) : (
-              <div className="text-center">
-                <div className="w-32 h-32 bg-white/5 rounded-[40px] flex items-center justify-center mx-auto mb-10 border border-white/10 relative group">
-                  <div className="absolute inset-0 bg-blue-500/20 rounded-[40px] blur-2xl group-hover:blur-3xl transition-all" />
-                  <Activity size={64} className="text-blue-500 relative z-10 animate-pulse" />
-                </div>
-                <h2 className="text-8xl font-black tracking-tighter uppercase text-text leading-none">Nexus Engine</h2>
-                <p className="text-2xl text-text/20 mt-6 uppercase tracking-[12px] font-black">Standing By for Transmission</p>
-              </div>
-            )}
+            </div>
           </div>
         )}
       </div>

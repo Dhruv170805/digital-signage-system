@@ -1,9 +1,12 @@
-const jwt = require('jsonwebtoken');
+const crypto = require("crypto");
 
-const generateToken = (id, role) => {
-  return jwt.sign({ id, role }, process.env.JWT_SECRET || 'secret', {
-    expiresIn: '24h',
-  });
+/**
+ * Generates a secure 32-byte unique device token
+ */
+function generateDeviceToken() {
+  return crypto.randomBytes(32).toString("hex");
+}
+
+module.exports = {
+  generateDeviceToken
 };
-
-module.exports = generateToken;
