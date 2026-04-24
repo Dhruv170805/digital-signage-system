@@ -1,4 +1,4 @@
-const screenRepository = require('../repositories/screenRepository');
+const screenService = require('./screenService');
 
 class SocketService {
   constructor() {
@@ -12,14 +12,23 @@ class SocketService {
       console.log('New socket connection:', socket.id);
 
       socket.on('heartbeat', async (data) => {
-        const { macAddress, ipAddress, screenId } = data;
+        const { macAddress, ipAddress, telemetry } = data;
         if (macAddress) {
-          const screen = await screenRepository.updateHeartbeat(macAddress, ipAddress);
-          socket.join(`screen:${screen.id}`);
-          if (screen.groupId) {
-            socket.join(`group:${screen.groupId}`);
+          const screen = await screenService.updateHeartbeatByMac(macAddress, ipAddress, telemetry);
+          if (screen) {
+            socket.join(`screen:${screen._id}`);
+            if (screen.groupId) {
+              socket.join(`group:${screen.groupId}`);
+            }
+            console.log(`Screen ${screen.name} checked in with telemetry.`);
           }
-          console.log(`Screen ${screen.name} checked in.`);
+        }
+      });
+
+      socket.on('screenPing', async (data) => {
+        const { token, screenId, telemetry } = data;
+        if (token) {
+            await screenService.updateHeartbeat(token, telemetry);
         }
       });
 

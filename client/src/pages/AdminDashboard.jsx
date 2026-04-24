@@ -1,3 +1,5 @@
+/* eslint-disable no-unused-vars */
+/* eslint-disable react-hooks/set-state-in-effect */
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
 import GridLayout from 'react-grid-layout';
@@ -9,31 +11,35 @@ import {
   Users as UsersIcon, CheckCircle, XCircle, Clock, 
   Play, Plus, Trash2, Settings as SettingsIcon, ExternalLink, Activity, 
   FileText, Calendar, LayoutGrid, Type as TypeIcon,
-  Save, AlertCircle, Tv, Monitor, Palette, Info, Eye, CheckSquare, MonitorPlay, Lock, Timer, Send, RefreshCw, File
+  Save, AlertCircle, AlertTriangle, Tv, Monitor, Palette, Info, Eye, CheckSquare, MonitorPlay, Lock, Timer, Send, RefreshCw, File
 } from 'lucide-react';
 
 import AuditHistory from '../components/admin/AuditHistory';
+import TickerManager from '../components/admin/TickerManager';
 
-const Card = ({ children, className = "", title, icon: Icon, subtitle }) => (
-  <div className={`glass-card p-8 animate-fade-in ${className}`}>
-    {(title || Icon) && (
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-4">
-          {Icon && (
-            <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-[var(--accent)] shadow-inner">
-              <Icon size={24} />
+const Card = ({ children, className = "", title, icon, subtitle }) => {
+  const Icon = icon;
+  return (
+    <div className={`glass-card p-8 animate-fade-in ${className}`}>
+      {(title || Icon) && (
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-4">
+            {Icon && (
+              <div className="w-12 h-12 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center text-accent shadow-inner">
+                <Icon size={24} />
+              </div>
+            )}
+            <div>
+              <h3 className="text-lg font-black text-text uppercase tracking-tighter leading-none">{title}</h3>
+              {subtitle && <p className="text-[10px] font-bold text-text-dim uppercase tracking-[2px] mt-1.5">{subtitle}</p>}
             </div>
-          )}
-          <div>
-            <h3 className="text-lg font-black text-white uppercase tracking-tighter leading-none">{title}</h3>
-            {subtitle && <p className="text-[10px] font-bold text-white/30 uppercase tracking-[2px] mt-1.5">{subtitle}</p>}
           </div>
         </div>
-      </div>
-    )}
-    {children}
-  </div>
-);
+      )}
+      {children}
+    </div>
+  );
+};
 
 const StatWidget = ({ label, value, icon: Icon, color = "blue", trend }) => {
   const colorMap = {
@@ -62,8 +68,8 @@ const StatWidget = ({ label, value, icon: Icon, color = "blue", trend }) => {
             </div>
           )}
         </div>
-        <p className="text-[10px] font-black text-white/30 uppercase tracking-[3px] mb-2">{label}</p>
-        <h2 className="text-4xl font-black text-white tracking-tighter tabular-nums">{value}</h2>
+        <p className="text-[10px] font-black text-text-dim uppercase tracking-[3px] mb-2">{label}</p>
+        <h2 className="text-4xl font-black text-text tracking-tighter tabular-nums">{value}</h2>
       </div>
     </div>
   );
@@ -77,7 +83,7 @@ const Badge = ({ label, type }) => {
     reset: 'bg-amber-500/10 text-amber-400 border-amber-500/20'
   };
   return (
-    <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase border ${colors[type] || 'bg-white/5 text-text/40 border-white/10'}`}>
+    <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase border ${colors[type] || 'bg-slate-100 text-text-dim border-slate-200'}`}>
       {label}
     </span>
   );
@@ -92,11 +98,11 @@ const PreviewModal = ({ isOpen, onClose, file }) => {
       <div className="relative w-full h-full flex flex-col gap-6 animate-fade-in">
         <div className="flex justify-between items-center bg-white/5 p-4 rounded-2xl border border-white/10">
           <div>
-            <h3 className="text-xl font-black uppercase tracking-tighter text-text">{file.fileName}</h3>
+            <h3 className="text-xl font-black uppercase tracking-tighter text-white">{file.fileName}</h3>
             <p className="text-[10px] font-bold text-sky-400 uppercase tracking-widest">{file.fileType} • {new Date(file.uploadedAt).toLocaleString()}</p>
           </div>
-          <button onClick={onClose} className="p-3 bg-white/10 rounded-xl hover:bg-rose-500 hover:text-text transition-all">
-            <XCircle size={24} className="text-text"/>
+          <button onClick={onClose} className="p-3 bg-white/10 rounded-xl hover:bg-rose-500 hover:text-white transition-all">
+            <XCircle size={24} className="text-white"/>
           </button>
         </div>
         
@@ -116,18 +122,9 @@ const PreviewModal = ({ isOpen, onClose, file }) => {
 
 const ModerationModal = ({ isOpen, onClose, file, onConfirm }) => {
   const [action, setAction] = useState('approve');
-  const [startTime, setStartTime] = useState('');
-  const [endTime, setEndTime] = useState('');
+  const [startTime, setStartTime] = useState(file?.requestedStartTime ? new Date(file.requestedStartTime).toISOString().slice(0, 16) : '');
+  const [endTime, setEndTime] = useState(file?.requestedEndTime ? new Date(file.requestedEndTime).toISOString().slice(0, 16) : '');
   const [reason, setReason] = useState('');
-
-  useEffect(() => {
-    if (file) {
-      setStartTime(file.requestedStartTime ? new Date(file.requestedStartTime).toISOString().slice(0, 16) : '');
-      setEndTime(file.requestedEndTime ? new Date(file.requestedEndTime).toISOString().slice(0, 16) : '');
-      setReason('');
-      setAction('approve');
-    }
-  }, [file, isOpen]);
 
   if (!isOpen || !file) return null;
 
@@ -142,13 +139,13 @@ const ModerationModal = ({ isOpen, onClose, file, onConfirm }) => {
     <div className="fixed inset-0 bg-black/90 backdrop-blur-xl z-[110] flex items-center justify-center p-6">
       <div className="glass max-w-lg w-full p-10 space-y-8 animate-fade-in border-white/10">
         <div className="flex justify-between items-center pb-6 border-b border-white/5">
-          <h3 className="text-2xl font-black uppercase tracking-tighter text-text">Asset Moderation</h3>
-          <button onClick={onClose} className="text-slate-500 hover:text-text"><XCircle /></button>
+          <h3 className="text-2xl font-black uppercase tracking-tighter text-white">Asset Moderation</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-white"><XCircle /></button>
         </div>
 
         <div className="flex gap-2 p-1 bg-black/40 rounded-2xl border border-white/5">
-          <button onClick={() => setAction('approve')} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${action === 'approve' ? 'bg-emerald-500 text-text' : 'text-slate-500 hover:text-slate-300'}`}>Approve</button>
-          <button onClick={() => setAction('reject')} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${action === 'reject' ? 'bg-rose-500 text-text' : 'text-slate-500 hover:text-slate-300'}`}>Reject</button>
+          <button onClick={() => setAction('approve')} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${action === 'approve' ? 'bg-emerald-500 text-white' : 'text-slate-500 hover:text-slate-300'}`}>Approve</button>
+          <button onClick={() => setAction('reject')} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${action === 'reject' ? 'bg-rose-500 text-white' : 'text-slate-500 hover:text-slate-300'}`}>Reject</button>
         </div>
 
         <div className="space-y-6">
@@ -156,11 +153,11 @@ const ModerationModal = ({ isOpen, onClose, file, onConfirm }) => {
             <>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-[8px] font-black uppercase text-slate-500 ml-1">Override From</label>
+                  <label className="text-[8px] font-black uppercase text-slate-400 ml-1">Override From</label>
                   <input type="datetime-local" className="nexus-input py-3 text-xs" value={startTime} onChange={(e) => setStartTime(e.target.value)}/>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[8px] font-black uppercase text-slate-500 ml-1">Override TO</label>
+                  <label className="text-[8px] font-black uppercase text-slate-400 ml-1">Override TO</label>
                   <input type="datetime-local" className="nexus-input py-3 text-xs" value={endTime} onChange={(e) => setEndTime(e.target.value)}/>
                 </div>
               </div>
@@ -170,9 +167,9 @@ const ModerationModal = ({ isOpen, onClose, file, onConfirm }) => {
             </>
           ) : (
             <div className="space-y-1">
-              <label className="text-[8px] font-black uppercase text-slate-500 ml-1">Reason for Rejection</label>
+              <label className="text-[8px] font-black uppercase text-slate-400 ml-1">Reason for Rejection</label>
               <textarea 
-                className="nexus-input min-h-[120px] py-4 resize-none" 
+                className="nexus-input min-h-[120px] py-4 resize-none text-white" 
                 placeholder="Enter technical reason for non-compliance..."
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
@@ -183,7 +180,7 @@ const ModerationModal = ({ isOpen, onClose, file, onConfirm }) => {
 
         <button 
           onClick={handleConfirm}
-          className={`w-full py-5 rounded-2xl font-black uppercase tracking-[4px] shadow-2xl transition-all active:scale-95 ${action === 'approve' ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-rose-500 hover:bg-rose-600'}`}
+          className={`w-full py-5 rounded-2xl font-black uppercase tracking-[4px] shadow-2xl transition-all active:scale-95 ${action === 'approve' ? 'bg-emerald-500 hover:bg-emerald-600 text-white' : 'bg-rose-500 hover:bg-rose-600 text-white'}`}
         >
           {action === 'approve' ? 'Authorize Asset' : 'Execute Rejection'}
         </button>
@@ -200,9 +197,6 @@ const AdminDashboard = () => {
   const [templates, setTemplates] = useState([]);
   const [screens, setScreens] = useState([]);
   const [tickers, setTickers] = useState([]);
-  const [ticker, setTicker] = useState({ text: '', speed: 5, isActive: 1, fontSize: 'text-4xl', fontStyle: 'font-normal' });
-  const [draftTicker, setDraftTicker] = useState({ text: '', speed: 5, isActive: 1, fontSize: 'text-4xl', fontStyle: 'font-normal' });
-  const [isTickerDirty, setIsTickerDirty] = useState(false);
   const [settings, setSettings] = useState({});
   const [schedules, setSchedules] = useState([]);
   
@@ -220,17 +214,23 @@ const AdminDashboard = () => {
   const [modFile, setModFile] = useState(null);
   const [showModModal, setShowModModal] = useState(false);
 
-  const fetchData = useCallback(async (isInitial = false) => {
+  const getAuthHeaders = () => ({
+    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+  });
+
+  const fetchData = useCallback(async () => {
+    await Promise.resolve();
+    const config = getAuthHeaders();
     try {
       const results = await Promise.allSettled([
-        axios.get(`${import.meta.env.VITE_API_URL}/api/auth/users`),
-        axios.get(`${import.meta.env.VITE_API_URL}/api/media`),
-        axios.get(`${import.meta.env.VITE_API_URL}/api/media/pending`),
-        axios.get(`${import.meta.env.VITE_API_URL}/api/templates`),
-        axios.get(`${import.meta.env.VITE_API_URL}/api/screens`),
-        axios.get(`${import.meta.env.VITE_API_URL}/api/ticker`),
-        axios.get(`${import.meta.env.VITE_API_URL}/api/settings`),
-        axios.get(`${import.meta.env.VITE_API_URL}/api/schedule`)
+        axios.get(`${import.meta.env.VITE_API_URL}/api/auth/users`, config),
+        axios.get(`${import.meta.env.VITE_API_URL}/api/media`, config),
+        axios.get(`${import.meta.env.VITE_API_URL}/api/media/pending`, config),
+        axios.get(`${import.meta.env.VITE_API_URL}/api/templates`, config),
+        axios.get(`${import.meta.env.VITE_API_URL}/api/screens`, config),
+        axios.get(`${import.meta.env.VITE_API_URL}/api/ticker`, config),
+        axios.get(`${import.meta.env.VITE_API_URL}/api/settings`, config),
+        axios.get(`${import.meta.env.VITE_API_URL}/api/schedule`, config)
       ]);
 
       if (results[0].status === 'fulfilled') setUsers(results[0].value.data);
@@ -249,7 +249,7 @@ const AdminDashboard = () => {
   }, []);
 
   useEffect(() => {
-    fetchData(true);
+    fetchData();
     const interval = setInterval(() => fetchData(), 30000);
     return () => clearInterval(interval);
   }, [fetchData]);
@@ -269,7 +269,7 @@ const AdminDashboard = () => {
 
   const handleModeration = async (id, action, data = {}) => {
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL}/api/media/${id}/${action}`, data);
+      await axios.post(`${import.meta.env.VITE_API_URL}/api/media/${id}/${action}`, data, getAuthHeaders());
       setShowModModal(false);
       setModFile(null);
       toast.success(action === 'approve' ? 'Asset authorized.' : 'Asset rejected.');
@@ -280,18 +280,9 @@ const AdminDashboard = () => {
   const registerScreen = async (e) => {
     e.preventDefault();
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL}/api/screens/register`, newScreen);
+      await axios.post(`${import.meta.env.VITE_API_URL}/api/screens/register`, newScreen, getAuthHeaders());
       toast.success('Screen Registered');
       setNewScreen({ name: '', location: '' });
-      fetchData();
-    } catch (err) { toast.error(err.response?.data?.error || err.message); }
-  };
-
-  const saveTicker = async () => {
-    try {
-      await axios.post(`${import.meta.env.VITE_API_URL}/api/ticker`, draftTicker);
-      toast.success('Ticker Updated');
-      setIsTickerDirty(false);
       fetchData();
     } catch (err) { toast.error(err.response?.data?.error || err.message); }
   };
@@ -305,7 +296,7 @@ const AdminDashboard = () => {
     }
 
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL}/api/templates`, { name: templateName.trim(), layout: currentLayout });
+      await axios.post(`${import.meta.env.VITE_API_URL}/api/templates`, { name: templateName.trim(), layout: currentLayout }, getAuthHeaders());
       toast.success('Layout Saved');
       setTemplateName('');
       fetchData();
@@ -315,7 +306,7 @@ const AdminDashboard = () => {
   const provisionUser = async (e) => {
     e.preventDefault();
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/register`, newUser);
+      await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/register`, newUser, getAuthHeaders());
       toast.success('User Provisioned');
       setShowUserForm(false);
       setNewUser({ name: '', email: '', password: '', role: 'user' });
@@ -327,7 +318,7 @@ const AdminDashboard = () => {
     e.preventDefault();
     const data = { ...newSchedule, mediaMapping: JSON.stringify(mediaMapping) };
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL}/api/schedule`, data);
+      await axios.post(`${import.meta.env.VITE_API_URL}/api/schedule`, data, getAuthHeaders());
       toast.success('Broadcast Scheduled');
       setNewSchedule({ screenId: '', templateId: '', mediaId: '', startTime: '', endTime: '' });
       setMediaMapping({});
@@ -338,7 +329,7 @@ const AdminDashboard = () => {
   const deleteSchedule = async (id) => {
     if (!window.confirm('Terminate Broadcast?')) return;
     try {
-      await axios.delete(`${import.meta.env.VITE_API_URL}/api/schedule/${id}`);
+      await axios.delete(`${import.meta.env.VITE_API_URL}/api/schedule/${id}`, getAuthHeaders());
       toast.success('Broadcast Terminated');
       fetchData();
     } catch (err) { toast.error(err.response?.data?.error || err.message); }
@@ -346,14 +337,14 @@ const AdminDashboard = () => {
 
   const saveSettings = async (key, val) => {
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL}/api/settings`, { [key]: val });
+      await axios.post(`${import.meta.env.VITE_API_URL}/api/settings`, { [key]: val }, getAuthHeaders());
       fetchData();
     } catch (err) { toast.error(err.response?.data?.error || err.message); }
   };
 
   const unlockUser = async (id) => {
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/users/${id}/unlock`);
+      await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/users/${id}/unlock`, {}, getAuthHeaders());
       toast.success('Account Unlocked');
       fetchData();
     } catch (err) { toast.error(err.response?.data?.error || err.message); }
@@ -361,7 +352,7 @@ const AdminDashboard = () => {
 
   const lockUser = async (id) => {
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/users/${id}/lock`);
+      await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/users/${id}/lock`, {}, getAuthHeaders());
       toast.success('Account Locked');
       fetchData();
     } catch (err) { toast.error(err.response?.data?.error || err.message); }
@@ -370,7 +361,7 @@ const AdminDashboard = () => {
   const deleteUser = async (id) => {
     if (!window.confirm('Purge personnel records?')) return;
     try {
-      await axios.delete(`${import.meta.env.VITE_API_URL}/api/auth/users/${id}`);
+      await axios.delete(`${import.meta.env.VITE_API_URL}/api/auth/users/${id}`, getAuthHeaders());
       toast.success('Record Purged');
       fetchData();
     } catch (err) { toast.error(err.response?.data?.error || err.message); }
@@ -380,7 +371,7 @@ const AdminDashboard = () => {
     const pw = prompt('Set Temporary Password:');
     if (!pw) return;
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/users/${id}/approve-reset`, { newPassword: pw });
+      await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/users/${id}/approve-reset`, { newPassword: pw }, getAuthHeaders());
       toast.success('Password Updated');
       fetchData();
     } catch (err) { toast.error(err.response?.data?.error || err.message); }
@@ -458,34 +449,34 @@ const AdminDashboard = () => {
               >
                 <div className="space-y-4">
                   {screens.length === 0 ? (
-                    <div className="p-20 text-center bg-white/[0.02] border border-dashed border-white/5 rounded-[32px]">
-                      <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <Monitor size={32} className="text-white/20" />
+                    <div className="p-20 text-center bg-slate-50 border border-dashed border-slate-200 rounded-[32px]">
+                      <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <Monitor size={32} className="text-text-dim/30" />
                       </div>
-                      <p className="text-[10px] font-black text-white/30 uppercase tracking-[4px]">No active units detected in network</p>
+                      <p className="text-[10px] font-black text-text-dim uppercase tracking-[4px]">No active units detected in network</p>
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {screens.map(s => (
-                        <div key={s.id} className="p-6 bg-white/[0.03] border border-white/5 rounded-[24px] flex items-center justify-between hover:bg-white/5 transition-all group relative overflow-hidden">
+                        <div key={s.id} className="p-6 bg-slate-50 border border-slate-200 rounded-[24px] flex items-center justify-between hover:bg-slate-100 transition-all group relative overflow-hidden">
                           <div className={`absolute top-0 left-0 w-1 h-full ${s.status === 'online' ? 'bg-emerald-500' : 'bg-rose-500'} opacity-50`} />
                           <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center relative">
-                              <Tv className="text-white/40 group-hover:text-white transition-colors" />
-                              <div className={`absolute -top-1 -right-1 w-3 h-3 rounded-full border-4 border-[#0B1220] ${s.status === 'online' ? 'bg-emerald-500 animate-live' : 'bg-rose-500'}`} />
+                            <div className="w-12 h-12 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center relative">
+                              <Tv className="text-text-dim group-hover:text-text transition-colors" />
+                              <div className={`absolute -top-1 -right-1 w-3 h-3 rounded-full border-4 border-white ${s.status === 'online' ? 'bg-emerald-500 animate-live' : 'bg-rose-500'}`} />
                             </div>
                             <div>
-                              <p className="text-[10px] font-black text-white/20 uppercase tracking-[2px] mb-1">{s.location}</p>
-                              <p className="font-black text-white uppercase tracking-tighter">{s.name}</p>
+                              <p className="text-[10px] font-black text-text-dim uppercase tracking-[2px] mb-1">{s.location}</p>
+                              <p className="font-black text-text uppercase tracking-tighter">{s.name}</p>
                             </div>
                           </div>
                           <div className="flex items-center gap-4">
                             <div className="text-right hidden sm:block">
-                              <p className="text-[8px] font-black text-white/20 uppercase tracking-widest mb-0.5">Network</p>
-                              <p className="text-[10px] font-bold text-emerald-400 mono">100.2 KB/S</p>
+                              <p className="text-[8px] font-black text-text-dim uppercase tracking-widest mb-0.5">Network</p>
+                              <p className="text-[10px] font-bold text-emerald-600 mono">100.2 KB/S</p>
                             </div>
-                            <button className="p-3 bg-white/5 rounded-xl opacity-0 group-hover:opacity-100 transition-all hover:bg-white/10">
-                              <ExternalLink size={16} className="text-white/40" />
+                            <button className="p-3 bg-slate-100 rounded-xl opacity-0 group-hover:opacity-100 transition-all hover:bg-slate-200">
+                              <ExternalLink size={16} className="text-text-dim" />
                             </button>
                           </div>
                         </div>
@@ -501,11 +492,11 @@ const AdminDashboard = () => {
                        <span className="text-[10px] font-black uppercase tracking-[3px]">Moderate Content</span>
                        <CheckSquare size={18} className="group-hover:translate-x-1 transition-transform" />
                     </button>
-                    <button onClick={() => setActiveTab('schedule')} className="nexus-btn-secondary flex items-center justify-between group h-16 px-6 bg-white/5 border-white/10 text-white hover:bg-white/10">
+                    <button onClick={() => setActiveTab('schedule')} className="nexus-btn-secondary flex items-center justify-between group h-16 px-6 bg-slate-50 border-slate-200 text-text hover:bg-slate-100">
                        <span className="text-[10px] font-black uppercase tracking-[3px]">Global Broadcast</span>
                        <Calendar size={18} className="group-hover:translate-x-1 transition-transform" />
                     </button>
-                    <button onClick={() => setActiveTab('templates')} className="nexus-btn-secondary flex items-center justify-between group h-16 px-6 bg-white/5 border-white/10 text-white hover:bg-white/10">
+                    <button onClick={() => setActiveTab('templates')} className="nexus-btn-secondary flex items-center justify-between group h-16 px-6 bg-slate-50 border-slate-200 text-text hover:bg-slate-100">
                        <span className="text-[10px] font-black uppercase tracking-[3px]">Architect UI</span>
                        <FileText size={18} className="group-hover:translate-x-1 transition-transform" />
                     </button>
@@ -524,26 +515,26 @@ const AdminDashboard = () => {
           <div className="animate-fade-in space-y-10 max-w-6xl mx-auto">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-2xl font-black text-white uppercase tracking-tighter">Moderation Queue</h3>
-                <p className="text-[10px] font-bold text-white/30 uppercase tracking-[4px] mt-2">Required Asset Clearances</p>
+                <h3 className="text-2xl font-black text-text uppercase tracking-tighter">Moderation Queue</h3>
+                <p className="text-[10px] font-bold text-text-dim uppercase tracking-[4px] mt-2">Required Asset Clearances</p>
               </div>
-              <div className="px-6 py-3 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black text-amber-400 uppercase tracking-widest">
+              <div className="px-6 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-[10px] font-black text-amber-600 uppercase tracking-widest">
                 {pendingMedia.length} Pending
               </div>
             </div>
 
             {pendingMedia.length === 0 ? (
-               <div className="text-center py-32 bg-white/[0.02] rounded-[40px] border border-dashed border-white/5">
+               <div className="text-center py-32 bg-slate-50 rounded-[40px] border border-dashed border-slate-200">
                  <div className="w-20 h-20 bg-emerald-500/5 rounded-full flex items-center justify-center mx-auto mb-6 border border-emerald-500/10">
                    <CheckCircle className="text-emerald-500 opacity-40" size={32} />
                  </div>
-                 <p className="text-white/20 uppercase font-black tracking-[6px] text-xs">Clearance Queue Empty</p>
+                 <p className="text-text-dim uppercase font-black tracking-[6px] text-xs">Clearance Queue Empty</p>
                </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                  {pendingMedia.map(m => (
                    <div key={m.id} className="glass-card p-6 group relative overflow-hidden transition-all duration-500 hover:scale-[1.02]">
-                      <div className="aspect-video bg-black rounded-2xl overflow-hidden mb-6 border border-white/5 relative group-hover:border-white/20 transition-all">
+                      <div className="aspect-video bg-black rounded-2xl overflow-hidden mb-6 border border-slate-200 relative group-hover:border-slate-300 transition-all">
                          {m.fileType === 'video' ? (
                            <video src={`${import.meta.env.VITE_API_URL}/${m.filePath}`} className="w-full h-full object-cover opacity-60 grayscale group-hover:grayscale-0 transition-all duration-700" />
                          ) : m.fileType === 'pdf' ? (
@@ -561,22 +552,22 @@ const AdminDashboard = () => {
                       </div>
                       
                       <div className="space-y-1">
-                        <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest">{m.fileType} • {(m.uploaderId?.name || 'Unknown').split(' ')[0]}</p>
-                        <h4 className="text-lg font-black truncate text-white uppercase tracking-tighter">{m.fileName}</h4>
+                        <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest">{m.fileType} • {(m.uploaderId?.name || 'Unknown').split(' ')[0]}</p>
+                        <h4 className="text-lg font-black truncate text-text uppercase tracking-tighter">{m.fileName}</h4>
                       </div>
                       
-                      <div className="mt-6 pt-6 border-t border-white/5 grid grid-cols-2 gap-4">
-                        <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
-                           <p className="text-[8px] font-black text-white/20 mb-2 uppercase tracking-widest leading-none">Window Start</p>
-                           <p className="text-[10px] font-black text-white uppercase tracking-tighter tabular-nums">{m.requestedStartTime ? new Date(m.requestedStartTime).toLocaleDateString() : 'Immediate'}</p>
+                      <div className="mt-6 pt-6 border-t border-slate-100 grid grid-cols-2 gap-4">
+                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                           <p className="text-[8px] font-black text-text-dim mb-2 uppercase tracking-widest leading-none">Window Start</p>
+                           <p className="text-[10px] font-black text-text uppercase tracking-tighter tabular-nums">{m.requestedStartTime ? new Date(m.requestedStartTime).toLocaleDateString() : 'Immediate'}</p>
                         </div>
-                        <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
-                           <p className="text-[8px] font-black text-white/20 mb-2 uppercase tracking-widest leading-none">Window End</p>
-                           <p className="text-[10px] font-black text-white uppercase tracking-tighter tabular-nums">{m.requestedEndTime ? new Date(m.requestedEndTime).toLocaleDateString() : 'Unset'}</p>
+                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                           <p className="text-[8px] font-black text-text-dim mb-2 uppercase tracking-widest leading-none">Window End</p>
+                           <p className="text-[10px] font-black text-text uppercase tracking-tighter tabular-nums">{m.requestedEndTime ? new Date(m.requestedEndTime).toLocaleDateString() : 'Unset'}</p>
                         </div>
                       </div>
 
-                      <button onClick={() => { setModFile(m); setShowModModal(true); }} className="w-full mt-6 py-4 bg-blue-600/10 border border-blue-600/20 text-blue-400 rounded-2xl text-[10px] font-black uppercase tracking-[4px] hover:bg-blue-600 hover:text-white transition-all duration-300">Evaluate Asset</button>
+                      <button onClick={() => { setModFile(m); setShowModModal(true); }} className="w-full mt-6 py-4 bg-blue-600/10 border border-blue-600/20 text-blue-600 rounded-2xl text-[10px] font-black uppercase tracking-[4px] hover:bg-blue-600 hover:text-white transition-all duration-300">Evaluate Asset</button>
                    </div>
                  ))}
               </div>
@@ -622,8 +613,8 @@ const AdminDashboard = () => {
                        </select>
                      </div>
                    ) : (
-                     <div className="space-y-4 p-4 border border-[var(--border)] bg-black/20 rounded-2xl">
-                        <p className="text-[10px] font-black uppercase text-center border-b border-[var(--border)] pb-2 mb-4">Zone Mapping</p>
+                     <div className="space-y-4 p-4 border border-slate-200 bg-slate-50 rounded-2xl">
+                        <p className="text-[10px] font-black uppercase text-center border-b border-slate-200 pb-2 mb-4 text-text-dim">Zone Mapping</p>
                         {safeParseJSON(templates.find(t => t.id === newSchedule.templateId)?.layout).map((z) => (
                           <div key={z.i} className="space-y-1">
                             <label className="text-[9px] font-bold uppercase ml-1 opacity-50">Zone {z.i}</label>
@@ -637,6 +628,17 @@ const AdminDashboard = () => {
                             </select>
                           </div>
                         ))}
+
+                        {/* Issue 4.3 Fix: Performance Warning */}
+                        {Object.values(mediaMapping).filter(id => {
+                            const m = approvedMedia.find(am => am.id === id);
+                            return m?.fileType === 'video';
+                        }).length > 2 && (
+                            <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-start gap-3">
+                                <AlertTriangle size={14} className="text-amber-600 mt-0.5 shrink-0" />
+                                <p className="text-[9px] font-bold text-amber-700 leading-tight uppercase">Performance Risk: High-density video decoding detected. Standard terminals may experience lag or crashes.</p>
+                            </div>
+                        )}
                      </div>
                    )}
 
@@ -663,29 +665,29 @@ const AdminDashboard = () => {
                 <div className="overflow-x-auto">
                   <table className="w-full text-left">
                      <thead>
-                        <tr className="bg-white/5 text-[9px] font-black uppercase text-slate-500">
+                        <tr className="bg-slate-50 text-[9px] font-black uppercase text-text-dim">
                            <th className="py-4 px-6">Media / Template</th>
                            <th className="py-4 px-6">Screen</th>
                            <th className="py-4 px-6">Active Window</th>
                            <th className="py-4 px-6 text-right">Operations</th>
                         </tr>
                      </thead>
-                     <tbody className="divide-y divide-white/5">
+                     <tbody className="divide-y divide-slate-100">
                         {schedules.map(s => {
                           const m = approvedMedia.find(am => am.id === s.mediaId);
                           const t = templates.find(tm => tm.id === s.templateId);
                           const scr = screens.find(sc => sc.id === s.screenId);
                           return (
-                            <tr key={s.id} className="hover:bg-white/5 transition-colors group">
+                            <tr key={s.id} className="hover:bg-slate-50 transition-colors group">
                                <td className="py-5 px-6">
                                   <p className="font-bold text-text uppercase text-xs tracking-tight">{t ? t.name : (m?.fileName || 'Asset Unknown')}</p>
-                                  <p className="text-[8px] font-bold text-sky-400/60 uppercase mt-1 tracking-widest">{t ? 'MULTI-FRAME ARRAY' : (m?.fileType || 'MEDIA')}</p>
+                                  <p className="text-[8px] font-bold text-sky-600/60 uppercase mt-1 tracking-widest">{t ? 'MULTI-FRAME ARRAY' : (m?.fileType || 'MEDIA')}</p>
                                </td>
-                               <td className="py-5 px-6 text-[10px] font-black uppercase text-slate-400">{scr ? scr.name : 'GLOBAL'}</td>
+                               <td className="py-5 px-6 text-[10px] font-black uppercase text-text-dim">{scr ? scr.name : 'GLOBAL'}</td>
                                <td className="py-5 px-6">
                                   <div className="flex items-center gap-3">
                                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                     <p className="text-[10px] font-bold tabular-nums text-slate-300">
+                                     <p className="text-[10px] font-bold tabular-nums text-text">
                                         {new Date(s.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} 
                                         <span className="mx-2 opacity-20">→</span>
                                         {new Date(s.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -693,7 +695,7 @@ const AdminDashboard = () => {
                                   </div>
                                </td>
                                <td className="py-5 px-6 text-right">
-                                  <button onClick={() => deleteSchedule(s.id)} className="p-2 bg-rose-500/10 text-rose-500 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-rose-500 hover:text-text transition-all"><Trash2 size={14}/></button>
+                                  <button onClick={() => deleteSchedule(s.id)} className="p-2 bg-rose-500/10 text-rose-500 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-rose-500 hover:text-white transition-all"><Trash2 size={14}/></button>
                                </td>
                             </tr>
                           );
@@ -736,31 +738,31 @@ const AdminDashboard = () => {
                icon={Monitor} 
                subtitle={`Network Inventory: ${screens.length} Nodes`}
              >
-                <div className="overflow-hidden rounded-2xl border border-white/10">
+                <div className="overflow-hidden rounded-2xl border border-slate-200">
                    <table className="w-full text-left">
                       <thead>
-                         <tr className="bg-white/5 text-[9px] font-black uppercase text-slate-500">
+                         <tr className="bg-slate-50 text-[9px] font-black uppercase text-text-dim">
                             <th className="py-4 px-6">Identity</th>
                             <th className="py-4 px-6">Location</th>
                             <th className="py-4 px-6">System Status</th>
                             <th className="py-4 px-6">Last Activity</th>
                          </tr>
                       </thead>
-                      <tbody className="divide-y divide-white/5">
+                      <tbody className="divide-y divide-slate-100">
                          {screens.map(s => (
-                           <tr key={s.id} className="hover:bg-white/5 transition-colors">
+                           <tr key={s.id} className="hover:bg-slate-50 transition-colors">
                               <td className="py-5 px-6">
                                  <p className="font-bold text-text uppercase text-sm tracking-tight">{s.name}</p>
-                                 <p className="text-[8px] font-bold text-sky-400/60 uppercase mt-0.5 tracking-widest">ID: {s.id.slice(-8)}</p>
+                                 <p className="text-[8px] font-bold text-sky-600/60 uppercase mt-0.5 tracking-widest">ID: {s.id.slice(-8)}</p>
                               </td>
-                              <td className="py-5 px-6 text-[10px] font-bold uppercase text-slate-400">{s.location}</td>
+                              <td className="py-5 px-6 text-[10px] font-bold uppercase text-text-dim">{s.location}</td>
                               <td className="py-5 px-6">
                                  <div className="flex items-center gap-2">
-                                    <div className={`w-1.5 h-1.5 rounded-full ${s.status === 'online' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-slate-700'}`} />
-                                    <span className={`text-[10px] font-black uppercase ${s.status === 'online' ? 'text-emerald-400' : 'text-slate-500'}`}>{s.status}</span>
+                                    <div className={`w-1.5 h-1.5 rounded-full ${s.status === 'online' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-slate-300'}`} />
+                                    <span className={`text-[10px] font-black uppercase ${s.status === 'online' ? 'text-emerald-600' : 'text-text-dim'}`}>{s.status}</span>
                                  </div>
                               </td>
-                              <td className="py-5 px-6 text-[10px] font-bold tabular-nums text-slate-500">
+                              <td className="py-5 px-6 text-[10px] font-bold tabular-nums text-text-dim">
                                  {s.lastPing ? new Date(s.lastPing).toLocaleTimeString() : 'NEVER'}
                               </td>
                            </tr>
@@ -773,7 +775,7 @@ const AdminDashboard = () => {
         );
       case 'audit':
         return <AuditHistory />;
-      case 'templates':
+      case 'templates': {
         const rowHeight = architectWidth > 0 ? (architectWidth / 12) * (9/16) : 50;
         return (
           <div className="space-y-8 animate-fade-in">
@@ -794,10 +796,10 @@ const AdminDashboard = () => {
                      <button onClick={() => setCurrentLayout([...currentLayout, { i: `Frame${currentLayout.length+1}`, x: 0, y: 0, w: 4, h: 4 }])} className="px-5 py-2 bg-white text-black rounded-xl text-[10px] font-black uppercase hover:bg-sky-400 hover:text-text transition-all shadow-[0_0_20px_rgba(255,255,255,0.2)]">+ Add Frame</button>
                    </div>
                 </div>
-                <div ref={architectRef} className="bg-slate-950 border-4 border-white/10 rounded-[40px] relative overflow-hidden grid-bg shadow-[0_0_100px_rgba(0,0,0,0.5)] p-0" style={{ height: architectWidth > 0 ? (Math.floor(rowHeight) * 12) : 'auto', minHeight: '400px' }}>
+                <div ref={architectRef} className="bg-slate-950 border-4 border-slate-800 rounded-[40px] relative overflow-hidden grid-bg shadow-[0_0_100px_rgba(0,0,0,0.5)] p-0" style={{ height: architectWidth > 0 ? (Math.floor(rowHeight) * 12) : 'auto', minHeight: '400px' }}>
                    <div className="absolute inset-0 grid pointer-events-none opacity-20" style={{ gridTemplateColumns: 'repeat(12, 1fr)', gridTemplateRows: 'repeat(12, 1fr)' }}>
                       {[...Array(144)].map((_, i) => (
-                        <div key={i} className="border-[0.5px] border-white/10" />
+                        <div key={i} className="border-[0.5px] border-slate-800" />
                       ))}
                    </div>
 
@@ -832,7 +834,7 @@ const AdminDashboard = () => {
                     isBounded={true}
                   >
                       {currentLayout.map(z => (
-                        <div key={z.i} className="bg-slate-900/90 border border-sky-500/30 backdrop-blur-md flex flex-col items-center justify-center text-text group overflow-hidden rounded-xl shadow-2xl transition-all hover:border-sky-400">
+                        <div key={z.i} className="bg-slate-900/90 border border-sky-500/30 backdrop-blur-md flex flex-col items-center justify-center text-white group overflow-hidden rounded-xl shadow-2xl transition-all hover:border-sky-400">
                            <div className="drag-handle w-full bg-sky-500/20 backdrop-blur-md text-sky-200 flex justify-between items-center px-3 py-1.5 font-black uppercase tracking-widest text-[9px] border-b border-sky-500/20 cursor-grab active:cursor-grabbing">
                               <div className="flex items-center gap-2">
                                 <div className="grid grid-cols-2 gap-0.5 opacity-40">
@@ -846,7 +848,7 @@ const AdminDashboard = () => {
                            </div>
                            <div className="flex-1 flex flex-col items-center justify-center leading-none pointer-events-none p-4 w-full">
                               <div className="relative">
-                                <span className="font-black text-3xl tracking-tighter text-text drop-shadow-2xl">{z.w} : {z.h}</span>
+                                <span className="font-black text-3xl tracking-tighter text-white drop-shadow-2xl">{z.w} : {z.h}</span>
                                 <div className="absolute -inset-2 bg-sky-500/10 blur-xl rounded-full -z-10" />
                               </div>
                               <div className="mt-2 flex items-center gap-3">
@@ -862,7 +864,7 @@ const AdminDashboard = () => {
                       ))}
                    </GridLayout>
                 </div>
-                <div className="mt-8 flex gap-4 items-center bg-white/5 p-4 rounded-2xl border border-white/10">
+                <div className="mt-8 flex gap-4 items-center bg-slate-50 p-4 rounded-2xl border border-slate-200">
                    <input type="text" placeholder="Layout Name" className="nexus-input" value={templateName} onChange={(e) => setTemplateName(e.target.value)}/>
                    <button onClick={saveTemplate} className="nexus-btn-primary whitespace-nowrap px-10 tracking-[2px]">Save</button>
                 </div>
@@ -877,9 +879,9 @@ const AdminDashboard = () => {
                 >
                    <div className="space-y-4 max-h-[480px] overflow-y-auto pr-2 custom-scrollbar mt-2">
                       {currentLayout.map((z, idx) => (
-                        <div key={z.i} className="p-4 bg-white/5 border border-white/10 rounded-xl space-y-3">
+                        <div key={z.i} className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
                            <div className="flex justify-between items-center">
-                              <span className="font-black text-xs text-sky-400">{z.i.toUpperCase()}</span>
+                              <span className="font-black text-xs text-sky-600">{z.i.toUpperCase()}</span>
                               <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
                            </div>
                            <div className="grid grid-cols-2 gap-3">
@@ -889,7 +891,7 @@ const AdminDashboard = () => {
                                     const next = [...currentLayout];
                                     next[idx].w = parseInt(e.target.value) || 1;
                                     setCurrentLayout(next);
-                                 }} className="w-full bg-black/40 border border-white/10 rounded-lg px-2 py-1 text-xs font-bold outline-none focus:border-sky-500/50 text-text"/>
+                                 }} className="w-full bg-slate-100 border border-slate-200 rounded-lg px-2 py-1 text-xs font-bold outline-none focus:border-sky-500/50 text-text"/>
                               </div>
                               <div className="space-y-1">
                                  <label className="text-[8px] font-black uppercase opacity-40">Height</label>
@@ -897,7 +899,7 @@ const AdminDashboard = () => {
                                     const next = [...currentLayout];
                                     next[idx].h = parseInt(e.target.value) || 1;
                                     setCurrentLayout(next);
-                                 }} className="w-full bg-black/40 border border-white/10 rounded-lg px-2 py-1 text-xs font-bold outline-none focus:border-sky-500/50 text-text"/>
+                                 }} className="w-full bg-slate-100 border border-slate-200 rounded-lg px-2 py-1 text-xs font-bold outline-none focus:border-sky-500/50 text-text"/>
                               </div>
                            </div>
                         </div>
@@ -913,12 +915,12 @@ const AdminDashboard = () => {
                 >
                    <div className="space-y-2 max-h-[480px] overflow-y-auto pr-2 custom-scrollbar mt-2">
                       {templates.map(t => (
-                        <div key={t.id} className="p-3 bg-white/5 border border-white/10 rounded-xl flex justify-between items-center group hover:bg-white/10 transition-all cursor-pointer">
+                        <div key={t.id} className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex justify-between items-center group hover:bg-slate-100 transition-all cursor-pointer">
                            <div>
                               <p className="text-[10px] font-extrabold truncate max-w-[120px] uppercase text-text">{t.name}</p>
-                              <p className="text-[8px] font-bold text-sky-400 opacity-60 uppercase">{safeParseJSON(t.layout).length} FRAMES</p>
+                              <p className="text-[8px] font-bold text-sky-600 opacity-60 uppercase">{safeParseJSON(t.layout).length} FRAMES</p>
                            </div>
-                           <button onClick={() => setCurrentLayout(safeParseJSON(t.layout))} className="text-[9px] font-black border border-white/20 px-3 py-1 rounded-lg hover:bg-white hover:text-black transition-all text-text">LOAD</button>
+                           <button onClick={() => setCurrentLayout(safeParseJSON(t.layout))} className="text-[9px] font-black border border-slate-300 px-3 py-1 rounded-lg hover:bg-slate-900 hover:text-white transition-all text-text">LOAD</button>
                         </div>
                       ))}
                    </div>
@@ -926,6 +928,7 @@ const AdminDashboard = () => {
              </div>
           </div>
         );
+      }
 
       case 'users':
         return (
@@ -969,21 +972,21 @@ const AdminDashboard = () => {
                 <div className="flex justify-end mb-8 mt-[-60px]">
                    <button onClick={() => setShowUserForm(true)} className="nexus-btn-primary text-xs py-2 px-6 shadow-xl">+ Add User</button>
                 </div>
-                <div className="overflow-hidden rounded-2xl border border-white/10">
+                <div className="overflow-hidden rounded-2xl border border-slate-200">
                   <table className="w-full text-left">
                     <thead>
-                      <tr className="bg-white/5 text-[10px] uppercase font-black text-text-dim">
+                      <tr className="bg-slate-50 text-[10px] uppercase font-black text-text-dim">
                         <th className="py-4 px-6">Identity</th>
                         <th className="py-4 px-6">Role</th>
                         <th className="py-4 px-6">System Status</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-white/5">
+                    <tbody className="divide-y divide-slate-100">
                       {users.map(u => (
-                        <tr key={u.id} className="hover:bg-white/5 transition-colors">
+                        <tr key={u.id} className="hover:bg-slate-50 transition-colors">
                           <td className="py-6 px-6">
                              <p className="font-bold text-lg leading-none text-text">{u.name}</p>
-                             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter mt-1">{u.email}</p>
+                             <p className="text-[10px] font-bold text-text-dim uppercase tracking-tighter mt-1">{u.email}</p>
                           </td>
                           <td className="py-6 px-6">
                             <div className="flex flex-col gap-2">
@@ -996,21 +999,21 @@ const AdminDashboard = () => {
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
                                  <div className={`w-1.5 h-1.5 rounded-full ${u.status === 'active' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
-                                 <span className="text-[10px] font-black uppercase text-slate-400">{u.status}</span>
+                                 <span className="text-[10px] font-black uppercase text-text-dim">{u.status}</span>
                               </div>
                               <div className="flex gap-2">
                                 {u.email !== getLoggedInUser()?.email && (
                                   <>
                                     {u.isLocked ? (
-                                      <button onClick={() => unlockUser(u.id)} className="p-2 bg-emerald-500/10 text-emerald-500 rounded-lg hover:bg-emerald-500 hover:text-text transition-colors" title="Unlock Account"><CheckCircle size={14}/></button>
+                                      <button onClick={() => unlockUser(u.id)} className="p-2 bg-emerald-500/10 text-emerald-500 rounded-lg hover:bg-emerald-500 hover:text-white transition-colors" title="Unlock Account"><CheckCircle size={14}/></button>
                                     ) : (
-                                      <button onClick={() => lockUser(u.id)} className="p-2 bg-amber-500/10 text-amber-500 rounded-lg hover:bg-amber-500 hover:text-text transition-colors" title="Lock Account"><Lock size={14}/></button>
+                                      <button onClick={() => lockUser(u.id)} className="p-2 bg-amber-500/10 text-amber-500 rounded-lg hover:bg-amber-500 hover:text-white transition-colors" title="Lock Account"><Lock size={14}/></button>
                                     )}
-                                    <button onClick={() => deleteUser(u.id)} className="p-2 bg-rose-500/10 text-rose-500 rounded-lg hover:bg-rose-500 hover:text-text transition-colors" title="Delete User"><Trash2 size={14}/></button>
+                                    <button onClick={() => deleteUser(u.id)} className="p-2 bg-rose-500/10 text-rose-500 rounded-lg hover:bg-rose-500 hover:text-white transition-colors" title="Delete User"><Trash2 size={14}/></button>
                                   </>
                                 )}
                                 {u.passwordResetRequested && (
-                                  <button onClick={() => approveReset(u.id)} className="p-2 bg-sky-500/10 text-sky-400 rounded-lg hover:bg-sky-500 hover:text-text transition-colors" title="Approve Reset"><Clock size={14}/></button>
+                                  <button onClick={() => approveReset(u.id)} className="p-2 bg-sky-500/10 text-sky-600 rounded-lg hover:bg-sky-500 hover:text-white transition-colors" title="Approve Reset"><Clock size={14}/></button>
                                 )}
                               </div>
                             </div>
@@ -1033,16 +1036,16 @@ const AdminDashboard = () => {
               subtitle="Default Content Configuration"
             >
               <div className="space-y-6 mt-4">
-                <div className="p-6 bg-white/5 border border-white/10 rounded-2xl">
-                  <label className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4 block">Global Default Media</label>
+                <div className="p-6 bg-slate-50 border border-slate-200 rounded-2xl">
+                  <label className="text-xs font-bold uppercase tracking-widest text-text-dim mb-4 block">Global Default Media</label>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <select className="nexus-input" value={settings.idleWallpaperId || ''} onChange={(e) => saveSettings('idleWallpaperId', e.target.value)}>
                       <option value="">System Default (Quotes)</option>
                       {approvedMedia.map(m => <option key={m.id} value={m.id}>{m.fileName} ({m.fileType})</option>)}
                     </select>
                     <div className="flex items-center gap-3 px-4 py-3 bg-sky-500/10 border border-sky-500/20 rounded-xl">
-                      <Info className="text-sky-400 shrink-0" size={16} />
-                      <p className="text-[10px] font-bold text-sky-400 uppercase leading-tight">This asset will play when no specific schedule is active.</p>
+                      <Info className="text-sky-600 shrink-0" size={16} />
+                      <p className="text-[10px] font-bold text-sky-600 uppercase leading-tight">This asset will play when no specific schedule is active.</p>
                     </div>
                   </div>
                 </div>
@@ -1055,12 +1058,12 @@ const AdminDashboard = () => {
               icon={AlertCircle} 
               subtitle="Critical Operations"
             >
-              <div className="flex items-center justify-between p-6 bg-rose-500/5 border border-rose-500/10 rounded-2xl mt-4">
+              <div className="flex items-center justify-between p-6 bg-rose-50 border border-rose-100 rounded-2xl mt-4">
                 <div>
-                   <p className="font-bold text-rose-200">Reset Local Database</p>
-                   <p className="text-xs text-rose-500/60 uppercase font-black mt-1">Permanently wipe all schedules and media records</p>
+                   <p className="font-bold text-rose-900">Reset Local Database</p>
+                   <p className="text-xs text-rose-600/60 uppercase font-black mt-1">Permanently wipe all schedules and media records</p>
                 </div>
-                <button onClick={executeSystemReset} className="px-6 py-2.5 bg-rose-500 text-text rounded-xl font-black text-[10px] uppercase hover:bg-rose-600 transition-all">Execute Reset</button>
+                <button onClick={executeSystemReset} className="px-6 py-2.5 bg-rose-600 text-white rounded-xl font-black text-[10px] uppercase hover:bg-rose-700 transition-all">Execute Reset</button>
               </div>
             </Card>
           </div>
@@ -1113,10 +1116,10 @@ const AdminDashboard = () => {
   return (
     <Shell role="admin" activeTab={activeTab} setActiveTab={setActiveTab}>
       <div className="p-10 max-w-7xl mx-auto">
-        <header className="mb-12 pb-8 flex justify-between items-end border-b border-white/10 relative">
+        <header className="mb-12 pb-8 flex justify-between items-end border-b border-slate-200 relative">
           <div>
             <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-sky-500/20 rounded-lg">{getTabIcon()}</div>
+              <div className="p-2 bg-sky-500/10 rounded-lg">{getTabIcon()}</div>
             </div>
             <h1 className="text-8xl font-black tracking-tighter leading-none text-text uppercase">{getTabLabel()}</h1>
           </div>

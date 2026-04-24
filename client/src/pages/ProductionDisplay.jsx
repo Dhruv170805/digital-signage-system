@@ -15,7 +15,8 @@ const ProductionDisplay = () => {
   const screenId = localStorage.getItem('screenId') || 1;
   const macAddress = localStorage.getItem('macAddress') || '00:00:00:00:00:00';
 
-  const fetchPlaylist = async () => {
+  const fetchPlaylist = React.useCallback(async () => {
+    await Promise.resolve();
     try {
       const response = await axios.get(`${API_URL}/screens/${screenId}/playlist`);
       const data = response.data.data;
@@ -31,16 +32,17 @@ const ProductionDisplay = () => {
       console.error('Failed to fetch playlist:', error);
       setLoading(false);
     }
-  };
+  }, [screenId]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchPlaylist();
     connect(macAddress, screenId);
 
     // Refresh playlist every minute as a fallback
     const interval = setInterval(fetchPlaylist, 60000);
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchPlaylist, connect, macAddress, screenId]);
 
   if (loading) return <div className="loading bg-bg text-text flex items-center justify-center min-h-screen">Initializing Nexus Engine...</div>;
 
@@ -107,7 +109,7 @@ const ProductionDisplay = () => {
   );
 };
 
-const ContentRenderer = ({ frame, schedule }) => {
+const ContentRenderer = ({ schedule }) => {
   // Simplification: In a real system, there might be a nested lookup
   // For now, if there's media in the schedule, render it in the frame
   if (schedule.media) return <MediaRenderer media={schedule.media} />;

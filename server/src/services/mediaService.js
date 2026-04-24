@@ -1,47 +1,30 @@
-const mediaRepository = require('../repositories/mediaRepository');
+const Media = require('../models/Media');
 const fs = require('fs');
-const socketService = require('./socketService');
 
 class MediaService {
-  async uploadMedia(fileData, bodyData, uploader) {
-    const { filename, path: filePath, mimetype, size, originalname } = fileData;
-    const { duration } = bodyData;
-    
-    let fileType = 'image';
-    if (mimetype.includes('pdf')) fileType = 'pdf';
-    if (mimetype.includes('video')) fileType = 'video';
-
-    let status = uploader.role === 'admin' ? 'approved' : 'pending';
-
-    try {
-      const newMedia = await mediaRepository.create({
-        filename,
-        originalName: originalname,
-        path: filePath,
-        mimeType: mimetype,
-        size,
-        status,
-        uploadedBy: uploader.id,
-      });
-
-      if (status === 'approved') {
-        socketService.broadcast('contentUpdate');
-      }
-
-      return newMedia;
-    } catch (error) {
-      // FIX: Ensure file is deleted if DB creation fails
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
-      throw error;
-    }
+  async getAllApproved() {
+    return await Media.find({ status: 'approved' }).sort({ createdAt: -1 });
   }
 
-  async approveMedia(id, adminId) {
-    const media = await mediaRepository.update(id, { status: 'approved' });
-    socketService.broadcast('contentUpdate');
-    return media;
+  async getPending() {
+    return await Media.find({ status: 'pending' }).sort({ createdAt: -1 });
+  }
+
+  async createMedia(data) {
+    const media = new Media(data);
+    return await media.save();
+  }
+
+  async updateStatus(id, status) {
+    return await Media.findByIdAndUpdate(id, { status }, { new: true });
+  }
+
+  async deleteMedia(id) {
+    const media = await Media.findById(id);
+    if (media && fs.existsSync(media.path)) {
+      fs.unlinkSync(media.path);
+    }
+    return await Media.findByIdAndDelete(id);
   }
 }
 

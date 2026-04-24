@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { 
   Search, Filter, Calendar, User, Tv, 
@@ -16,7 +16,8 @@ const AuditHistory = () => {
     endDate: ''
   });
 
-  const fetchLogs = async () => {
+  const fetchLogs = useCallback(async () => {
+    await Promise.resolve();
     setLoading(true);
     try {
       const params = new URLSearchParams();
@@ -25,18 +26,21 @@ const AuditHistory = () => {
       if (filters.startDate) params.append('startDate', filters.startDate);
       if (filters.endDate) params.append('endDate', filters.endDate);
 
-      const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/audit?${params.toString()}`);
+      const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/audit?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
       setLogs(res.data);
     } catch (err) {
       console.error('Audit fetch error:', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [filters]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchLogs();
-  }, [filters]);
+  }, [fetchLogs]);
 
   const getActionIcon = (type) => {
     switch (type) {

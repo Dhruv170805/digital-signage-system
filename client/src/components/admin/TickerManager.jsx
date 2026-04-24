@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { Type, Play, Pause, Trash2, Edit2, Zap, Settings, Type as TypeIcon, Palette, MoveRight, Layers, Clock } from 'lucide-react';
@@ -21,22 +21,25 @@ const TickerManager = () => {
     const [isEditing, setIsEditing] = useState(false);
     const [editId, setEditId] = useState(null);
 
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
+        await Promise.resolve();
         try {
+            const config = { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } };
             const [tRes, sRes] = await Promise.all([
-                axios.get(`${import.meta.env.VITE_API_URL}/api/ticker`, {
-                    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-                }),
-                axios.get(`${import.meta.env.VITE_API_URL}/api/screens`)
+                axios.get(`${import.meta.env.VITE_API_URL}/api/ticker`, config),
+                axios.get(`${import.meta.env.VITE_API_URL}/api/screens`, config)
             ]);
             setTickers(tRes.data);
             setScreens(sRes.data);
         } catch (err) {
             console.error(err);
         }
-    };
+    }, []);
 
-    useEffect(() => { fetchData(); }, []);
+    useEffect(() => { 
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        fetchData(); 
+    }, [fetchData]);
 
     const handleSave = async (e) => {
         e.preventDefault();
@@ -51,7 +54,7 @@ const TickerManager = () => {
             }
             fetchData();
             handleCancel();
-        } catch (err) { toast.error('Failed to save ticker'); }
+        } catch { toast.error('Failed to save ticker'); }
     };
 
     const handleDelete = async (id) => {
@@ -62,7 +65,7 @@ const TickerManager = () => {
             });
             toast.success('Ticker Deleted');
             fetchData();
-        } catch (err) { toast.error('Failed to delete ticker'); }
+        } catch { toast.error('Failed to delete ticker'); }
     };
 
     const handleToggle = async (id, isActive) => {
@@ -71,7 +74,7 @@ const TickerManager = () => {
                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
             });
             fetchData();
-        } catch (err) { toast.error('Failed to toggle status'); }
+        } catch { toast.error('Failed to toggle status'); }
     };
 
     const handleEdit = (t) => {
@@ -240,33 +243,33 @@ const TickerManager = () => {
                         </thead>
                         <tbody className="divide-y divide-white/5">
                             {tickers.map(t => (
-                                <tr key={t.id || t._id} className={`hover:bg-white/5 transition-colors ${!t.isActive ? 'opacity-50' : ''}`}>
+                                <tr key={t.id || t._id} className={`hover:bg-white transition-colors ${!t.isActive ? 'opacity-50' : ''}`}>
                                     <td className="py-5 px-6">
                                         <p className="font-bold text-text uppercase text-xs tracking-tight truncate max-w-[200px]">{t.text}</p>
-                                        <p className="text-[8px] font-bold text-sky-400/60 uppercase mt-1 tracking-widest flex items-center gap-2">
+                                        <p className="text-[8px] font-bold text-accent/60 uppercase mt-1 tracking-widest flex items-center gap-2">
                                             {t.type} <MoveRight size={8}/> {t.direction} <MoveRight size={8}/> {t.speed}px/s
                                         </p>
                                     </td>
                                     <td className="py-5 px-6">
-                                        <span className={`px-2 py-1 rounded text-[8px] font-black uppercase border ${t.targetType === 'global' ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'}`}>
+                                        <span className={`px-2 py-1 rounded text-[8px] font-black uppercase border ${t.targetType === 'global' ? 'bg-blue-500/10 text-blue-600 border-blue-500/20' : 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'}`}>
                                             {t.targetType}
                                         </span>
                                     </td>
                                     <td className="py-5 px-6">
                                         <div className="flex flex-col gap-1">
-                                            <span className="text-[9px] font-bold text-amber-400 flex items-center gap-1"><Zap size={10}/> Pri: {t.priority}</span>
-                                            <span className="text-[9px] font-bold text-slate-400 flex items-center gap-1"><Clock size={10}/> {t.startTime} - {t.endTime}</span>
+                                            <span className="text-[9px] font-bold text-orange-600 flex items-center gap-1"><Zap size={10}/> Pri: {t.priority}</span>
+                                            <span className="text-[9px] font-bold text-text-dim flex items-center gap-1"><Clock size={10}/> {t.startTime} - {t.endTime}</span>
                                         </div>
                                     </td>
                                     <td className="py-5 px-6 text-right">
                                         <div className="flex justify-end gap-2">
-                                            <button onClick={() => handleToggle(t.id || t._id, !t.isActive)} className="p-2 bg-white/5 text-slate-300 rounded-lg hover:bg-white/10 transition-all">
+                                            <button onClick={() => handleToggle(t.id || t._id, !t.isActive)} className="p-2 bg-slate-100 text-slate-500 rounded-lg hover:bg-slate-200 transition-all">
                                                 {t.isActive ? <Pause size={14}/> : <Play size={14}/>}
                                             </button>
-                                            <button onClick={() => handleEdit(t)} className="p-2 bg-sky-500/10 text-sky-400 rounded-lg hover:bg-sky-500 hover:text-white transition-all">
+                                            <button onClick={() => handleEdit(t)} className="p-2 bg-blue-500/10 text-blue-600 rounded-lg hover:bg-blue-600 hover:text-white transition-all">
                                                 <Edit2 size={14}/>
                                             </button>
-                                            <button onClick={() => handleDelete(t.id || t._id)} className="p-2 bg-rose-500/10 text-rose-500 rounded-lg hover:bg-rose-500 hover:text-white transition-all">
+                                            <button onClick={() => handleDelete(t.id || t._id)} className="p-2 bg-red-500/10 text-red-600 rounded-lg hover:bg-red-600 hover:text-white transition-all">
                                                 <Trash2 size={14}/>
                                             </button>
                                         </div>

@@ -1,11 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const screenController = require('../controllers/screenController');
-const { protect, admin } = require('../middlewares/authMiddleware');
+const { authenticate, authorize } = require('../middlewares/authMiddleware');
+const screenAuth = require('../middlewares/screenAuth');
 
-router.get('/', protect, screenController.getAll);
-router.get('/:id', protect, screenController.getById);
-router.get('/:id/playlist', screenController.getPlaylist); // Screens might not need JWT if using MacAddress/Socket, but typically they fetch playlist via ID
-router.put('/:id', protect, admin, screenController.update);
+router.get('/', authenticate, screenController.getAll);
+router.get('/me', screenAuth, screenController.getMe);
+router.get('/manifest', screenAuth, screenController.getManifest);
+router.get('/:id', authenticate, screenController.getById);
+router.post('/register', authenticate, authorize('admin'), screenController.register);
+router.put('/:id', authenticate, authorize('admin'), screenController.update);
 
 module.exports = router;

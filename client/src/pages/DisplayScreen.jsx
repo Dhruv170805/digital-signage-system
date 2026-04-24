@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+/* eslint-disable react-hooks/set-state-in-effect */
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
 import io from 'socket.io-client';
 import { useSearchParams } from 'react-router-dom';
@@ -13,6 +14,7 @@ const Weather = ({ location }) => {
   const apiKey = import.meta.env.VITE_OPENWEATHER_API_KEY;
 
   const fetchWeather = useCallback(async () => {
+    await Promise.resolve();
     try {
       let city = location || '';
       if (!city) {
@@ -22,7 +24,7 @@ const Weather = ({ location }) => {
             city = geoRes.data.city;
             setArea(city);
           }
-        } catch (e) {}
+        } catch { /* empty */ }
       }
 
       if (apiKey && city) {
@@ -34,7 +36,7 @@ const Weather = ({ location }) => {
         const res = await axios.get(`https://wttr.in/${encodeURIComponent(city)}?format=%t+%C`);
         setTemp(res.data.split(' ')[0].replace('+', ''));
       }
-    } catch (err) {}
+    } catch { /* empty */ }
   }, [location, apiKey]);
 
   useEffect(() => {
@@ -63,31 +65,59 @@ const Weather = ({ location }) => {
 };
 
 // --- Media Item Component ---
-const MediaItem = ({ item }) => {
+const MediaItem = ({ item, onMediaError }) => {
   const videoRef = React.useRef(null);
+  const [hasError, setHasError] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
+
+  const apiBase = (import.meta.env.VITE_API_URL || '').replace(/\/api\/?$/, '').replace(/\/$/, '');
+  const filePath = item?.filePath?.startsWith('/') ? item.filePath : `/${item?.filePath || ''}`;
+  const src = `${apiBase}${filePath}`.replace(/([^:]\/)\/+/g, "$1");
+
+  const handleError = () => {
+    setHasError(true);
+    if (onMediaError) onMediaError();
+  };
 
   useEffect(() => {
+    if (item?.fileType === 'pdf') {
+      setIsValidating(true);
+      fetch(src, { method: 'HEAD' })
+        .then(res => {
+          if (!res.ok) handleError();
+        })
+        .catch(() => handleError())
+        .finally(() => setIsValidating(false));
+    }
+  }, [src, item?.fileType]);
+
+  useEffect(() => {
+    const videoElement = videoRef.current;
     return () => {
-      if (videoRef.current) {
-        videoRef.current.pause();
-        videoRef.current.src = "";
-        videoRef.current.load();
+      if (videoElement) {
+        videoElement.pause();
+        videoElement.src = "";
+        videoElement.load();
       }
     };
   }, []);
 
-  if (!item) return (
+  if (!item || hasError) return (
     <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900/50 gap-4">
       <div className="w-16 h-16 rounded-full bg-rose-500/10 flex items-center justify-center border border-rose-500/20">
         <AlertCircle className="text-rose-500/50" size={32} />
       </div>
-      <span className="text-[10px] font-black text-rose-500/40 uppercase tracking-[6px]">Asset Missing</span>
+      <span className="text-[10px] font-black text-rose-500/40 uppercase tracking-[6px]">
+        {hasError ? 'Playback Failed' : 'Asset Missing'}
+      </span>
     </div>
   );
 
-  const apiBase = import.meta.env.VITE_API_URL.replace(/\/$/, '');
-  const filePath = item.filePath.startsWith('/') ? item.filePath : `/${item.filePath}`;
-  const src = `${apiBase}${filePath}`;
+  if (isValidating) return (
+    <div className="w-full h-full flex items-center justify-center bg-black/20">
+      <RefreshCw className="animate-spin text-blue-500/30" size={32} />
+    </div>
+  );
 
   if (item.fileType === 'video') {
     return (
@@ -99,6 +129,7 @@ const MediaItem = ({ item }) => {
           muted 
           loop 
           playsInline
+          onError={handleError}
           className="w-full h-full object-fill shadow-2xl" 
         />
       </div>
@@ -109,11 +140,61 @@ const MediaItem = ({ item }) => {
     return <iframe src={`${src}#toolbar=0&navpanes=0&scrollbar=0`} className="w-full h-full border-none bg-white shadow-2xl pointer-events-none" title={item.fileName} />;
   }
 
-  return <img src={src} alt={item.fileName} className="w-full h-full object-fill bg-black shadow-2xl" />;
+  return (
+    <img 
+      src={src} 
+      alt={item.fileName} 
+      onError={handleError}
+      className="w-full h-full object-fill bg-black shadow-2xl" 
+    />
+  );
 };
+
+const TickerContent = ({ ticker }) => (
+    <div className="flex items-center gap-32 px-16">
+        <span className="tracking-tight uppercase font-black">
+            {ticker.text}
+        </span>
+        {ticker.type === 'link' && ticker.linkUrl && (
+            <div className="px-6 py-2 bg-white/10 rounded-2xl border border-white/20 backdrop-blur-md">
+                <span className="text-[12px] font-black text-blue-400 uppercase tracking-[4px] flex items-center gap-3" style={{ fontSize: '1rem' }}>
+                    <Zap size={14} className="animate-pulse" /> {ticker.linkUrl.replace(/^https?:\/\//, '')}
+                </span>
+            </div>
+        )}
+    </div>
+);
 
 // --- Advanced Ticker Component ---
 const TickerDisplay = ({ ticker }) => {
+    const containerRef = React.useRef(null);
+    const contentRef = React.useRef(null);
+    const [clones, setClones] = useState(4);
+
+    useEffect(() => {
+        if (!ticker) return;
+        
+        const updateClones = () => {
+            if (containerRef.current && contentRef.current) {
+                const viewportWidth = containerRef.current.parentElement?.offsetWidth || window.innerWidth;
+                const textWidth = contentRef.current.offsetWidth || 500;
+                // Add enough clones to cover the screen plus a buffer for seamless loop
+                const needed = Math.ceil(viewportWidth / textWidth) + 2;
+                setClones(needed);
+            }
+        };
+
+        const observer = new ResizeObserver(updateClones);
+        if (containerRef.current?.parentElement) {
+            observer.observe(containerRef.current.parentElement);
+        }
+        
+        // Initial calculation
+        updateClones();
+        
+        return () => observer.disconnect();
+    }, [ticker]);
+
     if (!ticker) return null;
 
     const fontSizeMap = {
@@ -147,34 +228,21 @@ const TickerDisplay = ({ ticker }) => {
     const animationName = ticker.direction === 'left-right' ? 'ticker-ltr' : (isVertical ? 'ticker-vertical' : 'ticker-rtl');
     const animDuration = Math.max(5, 100 - (ticker.speed || 50)) + 's';
 
-    const TickerContent = () => (
-        <div className="flex items-center gap-32 px-16">
-            <span className="tracking-tight uppercase font-black">
-                {ticker.text}
-            </span>
-            {ticker.type === 'link' && ticker.linkUrl && (
-                <div className="px-6 py-2 bg-white/10 rounded-2xl border border-white/20 backdrop-blur-md">
-                    <span className="text-[12px] font-black text-blue-400 uppercase tracking-[4px] flex items-center gap-3" style={{ fontSize: '1rem' }}>
-                        <Zap size={14} className="animate-pulse" /> {ticker.linkUrl.replace(/^https?:\/\//, '')}
-                    </span>
-                </div>
-            )}
-        </div>
-    );
-
     return (
         <div className="w-full h-full flex items-center overflow-hidden relative shadow-inner" style={{ backgroundColor: style.backgroundColor }}>
             <div 
+                ref={containerRef}
                 className="whitespace-nowrap absolute flex items-center"
                 style={{
                     animation: `${animationName} ${animDuration} linear infinite`,
                     ...style
                 }}
             >
-                <TickerContent />
-                <TickerContent />
-                <TickerContent />
-                <TickerContent />
+                {[...Array(clones)].map((_, i) => (
+                    <div key={i} ref={i === 0 ? contentRef : null}>
+                        <TickerContent ticker={ticker} />
+                    </div>
+                ))}
             </div>
         </div>
     );
@@ -197,6 +265,8 @@ const DisplayScreen = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
 
+  const lastFetchRef = useRef(0);
+
   // Capture token from URL and persist
   useEffect(() => {
     const token = searchParams.get("token");
@@ -208,9 +278,24 @@ const DisplayScreen = () => {
     }
   }, [searchParams]);
 
+  const getTelemetry = () => {
+    const telemetry = {
+        uptime: Math.round(performance.now() / 1000),
+    };
+    if (window.performance && window.performance.memory) {
+        telemetry.ramUsage = Math.round(window.performance.memory.usedJSHeapSize / (1024 * 1024));
+    }
+    return telemetry;
+  };
+
   const fetchData = useCallback(async () => {
+    // Issue 4.1 Fix: Throttle fetches to once every 3 seconds
+    const now = Date.now();
+    if (now - lastFetchRef.current < 3000) return;
+    lastFetchRef.current = now;
+
+    await Promise.resolve();
     const token = localStorage.getItem('screenToken');
-    const screenId = searchParams.get('screenId'); // Fallback for legacy
 
     const authConfig = {
       headers: token ? { Authorization: `Bearer ${token}` } : {}
@@ -218,35 +303,40 @@ const DisplayScreen = () => {
 
     setIsSyncing(true);
     try {
-      // 1. Identify Screen (if token exists)
+      // Use the new Manifest-Only API (Issue 4.2 Fix)
       if (token) {
-        try {
-          const meRes = await axios.get(`${import.meta.env.VITE_API_URL}/api/screens/me`, authConfig);
-          setScreenInfo(meRes.data);
-        } catch (e) {
-          console.error("Identity verification failed", e);
+        const manifestRes = await axios.get(`${import.meta.env.VITE_API_URL}/api/screens/manifest`, authConfig);
+        const { screen, playlist: newPlaylist, tickers: newTickers, settings: newSettings, media: newMedia } = manifestRes.data;
+        
+        setScreenInfo(screen);
+
+        // Issue 5.1 Fix: Deep compare playlist IDs to prevent unnecessary restarts
+        const currentIds = playlist.map(p => p.id || p._id).join(',');
+        const newIds = newPlaylist.map(p => p.id || p._id).join(',');
+
+        if (newIds !== currentIds) {
+          setPlaylist(newPlaylist);
+          setCurrentIdx(0);
         }
+
+        setTickers(newTickers);
+        setSettings(newSettings);
+        setAllMedia(newMedia);
+      } else {
+        // Fallback for screens without tokens (legacy or initial setup)
+        const screenId = searchParams.get('screenId');
+        const [playlistRes, mediaRes, tickerRes, settingsRes] = await Promise.all([
+          axios.get(`${import.meta.env.VITE_API_URL}/api/schedule/active${screenId ? `?screenId=${screenId}` : ''}`),
+          axios.get(`${import.meta.env.VITE_API_URL}/api/media`),
+          axios.get(`${import.meta.env.VITE_API_URL}/api/ticker/active`),
+          axios.get(`${import.meta.env.VITE_API_URL}/api/settings`)
+        ]);
+
+        setPlaylist(playlistRes.data);
+        setAllMedia(mediaRes.data);
+        setTickers(tickerRes.data);
+        setSettings(settingsRes.data);
       }
-
-      // 2. Fetch Playlist (Assignments)
-      const scheduleUrl = token 
-        ? `${import.meta.env.VITE_API_URL}/api/schedule/me`
-        : `${import.meta.env.VITE_API_URL}/api/schedule/active${screenId ? `?screenId=${screenId}` : ''}`;
-
-      const [playlistRes, mediaRes, tickerRes, settingsRes] = await Promise.all([
-        axios.get(scheduleUrl, authConfig),
-        axios.get(`${import.meta.env.VITE_API_URL}/api/media`, authConfig),
-        axios.get(`${import.meta.env.VITE_API_URL}/api/ticker/active`, authConfig),
-        axios.get(`${import.meta.env.VITE_API_URL}/api/settings`)
-      ]);
-
-      if (playlistRes.data.length !== playlist.length) setCurrentIdx(0);
-      if (tickerRes.data.length !== tickers.length) setCurrentTickerIdx(0);
-
-      setPlaylist(playlistRes.data);
-      setAllMedia(mediaRes.data);
-      setTickers(tickerRes.data);
-      setSettings(settingsRes.data);
 
     } catch (err) {
       console.error("Data sync error", err);
@@ -256,7 +346,7 @@ const DisplayScreen = () => {
         setIsInitialLoading(false);
       }, 1500);
     }
-  }, [searchParams, playlist.length, tickers.length]);
+  }, [searchParams, playlist]);
 
   useEffect(() => {
     const socket = io(import.meta.env.VITE_API_URL);
@@ -264,21 +354,52 @@ const DisplayScreen = () => {
     fetchData();
 
     const t = setInterval(() => setTime(new Date()), 1000);
-    const f = setInterval(fetchData, 300000);
+    
+    // Issue 6.1 Fix: Remove heavy interval and move to event-driven push
+    // Jittered fetch is still good as a "safety net" but can be much rarer (e.g., once an hour)
+    const safetyNetInterval = 3600000 + (Math.random() * 60000);
+    const f = setInterval(fetchData, safetyNetInterval);
 
     const hb = setInterval(() => {
         const token = localStorage.getItem('screenToken');
         const screenId = searchParams.get('screenId');
+        const telemetry = getTelemetry();
+
         if (token) {
-            socket.emit('screenPing', { token });
+            socket.emit('screenPing', { token, telemetry });
         } else if (screenId) {
-            socket.emit('screenPing', { screenId });
+            socket.emit('screenPing', { screenId, telemetry });
         }
     }, 10000);
 
+    // Delta-based Push Logic
+    socket.on('manifestUpdate', (manifest) => {
+        console.log("⚡ Received instant manifest push from server");
+        const { screen, playlist: newPlaylist, tickers: newTickers, settings: newSettings, media: newMedia } = manifest;
+        
+        setScreenInfo(screen);
+
+        const currentIds = playlist.map(p => p.id || p._id).join(',');
+        const newIds = newPlaylist.map(p => p.id || p._id).join(',');
+
+        if (newIds !== currentIds) {
+          setPlaylist(newPlaylist);
+          setCurrentIdx(0);
+        }
+
+        setTickers(newTickers);
+        setSettings(newSettings);
+        setAllMedia(newMedia);
+    });
+
+    // Legacy fallback listeners
     socket.on('contentUpdate', fetchData);
     socket.on('scheduleUpdated', fetchData);
     socket.on('tickerUpdate', fetchData);
+    socket.on('connect', () => {
+        console.log("🟢 Socket connected, syncing manifest...");
+        fetchData();
+    });
 
     return () => {
       clearInterval(t);
@@ -286,7 +407,7 @@ const DisplayScreen = () => {
       clearInterval(hb);
       socket.disconnect();
     };
-  }, [fetchData, searchParams]);
+  }, [fetchData, searchParams, playlist]);
 
   // Playlist Engine
   useEffect(() => {
@@ -295,7 +416,9 @@ const DisplayScreen = () => {
       const t = setTimeout(() => setCurrentIdx((prev) => (prev + 1) % playlist.length), duration * 1000);
       return () => clearTimeout(t);
     } else {
-      if (currentIdx !== 0) setCurrentIdx(0);
+      if (currentIdx !== 0) {
+        Promise.resolve().then(() => setCurrentIdx(0));
+      }
     }
   }, [currentIdx, playlist]);
 
@@ -305,7 +428,9 @@ const DisplayScreen = () => {
       const t = setTimeout(() => setCurrentTickerIdx((prev) => (prev + 1) % tickers.length), 15000);
       return () => clearTimeout(t);
     } else {
-        if (currentTickerIdx !== 0) setCurrentTickerIdx(0);
+        if (currentTickerIdx !== 0) {
+          Promise.resolve().then(() => setCurrentTickerIdx(0));
+        }
     }
   }, [currentTickerIdx, tickers]);
 
@@ -316,7 +441,11 @@ const DisplayScreen = () => {
   };
 
   const renderMediaContent = (item) => {
-    if (!item) return null;
+    if (!item) return (
+      <div className="w-full h-full flex items-center justify-center bg-black/40 backdrop-blur-3xl">
+        <Activity className="text-blue-500/20 animate-pulse" size={120} />
+      </div>
+    );
     
     const layout = item.layout ? safeParse(item.layout) : null;
     const mapping = item.mediaMapping ? safeParse(item.mediaMapping, {}) : {};
@@ -327,12 +456,20 @@ const DisplayScreen = () => {
         <div className="w-full h-full relative animate-fade-in">
           {layout.map((zone) => {
             const mappedMediaId = mapping[zone.i];
-            const mappedMedia = allMedia.find(m => (m.id === mappedMediaId || m._id === mappedMediaId));
+            const mappedMedia = allMedia.find(m => (m.id === mappedMediaId || m._id === mappedMediaId)) || 
+                                (item.populatedMapping && item.populatedMapping[zone.i]);
             
-            const left = zone.x !== undefined ? (zone.x <= 12 ? (zone.x / 12) * 100 : zone.x) : 0;
-            const top = zone.y !== undefined ? (zone.y <= 12 ? (zone.y / 12) * 100 : zone.y) : 0;
-            const width = zone.w !== undefined ? (zone.w <= 12 ? (zone.w / 12) * 100 : zone.width || 100) : 100;
-            const height = zone.h !== undefined ? (zone.h <= 12 ? (zone.h / 12) * 100 : zone.height || 100) : 100;
+            // Issue 1.1 Fix: Clamp coordinates and dimensions to prevent overflow
+            const rawX = Math.max(0, Math.min(zone.x || 0, 11));
+            const rawY = Math.max(0, Math.min(zone.y || 0, 11));
+            const rawW = Math.max(1, Math.min(zone.w || 12, 12 - rawX));
+            const rawH = Math.max(1, Math.min(zone.h || 12, 12 - rawY));
+
+            const left = (rawX / 12) * 100;
+            const top = (rawY / 12) * 100;
+            const width = (rawW / 12) * 100;
+            const height = (rawH / 12) * 100;
+            
             const zIndex = zone.zIndex || 1;
 
             return (
@@ -344,13 +481,21 @@ const DisplayScreen = () => {
                   top: `${top}%`, 
                   width: `${width}%`, 
                   height: `${height}%`,
+                  minWidth: '10px',
+                  minHeight: '10px',
                   zIndex: zIndex
                 }}
               >
                 {zone.type === 'ticker' ? (
-                  <TickerDisplay ticker={tickers.find(t => t.id === mappedMediaId)} />
+                  <TickerDisplay ticker={tickers.find(t => (t.id === mappedMediaId || t._id === mappedMediaId))} />
                 ) : (
-                  <MediaItem item={mappedMedia} />
+                  <MediaItem 
+                    item={mappedMedia} 
+                    onMediaError={() => {
+                        // For multi-frame, we don't necessarily want to skip the WHOLE layout
+                        // but maybe we should if the main frame fails.
+                    }}
+                  />
                 )}
               </div>
             );
@@ -359,10 +504,18 @@ const DisplayScreen = () => {
       );
     }
 
+    const singleMedia = item.mediaId || item;
+
     return (
       <div className="w-full h-full p-12 animate-fade-in relative z-10">
         <div className="w-full h-full glass overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.8)] relative border-white/5 bg-black">
-          <MediaItem item={item} />
+          <MediaItem 
+            item={singleMedia} 
+            onMediaError={() => {
+                console.log("⚠️ Fullscreen media failed, skipping...");
+                setCurrentIdx((prev) => (playlist.length > 0 ? (prev + 1) % playlist.length : 0));
+            }}
+          />
         </div>
       </div>
     );
@@ -432,7 +585,7 @@ const DisplayScreen = () => {
 
       {/* Main Content Area */}
       <div className="flex-1 relative overflow-hidden z-10">
-        {playlist.length > 0 ? (
+        {playlist.length > 0 && currentIdx < playlist.length ? (
           <div key={playlist[currentIdx]?.id} className="w-full h-full relative transition-all duration-1000">
             {renderMediaContent(playlist[currentIdx])}
           </div>

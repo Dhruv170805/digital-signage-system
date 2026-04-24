@@ -9,8 +9,9 @@ const PORT = process.env.PORT || 5000;
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
-    origin: '*',
-    methods: ['GET', 'POST']
+    origin: process.env.CLIENT_URL || '*',
+    methods: ['GET', 'POST'],
+    credentials: true
   }
 });
 

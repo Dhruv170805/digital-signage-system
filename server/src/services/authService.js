@@ -1,46 +1,91 @@
-const userRepository = require('../repositories/userRepository');
-const bcrypt = require('bcryptjs');
+const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 
 class AuthService {
   async login(email, password) {
-    if (!email || !password) {
-      const error = new Error('Email and password are required');
-      error.statusCode = 400;
-      throw error;
+    const user = await User.findOne({ email });
+    if (user && (await user.matchPassword(password))) {
+      const payload = { 
+        id: user._id, 
+        role: user.role, 
+        status: user.status,
+        tokenVersion: user.tokenVersion
+      };
+      
+      const accessToken = jwt.sign(
+        payload,
+        process.env.JWT_SECRET || 'secret',
+        { expiresIn: '15m' }
+      );
+      
+      const refreshToken = jwt.sign(
+        { id: user._id, tokenVersion: user.tokenVersion },
+        process.env.JWT_REFRESH_SECRET || 'refresh_secret',
+        { expiresIn: '7d' }
+      );
+
+      return {
+        accessToken,
+        refreshToken,
+        user: { id: user._id, name: user.name, email: user.email, role: user.role }
+      };
     }
+    throw new Error('Invalid email or password');
+  }
 
-    const user = await userRepository.getByEmail(email);
+  async refresh(refreshToken) {
+    if (!refreshToken) throw new Error('No refresh token provided');
+    
+    try {
+      const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET || 'refresh_secret');
+      const user = await User.findById(decoded.id);
+      
+      if (!user) throw new Error('User not found');
+      if (user.tokenVersion !== decoded.tokenVersion) throw new Error('Token revoked');
+      if (user.status === 'locked') throw new Error('User is locked');
 
-    if (!user) {
-      const error = new Error('Invalid credentials');
-      error.statusCode = 401;
-      throw error;
+      const payload = { 
+        id: user._id, 
+        role: user.role, 
+        status: user.status,
+        tokenVersion: user.tokenVersion
+      };
+
+      const accessToken = jwt.sign(
+        payload,
+        process.env.JWT_SECRET || 'secret',
+        { expiresIn: '15m' }
+      );
+
+      return { accessToken };
+    } catch (error) {
+      throw new Error('Invalid refresh token');
     }
+  }
 
-    if (user.status !== 'active') {
-      const error = new Error('Account is deactivated. Contact Admin.');
-      error.statusCode = 403;
-      throw error;
-    }
+  async logout(userId) {
+    // Increment tokenVersion to revoke all existing refresh tokens
+    await User.findByIdAndUpdate(userId, { $inc: { tokenVersion: 1 } });
+  }
 
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      const error = new Error('Invalid credentials');
-      error.statusCode = 401;
-      throw error;
-    }
+  async register(data) {
+    const user = new User(data);
+    await user.save();
+    const userObject = user.toObject({ virtuals: true });
+    delete userObject.password;
+    return userObject;
+  }
 
-    const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role, name: user.name },
-      process.env.JWT_SECRET,
-      { expiresIn: '24h' }
-    );
+  async getAllUsers() {
+    return await User.find({}, '-password');
+  }
 
-    return {
-      token,
-      user: { id: user.id, email: user.email, role: user.role, name: user.name }
-    };
+  async updateStatus(id, status) {
+    return await User.findByIdAndUpdate(id, { status }, { new: true });
+  }
+
+  async deleteUser(id) {
+    return await User.findByIdAndDelete(id);
   }
 }
 

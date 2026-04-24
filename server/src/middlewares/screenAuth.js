@@ -1,4 +1,4 @@
-const prisma = require('../utils/db');
+const screenService = require('../services/screenService');
 
 module.exports = async function screenAuth(req, res, next) {
   const authHeader = req.headers.authorization;
@@ -9,28 +9,16 @@ module.exports = async function screenAuth(req, res, next) {
   }
 
   try {
-    const screen = await prisma.screen.findUnique({
-      where: { deviceToken: token }
-    });
+    const screen = await screenService.getScreenByToken(token);
 
     if (!screen) {
       return res.status(401).json({ error: "Invalid device token" });
     }
 
-    if (!screen.isActive) {
-      return res.status(403).json({ error: "Screen is inactive" });
-    }
-
     req.screen = screen;
 
-    // Update last seen
-    await prisma.screen.update({
-      where: { id: screen.id },
-      data: {
-        lastSeen: new Date(),
-        status: 'online'
-      }
-    });
+    // Update last seen (heartbeat logic can be moved to service)
+    await screenService.updateHeartbeat(token);
 
     next();
   } catch (err) {

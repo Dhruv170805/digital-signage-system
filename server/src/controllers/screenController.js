@@ -1,11 +1,10 @@
-const screenRepository = require('../repositories/screenRepository');
-const playlistEngine = require('../services/playlistEngine');
+const screenService = require('../services/screenService');
 
 class ScreenController {
   async getAll(req, res, next) {
     try {
-      const screens = await screenRepository.getAll();
-      res.json({ success: true, data: screens });
+      const screens = await screenService.getAllScreens();
+      res.json(screens);
     } catch (error) {
       next(error);
     }
@@ -13,21 +12,18 @@ class ScreenController {
 
   async getById(req, res, next) {
     try {
-      const screen = await screenRepository.getById(req.params.id);
-      if (!screen) return res.status(404).json({ success: false, message: 'Screen not found' });
-      res.json({ success: true, data: screen });
+      const screen = await screenService.getScreenById(req.params.id);
+      if (!screen) return res.status(404).json({ message: 'Screen not found' });
+      res.json(screen);
     } catch (error) {
       next(error);
     }
   }
 
-  async getPlaylist(req, res, next) {
+  async register(req, res, next) {
     try {
-      const screen = await screenRepository.getById(req.params.id);
-      if (!screen) return res.status(404).json({ success: false, message: 'Screen not found' });
-      
-      const playlist = await playlistEngine.getPlaylistForScreen(screen.id, screen.groupId);
-      res.json({ success: true, data: playlist });
+      const screen = await screenService.registerScreen(req.body);
+      res.status(201).json(screen);
     } catch (error) {
       next(error);
     }
@@ -35,8 +31,25 @@ class ScreenController {
 
   async update(req, res, next) {
     try {
-      const updated = await screenRepository.update(req.params.id, req.body);
-      res.json({ success: true, data: updated });
+      const screen = await screenService.updateScreen(req.params.id, req.body);
+      res.json(screen);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getMe(req, res) {
+    res.json(req.screen);
+  }
+
+  async getManifest(req, res, next) {
+    try {
+      const { _id, groupId } = req.screen;
+      const manifest = await screenService.getManifest(_id, groupId);
+      res.json({
+        screen: req.screen,
+        ...manifest
+      });
     } catch (error) {
       next(error);
     }

@@ -28,6 +28,16 @@ class ScheduleController {
       next(error);
     }
   }
+
+  async delete(req, res, next) {
+    try {
+      const prisma = require('../utils/db');
+      await prisma.schedule.delete({ where: { id: req.params.id } });
+      res.json({ success: true, message: 'Schedule deleted' });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 module.exports = new ScheduleController();

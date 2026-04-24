@@ -44,14 +44,14 @@ const Shell = ({ children, role, activeTab, setActiveTab }) => {
   };
 
   return (
-    <div className="flex h-screen bg-[#FFFFFF] overflow-hidden font-sans selection:bg-accent selection:text-white text-text">
+    <div className="flex h-screen bg-[#F1F5F9] overflow-hidden font-sans selection:bg-accent selection:text-white text-text">
       {/* Dynamic Background Effects */}
       <div className="fixed inset-0 pointer-events-none bg-bg">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-accent/5 rounded-full blur-[120px]" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-emerald-500/5 rounded-full blur-[120px]" />
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-accent/10 rounded-full blur-[120px]" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-emerald-500/10 rounded-full blur-[120px]" />
       </div>
 
-      <aside className="w-72 glass border-r border-slate-200/60 flex flex-col shrink-0 z-30 m-4 rounded-[32px]">
+      <aside className="w-72 bg-white/90 backdrop-blur-3xl border-r border-slate-200 flex flex-col shrink-0 z-30 m-4 rounded-[32px] shadow-xl shadow-slate-200/50">
         <div className="p-8 pb-6">
           <div className="flex items-center gap-4 mb-8">
             <div className="w-12 h-12 bg-gradient-to-br from-accent to-blue-600 rounded-2xl flex items-center justify-center shadow-2xl shadow-accent/20 relative group">

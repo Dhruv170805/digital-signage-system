@@ -16,7 +16,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-router.get('/', protect, mediaController.getAll);
+router.get('/', mediaController.getAll);
 router.get('/pending', protect, admin, mediaController.getPending);
 router.post('/upload', protect, upload.single('media'), mediaController.upload);
 router.put('/:id/approve', protect, admin, mediaController.approve);

@@ -1,9 +1,9 @@
-const templateRepository = require('../repositories/templateRepository');
+const templateService = require('../services/templateService');
 
 class TemplateController {
   async getAll(req, res, next) {
     try {
-      const templates = await templateRepository.getAll();
+      const templates = await templateService.getAll();
       res.json(templates);
     } catch (error) {
       next(error);
@@ -12,7 +12,7 @@ class TemplateController {
 
   async getById(req, res, next) {
     try {
-      const template = await templateRepository.getById(req.params.id);
+      const template = await templateService.getById(req.params.id);
       if (!template) return res.status(404).json({ message: 'Template not found' });
       res.json(template);
     } catch (error) {
@@ -22,8 +22,7 @@ class TemplateController {
 
   async create(req, res, next) {
     try {
-      const { frames, ...templateData } = req.body;
-      const template = await templateRepository.create(templateData, frames);
+      const template = await templateService.create(req.body);
       res.status(201).json(template);
     } catch (error) {
       next(error);
@@ -32,8 +31,7 @@ class TemplateController {
 
   async update(req, res, next) {
     try {
-      const { frames, ...templateData } = req.body;
-      const template = await templateRepository.update(req.params.id, templateData, frames);
+      const template = await templateService.update(req.params.id, req.body);
       res.json(template);
     } catch (error) {
       next(error);
@@ -42,8 +40,8 @@ class TemplateController {
 
   async delete(req, res, next) {
     try {
-      await templateRepository.delete(req.params.id);
-      res.status(204).end();
+      await templateService.delete(req.params.id);
+      res.json({ message: 'Template deleted' });
     } catch (error) {
       next(error);
     }

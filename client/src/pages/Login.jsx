@@ -1,10 +1,21 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, ArrowRight, Activity, XCircle, ShieldCheck } from 'lucide-react';
-import axios from 'axios';
+import api from '../services/api';
+import useAuthStore from '../store/useAuthStore';
 import toast from 'react-hot-toast';
 
 const Login = () => {
+  const navigate = useNavigate();
+  const token = useAuthStore((state) => state.token);
+  const user = useAuthStore((state) => state.user);
+
+  React.useEffect(() => {
+    if (token && user) {
+      navigate(user.role === 'admin' ? '/admin' : '/user');
+    }
+  }, [token, user, navigate]);
+
   const [email, setEmail] = useState('admin@corp.in');
   const [password, setPassword] = useState('admin123');
   const [shaking, setShaking] = useState(false);
@@ -12,13 +23,12 @@ const Login = () => {
   const [showResetModal, setShowResetModal] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [resetLoading, setResetLoading] = useState(false);
-  const navigate = useNavigate();
 
   const handleResetRequest = async (e) => {
     e.preventDefault();
     setResetLoading(true);
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/request-reset`, { email: resetEmail });
+      await api.post(`/api/auth/request-reset`, { email: resetEmail });
       toast.success('Reset request sent to administrator.');
       setShowResetModal(false);
       setResetEmail('');
@@ -34,9 +44,9 @@ const Login = () => {
     setLoading(true);
     
     try {
-      const response = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/login`, { email, password });
-      localStorage.setItem('token', response.data.token);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
+      const response = await api.post(`/api/auth/login`, { email, password });
+      useAuthStore.getState().setToken(response.data.accessToken);
+      useAuthStore.getState().setUser(response.data.user);
       
       toast.success(`Access Granted: Welcome ${response.data.user.name}`);
       
