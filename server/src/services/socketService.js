@@ -10,38 +10,73 @@ class SocketService {
     this.io = io;
     weatherService.init(io);
 
+    // Authentication Middleware for Sockets
+    this.io.use(async (socket, next) => {
+      try {
+        const token = socket.handshake.auth.token || socket.handshake.query.token;
+        const deviceToken = socket.handshake.auth.deviceToken || socket.handshake.query.deviceToken;
+
+        if (token) {
+          const jwt = require('jsonwebtoken');
+          const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret');
+          socket.user = decoded;
+          return next();
+        } 
+
+        if (deviceToken) {
+          const screen = await screenService.getScreenByToken(deviceToken);
+          if (screen) {
+            socket.screen = screen;
+            return next();
+          }
+        }
+
+        // Allow unauthenticated connections but restrict their actions later
+        // Or strictly block them:
+        return next(new Error('Authentication failed'));
+      } catch (err) {
+        return next(new Error('Authentication error'));
+      }
+    });
+
     this.io.on('connection', (socket) => {
-      console.log('New socket connection:', socket.id);
+      console.log('New socket connection:', socket.id, socket.user ? `User: ${socket.user.id}` : socket.screen ? `Screen: ${socket.screen.screenId}` : 'Unknown');
 
       // Send cached weather immediately upon connection
       socket.emit('weatherUpdate', Object.fromEntries(weatherService.weatherCache));
 
       socket.on('heartbeat', async (data) => {
-        const { macAddress, ipAddress, telemetry } = data;
-        if (macAddress) {
-          const screen = await screenService.updateHeartbeatByMac(macAddress, ipAddress, telemetry);
-          if (screen) {
-            socket.join(`screen:${screen._id}`);
-            if (screen.groupId) {
-              socket.join(`group:${screen.groupId}`);
-            }
-            console.log(`Screen ${screen.name} checked in with telemetry.`);
+        // Only allow screens to send heartbeats
+        if (!socket.screen) return;
+        
+        const { ipAddress, telemetry } = data;
+        const screen = await screenService.updateHeartbeat(socket.screen.deviceToken, telemetry);
+        if (screen) {
+          socket.join(`screen:${screen._id}`);
+          if (screen.groupId) {
+            socket.join(`group:${screen.groupId}`);
           }
         }
       });
 
       socket.on('screenPing', async (data) => {
-        const { token, screenId, telemetry } = data;
-        let screen = null;
-        if (token) {
-            screen = await screenService.updateHeartbeat(token, telemetry);
-        } else if (screenId) {
-            screen = await screenService.getScreenById(screenId);
+        // If authenticated as screen, use that info
+        if (socket.screen) {
+            socket.join(`screen:${socket.screen._id}`);
+            if (socket.screen.groupId) socket.join(`group:${socket.screen.groupId}`);
+            return;
         }
 
-        if (screen) {
-            socket.join(`screen:${screen._id}`);
-            if (screen.groupId) socket.join(`group:${screen.groupId}`);
+        // If admin, allow joining any room for monitoring
+        if (socket.user && socket.user.role === 'admin') {
+            const { screenId } = data;
+            if (screenId) {
+                const screen = await screenService.getScreenById(screenId);
+                if (screen) {
+                    socket.join(`screen:${screen._id}`);
+                    if (screen.groupId) socket.join(`group:${screen.groupId}`);
+                }
+            }
         }
       });
 

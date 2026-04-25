@@ -17,6 +17,18 @@ const authenticate = async (req, res, next) => {
         return res.status(403).json({ success: false, message: 'Account is locked' });
       }
 
+      // Check token version to handle global logout/password reset
+      const User = require('../models/User');
+      const user = await User.findById(decoded.id).select('tokenVersion status');
+      
+      if (!user || user.tokenVersion !== decoded.tokenVersion) {
+        return res.status(401).json({ success: false, message: 'Token has been revoked' });
+      }
+
+      if (user.status === 'locked') {
+        return res.status(403).json({ success: false, message: 'Account is locked' });
+      }
+
       req.user = decoded; // contains { id, role, status, tokenVersion }
       next();
     } catch (error) {

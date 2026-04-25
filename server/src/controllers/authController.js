@@ -44,6 +44,15 @@ class AuthController {
     }
   }
 
+  async getMe(req, res, next) {
+    try {
+      const user = await authService.getMe(req.user.id);
+      res.json(user);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async logout(req, res, next) {
     try {
       // Optional: Revoke tokens for the user completely (global logout)

@@ -27,17 +27,14 @@ function App() {
     const initAuth = async () => {
       try {
         const res = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/refresh`, {}, { withCredentials: true });
-        setToken(res.data.accessToken);
+        const accessToken = res.data.accessToken;
+        setToken(accessToken);
         
-        // We need user details to properly restore state, so decoding the token or fetching user is needed.
-        // Let's decode the JWT token from the access token.
-        const base64Url = res.data.accessToken.split('.')[1];
-        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-        const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-        }).join(''));
-        const payload = JSON.parse(jsonPayload);
-        setUser({ id: payload.id, role: payload.role, status: payload.status });
+        // Fetch user profile securely from /me endpoint
+        const userRes = await axios.get(`${import.meta.env.VITE_API_URL}/api/auth/me`, {
+          headers: { Authorization: `Bearer ${accessToken}` }
+        });
+        setUser(userRes.data);
       } catch (err) {
         logout();
       } finally {

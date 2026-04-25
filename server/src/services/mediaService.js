@@ -22,10 +22,23 @@ class MediaService {
 
   async deleteMedia(id) {
     const media = await Media.findById(id);
-    if (media && fs.existsSync(media.path)) {
-      fs.unlinkSync(media.path);
+    if (!media) return null;
+
+    // Delete from DB first
+    const deletedMedia = await Media.findByIdAndDelete(id);
+    
+    // Then attempt to delete file
+    try {
+      if (media.path && fs.existsSync(media.path)) {
+        fs.unlinkSync(media.path);
+      }
+    } catch (err) {
+      console.error(`Failed to delete physical file: ${media.path}`, err);
+      // We don't throw here because the DB record is already gone, 
+      // which is the primary source of truth for the app.
     }
-    return await Media.findByIdAndDelete(id);
+    
+    return deletedMedia;
   }
 }
 
