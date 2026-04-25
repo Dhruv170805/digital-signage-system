@@ -45,6 +45,8 @@ class WeatherService {
             } else {
                 temp = res.data.replace('+', '');
             }
+            // Delay to respect wttr.in rate limits when no API key is present
+            await new Promise(resolve => setTimeout(resolve, 1000));
           }
 
           this.weatherCache.set(location, { temp, area });

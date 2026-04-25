@@ -32,7 +32,7 @@ class AuthController {
     try {
       const refreshToken = req.cookies?.refreshToken;
       if (!refreshToken) {
-        return res.status(401).json({ message: 'No refresh token' });
+        return res.status(401).json({ success: false, message: 'No refresh token' });
       }
 
       const { accessToken } = await authService.refresh(refreshToken);
@@ -40,7 +40,7 @@ class AuthController {
     } catch (error) {
       // Clear invalid cookie
       res.clearCookie('refreshToken');
-      res.status(401).json({ message: error.message || 'Refresh failed' });
+      res.status(401).json({ success: false, message: error.message || 'Refresh failed' });
     }
   }
 

@@ -13,9 +13,9 @@ class AssignmentService {
     return await Assignment.findById(id);
   }
 
-  async createAssignment(data) {
+  async createAssignment(data, session = null) {
     const assignment = new Assignment(data);
-    return await assignment.save();
+    return await assignment.save({ session });
   }
 
   async deleteAssignment(id) {

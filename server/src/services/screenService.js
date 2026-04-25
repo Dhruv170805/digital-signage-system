@@ -60,6 +60,17 @@ class ScreenService {
   }
 
   async getManifest(screenId, groupId) {
+    const { redisClient } = require('../config/redis');
+    const cacheKey = `manifest:${screenId}`;
+    
+    // Try to get from cache first
+    try {
+      const cached = await redisClient.get(cacheKey);
+      if (cached) return JSON.parse(cached);
+    } catch (err) {
+      console.warn('Redis cache read failed for manifest:', err.message);
+    }
+
     const assignmentService = require('./assignmentService');
     const tickerService = require('./tickerService');
     const configService = require('./configService');
@@ -75,13 +86,22 @@ class ScreenService {
       idleService.getIdleContent(screenId, groupId)
     ]);
 
-    return {
+    const manifest = {
       playlist,
       tickers,
       settings,
       media,
       idleConfig
     };
+
+    // Cache the result for 1 hour
+    try {
+      await redisClient.setex(cacheKey, 3600, JSON.stringify(manifest));
+    } catch (err) {
+      console.warn('Redis cache write failed for manifest:', err.message);
+    }
+
+    return manifest;
   }
 
   async pushManifestToScreen(screenId) {
@@ -97,9 +117,20 @@ class ScreenService {
   }
 
   async broadcastManifestUpdate() {
+    const { redisClient } = require('../config/redis');
+    // Invalidate all manifest caches
+    try {
+      const keys = await redisClient.keys('manifest:*');
+      if (keys.length > 0) {
+        await redisClient.del(keys);
+      }
+    } catch (err) {
+      console.warn('Failed to clear manifest cache:', err.message);
+    }
+
     const broadcastQueue = require('../workers/broadcastQueue');
     await broadcastQueue.add('broadcastManifest', {});
-    console.log('Added broadcast task to BullMQ');
+    console.log('Added broadcast task to BullMQ and cleared caches');
   }
 
   async getScreenByToken(deviceToken) {

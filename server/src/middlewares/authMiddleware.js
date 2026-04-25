@@ -21,7 +21,9 @@ const authenticate = async (req, res, next) => {
       const User = require('../models/User');
       const user = await User.findById(decoded.id).select('tokenVersion status');
       
-      if (!user || user.tokenVersion !== decoded.tokenVersion) {
+      const tokenVersion = decoded.tokenVersion !== undefined ? decoded.tokenVersion : 0;
+
+      if (!user || user.tokenVersion !== tokenVersion) {
         return res.status(401).json({ success: false, message: 'Token has been revoked' });
       }
 

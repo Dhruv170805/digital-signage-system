@@ -53,30 +53,43 @@ class AssignmentController {
       
       const createdAssignments = [];
       const screenService = require('../services/screenService');
+      const mongoose = require('mongoose');
+      
+      const session = await mongoose.startSession();
+      session.startTransaction();
 
-      if (targetType === 'all' || !targetIds || targetIds.length === 0) {
-        const assignment = await assignmentService.createAssignment({ ...baseData, isGlobal: true });
-        createdAssignments.push(assignment);
-        if (assignment.status === 'approved') await screenService.broadcastManifestUpdate();
-      } else {
-        for (const tid of targetIds) {
-          const targetedData = { ...baseData };
-          if (targetType === 'screen') targetedData.screenId = tid;
-          else targetedData.groupId = tid;
-          
-          const assignment = await assignmentService.createAssignment(targetedData);
+      try {
+        if (targetType === 'all' || !targetIds || targetIds.length === 0) {
+          const assignment = await assignmentService.createAssignment({ ...baseData, isGlobal: true }, session);
           createdAssignments.push(assignment);
-          
-          if (assignment.status === 'approved') {
-            if (targetType === 'screen') await screenService.pushManifestToScreen(tid);
-            else {
-              // Group update: find all screens in group
-              const screens = await screenService.getAllScreens();
-              const groupScreens = screens.filter(s => s.groupId?._id.toString() === tid || s.groupId?.toString() === tid);
-              for (const gs of groupScreens) await screenService.pushManifestToScreen(gs._id);
+          if (assignment.status === 'approved') await screenService.broadcastManifestUpdate();
+        } else {
+          for (const tid of targetIds) {
+            const targetedData = { ...baseData };
+            if (targetType === 'screen') targetedData.screenId = tid;
+            else targetedData.groupId = tid;
+            
+            const assignment = await assignmentService.createAssignment(targetedData, session);
+            createdAssignments.push(assignment);
+            
+            if (assignment.status === 'approved') {
+              if (targetType === 'screen') await screenService.pushManifestToScreen(tid);
+              else {
+                // Group update: find all screens in group
+                const screens = await screenService.getAllScreens();
+                const groupScreens = screens.filter(s => s.groupId?._id.toString() === tid || s.groupId?.toString() === tid);
+                for (const gs of groupScreens) await screenService.pushManifestToScreen(gs._id);
+              }
             }
           }
         }
+        
+        await session.commitTransaction();
+      } catch (err) {
+        await session.abortTransaction();
+        throw err;
+      } finally {
+        session.endSession();
       }
 
       // Log first one for audit
@@ -175,7 +188,7 @@ class AssignmentController {
         status: 'rejected', 
         rejectionReason: req.body.reason 
       }, { new: true });
-      if (!assignment) return res.status(404).json({ message: 'Assignment not found' });
+      if (!assignment) return res.status(404).json({ success: false, message: 'Assignment not found' });
 
       await loggerService.logAudit(req.user.id, 'REJECT', 'Assignment', assignment._id, { name: assignment.name, reason: req.body.reason });
       res.json(assignment);

@@ -89,7 +89,7 @@ class ScreenController {
       } else if (targetType === 'all') {
         query = {}; // all assignments
       } else {
-        return res.status(400).json({ error: 'Invalid target type or missing target ID' });
+        return res.status(400).json({ success: false, error: 'Invalid target type or missing target ID' });
       }
 
       // Clear assignments

@@ -14,7 +14,7 @@ class TemplateController {
   async getById(req, res, next) {
     try {
       const template = await templateService.getById(req.params.id);
-      if (!template) return res.status(404).json({ message: 'Template not found' });
+      if (!template) return res.status(404).json({ success: false, message: 'Template not found' });
       res.json(template);
     } catch (error) {
       next(error);

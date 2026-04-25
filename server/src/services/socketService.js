@@ -32,10 +32,11 @@ class SocketService {
         }
 
         // Allow unauthenticated connections but restrict their actions later
-        // Or strictly block them:
-        return next(new Error('Authentication failed'));
+        return next();
       } catch (err) {
-        return next(new Error('Authentication error'));
+        // Log error but allow connection to see if it can authenticate via events (legacy support)
+        console.warn('Socket auth handshake error:', err.message);
+        return next();
       }
     });
 
@@ -60,21 +61,37 @@ class SocketService {
       });
 
       socket.on('screenPing', async (data) => {
-        // If authenticated as screen, use that info
+        const { token, screenId, telemetry } = data;
+        
+        // If already authenticated as screen via handshake
         if (socket.screen) {
             socket.join(`screen:${socket.screen._id}`);
             if (socket.screen.groupId) socket.join(`group:${socket.screen.groupId}`);
             return;
         }
 
+        // Backward compatibility: allow screen to identify via token/screenId in event
+        let screen = null;
+        if (token) {
+            screen = await screenService.updateHeartbeat(token, telemetry);
+        } else if (screenId) {
+            // screenId is less secure, so we only fetch, not update heartbeat if no token
+            screen = await screenService.getScreenById(screenId);
+        }
+
+        if (screen) {
+            socket.join(`screen:${screen._id}`);
+            if (screen.groupId) socket.join(`group:${screen.groupId}`);
+        }
+
         // If admin, allow joining any room for monitoring
         if (socket.user && socket.user.role === 'admin') {
-            const { screenId } = data;
-            if (screenId) {
-                const screen = await screenService.getScreenById(screenId);
-                if (screen) {
-                    socket.join(`screen:${screen._id}`);
-                    if (screen.groupId) socket.join(`group:${screen.groupId}`);
+            const { screenId: targetScreenId } = data;
+            if (targetScreenId) {
+                const targetScreen = await screenService.getScreenById(targetScreenId);
+                if (targetScreen) {
+                    socket.join(`screen:${targetScreen._id}`);
+                    if (targetScreen.groupId) socket.join(`group:${targetScreen.groupId}`);
                 }
             }
         }
