@@ -7,15 +7,26 @@ import Card from './Card';
 
 const ScreenManager = ({ fetchData }) => {
   const { data: screens = [], refetch, isLoading } = useScreens();
-  const [newScreen, setNewScreen] = useState({ name: '', location: '', resolution: '1920x1080' });
+  const [groups, setGroups] = useState([]);
+  const [newScreen, setNewScreen] = useState({ name: '', location: '', resolution: '1920x1080', groupId: '' });
+  const [newGroup, setNewGroup] = useState({ name: '', description: '' });
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const fetchGroups = async () => {
+    try {
+      const res = await api.get('/api/groups');
+      setGroups(res.data);
+    } catch (err) { console.error('Failed to load groups'); }
+  };
+
+  React.useEffect(() => { fetchGroups(); }, []);
 
   const registerScreen = async (e) => {
     e.preventDefault();
     try {
       const res = await api.post(`/api/screens/register`, newScreen);
       toast.success('Screen Provisioned Successfully');
-      setNewScreen({ name: '', location: '', resolution: '1920x1080' });
+      setNewScreen({ name: '', location: '', resolution: '1920x1080', groupId: '' });
       refetch();
       if (fetchData) fetchData();
       
@@ -25,6 +36,34 @@ const ScreenManager = ({ fetchData }) => {
           toast.success('Device Token copied to clipboard!', { icon: '🔑' });
       }
     } catch (err) { toast.error(err.response?.data?.error || err.message); }
+  };
+
+  const createGroup = async (e) => {
+    e.preventDefault();
+    try {
+      await api.post('/api/groups', newGroup);
+      toast.success('Group Created');
+      setNewGroup({ name: '', description: '' });
+      fetchGroups();
+    } catch (err) { toast.error('Failed to create group'); }
+  };
+
+  const deleteGroup = async (id) => {
+    if (!window.confirm('Delete group? Screens will be unassigned.')) return;
+    try {
+      await api.delete(`/api/groups/${id}`);
+      toast.success('Group Deleted');
+      fetchGroups();
+      refetch();
+    } catch (err) { toast.error('Failed to delete group'); }
+  };
+
+  const updateScreenGroup = async (screenId, groupId) => {
+      try {
+          await api.put(`/api/screens/${screenId}`, { groupId: groupId || null });
+          toast.success('Screen Group Updated');
+          refetch();
+      } catch (err) { toast.error('Failed to update group'); }
   };
 
   const deleteScreen = async (id) => {
@@ -49,158 +88,113 @@ const ScreenManager = ({ fetchData }) => {
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 animate-fade-in">
-       {/* Provisioning Section */}
-       <Card 
-         className="lg:col-span-1" 
-         title="Screen" 
-         icon={Tv} 
-         subtitle="Register New Screen"
-       >
-          <form onSubmit={registerScreen} className="space-y-6 mt-4">
-             <div className="space-y-1">
-               <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Screen Identity</label>
-               <input type="text" required className="nexus-input" placeholder="e.g. FRONT-DESK-01" value={newScreen.name} onChange={(e) => setNewScreen(p => ({ ...p, name: e.target.value }))}/>
-             </div>
-             
-             <div className="space-y-1">
-               <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Physical Location</label>
-               <div className="relative">
-                 <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-                 <input type="text" required className="nexus-input pl-10" placeholder="e.g. Main Lobby" value={newScreen.location} onChange={(e) => setNewScreen(p => ({ ...p, location: e.target.value }))}/>
-               </div>
-             </div>
+    <div className="space-y-10 animate-fade-in">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        {/* Provisioning Section */}
+        <Card 
+            className="lg:col-span-1" 
+            title="Provision" 
+            icon={Tv} 
+            subtitle="Authorize Node"
+        >
+            <form onSubmit={registerScreen} className="space-y-6 mt-4">
+                <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Identity</label>
+                    <input type="text" required className="nexus-input" placeholder="e.g. FRONT-DESK-01" value={newScreen.name} onChange={(e) => setNewScreen(p => ({ ...p, name: e.target.value }))}/>
+                </div>
+                
+                <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Location</label>
+                    <input type="text" required className="nexus-input" placeholder="e.g. Lobby" value={newScreen.location} onChange={(e) => setNewScreen(p => ({ ...p, location: e.target.value }))}/>
+                </div>
 
-             <div className="space-y-1">
-               <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Native Resolution</label>
-               <select className="nexus-input" value={newScreen.resolution} onChange={(e) => setNewScreen(p => ({ ...p, resolution: e.target.value }))}>
-                  <option value="1920x1080">1080p (1920x1080)</option>
-                  <option value="3840x2160">4K (3840x2160)</option>
-                  <option value="1280x720">720p (1280x720)</option>
-                  <option value="1080x1920">Portrait (1080x1920)</option>
-               </select>
-             </div>
+                <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Initial Group</label>
+                    <select className="nexus-input" value={newScreen.groupId} onChange={(e) => setNewScreen(p => ({ ...p, groupId: e.target.value }))}>
+                        <option value="">Unassigned</option>
+                        {groups.map(g => <option key={g._id} value={g._id}>{g.name}</option>)}
+                    </select>
+                </div>
 
-             <button type="submit" className="nexus-btn-primary w-full py-4 font-black tracking-[4px] uppercase text-[11px] shadow-xl shadow-accent/20">
-                AUTHORIZE SCREEN
-             </button>
-          </form>
-       </Card>
+                <button type="submit" className="nexus-btn-primary w-full py-4 font-black tracking-[4px] uppercase text-[11px]">
+                    AUTHORIZE SCREEN
+                </button>
+            </form>
+        </Card>
 
-       {/* Managed Screens Section */}
-       <Card 
-         className="lg:col-span-3" 
-         title="Screen" 
-         icon={Monitor} 
-         subtitle={`Network Health: ${screens.filter(s => s.status === 'online').length}/${screens.length} Online`}
-         actions={
-             <button onClick={handleRefresh} className={`p-2 hover:bg-slate-100 rounded-xl transition-all ${isRefreshing ? 'animate-spin text-accent' : 'text-slate-400'}`}>
-                 <RefreshCw size={18} />
-             </button>
-         }
-       >
-          <div className="overflow-hidden rounded-3xl border border-slate-200 mt-4">
-             <table className="w-full text-left">
-                <thead>
-                   <tr className="bg-slate-50 text-[10px] font-black uppercase text-slate-400 border-b border-slate-100">
-                      <th className="py-5 px-8">Screen Info</th>
-                      <th className="py-5 px-8 text-center">Hardware Stats</th>
-                      <th className="py-5 px-8">System Health</th>
-                      <th className="py-5 px-8 text-right">Actions</th>
-                   </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                   {isLoading ? (
-                       <tr><td colSpan="4" className="py-20 text-center text-[10px] font-black text-slate-300 uppercase tracking-[6px] animate-pulse">Syncing Screen Inventory...</td></tr>
-                   ) : screens.length === 0 ? (
-                       <tr><td colSpan="4" className="py-20 text-center text-[10px] font-black text-slate-300 uppercase tracking-[6px]">No screens provisioned in this network</td></tr>
-                   ) : (
-                     screens.map(s => (
-                       <tr key={s._id} className="group hover:bg-slate-50/80 transition-all duration-300">
-                          <td className="py-6 px-8">
-                             <div className="flex items-center gap-4">
-                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center border-2 transition-all ${s.status === 'online' ? 'bg-emerald-50 border-emerald-100' : 'bg-slate-50 border-slate-100'}`}>
-                                   <Tv size={20} className={s.status === 'online' ? 'text-emerald-500' : 'text-slate-400'} />
-                                </div>
-                                <div>
-                                   <p className="font-black text-text uppercase tracking-tighter text-base">{s.name}</p>
-                                   <div className="flex items-center gap-2 mt-1">
-                                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{s.location}</span>
-                                      <span className="text-slate-200">•</span>
-                                      <span className="text-[9px] font-bold text-sky-500 uppercase tracking-widest tabular-nums">{s.resolution}</span>
-                                   </div>
-                                </div>
-                             </div>
-                          </td>
-                          
-                          <td className="py-6 px-8">
-                             <div className="flex items-center justify-center gap-6">
-                                <div className="text-center group/stat">
-                                   <div className="flex items-center gap-1.5 justify-center text-slate-400 group-hover/stat:text-accent transition-colors">
-                                      <Cpu size={12}/>
-                                      <span className="text-[10px] font-black tabular-nums">{s.telemetry?.ramUsage || 0}%</span>
-                                   </div>
-                                   <p className="text-[8px] font-bold uppercase text-slate-400 tracking-tighter mt-1">Memory</p>
-                                </div>
-                                <div className="text-center group/stat">
-                                   <div className="flex items-center gap-1.5 justify-center text-slate-400 group-hover/stat:text-amber-500 transition-colors">
-                                      <Zap size={12}/>
-                                      <span className="text-[10px] font-black tabular-nums">{s.telemetry?.uptime ? Math.floor(s.telemetry.uptime / 3600) : 0}h</span>
-                                   </div>
-                                   <p className="text-[8px] font-bold uppercase text-slate-400 tracking-tighter mt-1">Uptime</p>
-                                </div>
-                             </div>
-                          </td>
+        {/* Groups Section */}
+        <Card 
+            className="lg:col-span-1" 
+            title="Screen Groups" 
+            icon={MapPin} 
+            subtitle="Cluster Management"
+        >
+            <form onSubmit={createGroup} className="space-y-4 mt-4">
+                <input type="text" required className="nexus-input py-2 text-xs" placeholder="Group Name" value={newGroup.name} onChange={(e) => setNewGroup(p => ({ ...p, name: e.target.value }))}/>
+                <button type="submit" className="w-full py-2 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest">Create Group</button>
+            </form>
 
-                          <td className="py-6 px-8">
-                             <div className="flex items-center gap-3">
-                                <div className="relative">
-                                   <div className={`w-2.5 h-2.5 rounded-full ${s.status === 'online' ? 'bg-emerald-500' : 'bg-slate-300'}`} />
-                                   {s.status === 'online' && <div className="absolute inset-0 w-2.5 h-2.5 bg-emerald-500 rounded-full animate-ping opacity-40" />}
-                                </div>
-                                <div>
-                                   <p className={`text-[10px] font-black uppercase tracking-widest ${s.status === 'online' ? 'text-emerald-600' : 'text-slate-400'}`}>
-                                      {s.status === 'online' ? 'Active Sync' : 'Offline'}
-                                   </p>
-                                   <p className="text-[9px] font-bold text-slate-400 mt-0.5 tabular-nums uppercase">
-                                      {s.lastSeen ? new Date(s.lastSeen).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Standby'}
-                                   </p>
-                                </div>
-                             </div>
-                          </td>
+            <div className="mt-6 space-y-2 max-h-[200px] overflow-y-auto custom-scrollbar pr-2">
+                {groups.map(g => (
+                    <div key={g._id} className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl group/g">
+                        <span className="text-[10px] font-black text-text uppercase">{g.name}</span>
+                        <button onClick={() => deleteGroup(g._id)} className="opacity-0 group-hover/g:opacity-100 text-rose-500 transition-opacity"><Trash2 size={12}/></button>
+                    </div>
+                ))}
+            </div>
+        </Card>
 
-                          <td className="py-6 px-8 text-right">
-                             <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button 
-                                  onClick={() => copyToken(s.deviceToken)}
-                                  className="p-2.5 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-sky-600 hover:border-sky-100 hover:bg-sky-50 transition-all shadow-sm"
-                                  title="Copy Authorization Token"
+        {/* Managed Screens Section */}
+        <Card 
+            className="lg:col-span-2" 
+            title="Network Inventory" 
+            icon={Monitor} 
+            subtitle={`Health: ${screens.filter(s => s.status === 'online').length}/${screens.length} Online`}
+            actions={
+                <button onClick={handleRefresh} className={`p-2 hover:bg-slate-100 rounded-xl transition-all ${isRefreshing ? 'animate-spin text-accent' : 'text-slate-400'}`}>
+                    <RefreshCw size={18} />
+                </button>
+            }
+        >
+            <div className="overflow-hidden rounded-3xl border border-slate-200 mt-4">
+                <table className="w-full text-left">
+                    <thead>
+                    <tr className="bg-slate-50 text-[10px] font-black uppercase text-slate-400 border-b border-slate-100">
+                        <th className="py-5 px-8">Screen</th>
+                        <th className="py-5 px-8">Group assignment</th>
+                        <th className="py-5 px-8 text-right">Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                    {screens.map(s => (
+                        <tr key={s._id} className="group hover:bg-slate-50/80 transition-all">
+                            <td className="py-6 px-8">
+                                <p className="font-black text-text uppercase text-xs">{s.name}</p>
+                                <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">{s.location}</p>
+                            </td>
+                            <td className="py-6 px-8">
+                                <select 
+                                    className="bg-transparent border-none text-[10px] font-black uppercase text-sky-600 outline-none"
+                                    value={s.groupId?._id || s.groupId || ''} 
+                                    onChange={(e) => updateScreenGroup(s._id, e.target.value)}
                                 >
-                                   <Copy size={14} />
-                                </button>
-                                <button 
-                                  onClick={() => window.open(`/display?screenId=${s._id}`, '_blank')}
-                                  className="p-2.5 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-emerald-600 hover:border-emerald-100 hover:bg-emerald-50 transition-all shadow-sm"
-                                  title="Live Remote View"
-                                >
-                                   <ExternalLink size={14} />
-                                </button>
-                                <button 
-                                  onClick={() => deleteScreen(s._id)}
-                                  className="p-2.5 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-rose-600 hover:border-rose-100 hover:bg-rose-50 transition-all shadow-sm"
-                                  title="Terminate Connection"
-                                >
-                                   <Trash2 size={14} />
-                                </button>
-                             </div>
-                          </td>
-                       </tr>
-                     ))
-                   )}
-                </tbody>
-             </table>
-          </div>
-       </Card>
+                                    <option value="">No Group</option>
+                                    {groups.map(g => <option key={g._id} value={g._id}>{g.name}</option>)}
+                                </select>
+                            </td>
+                            <td className="py-6 px-8 text-right">
+                                <div className="flex justify-end gap-2">
+                                    <button onClick={() => copyToken(s.deviceToken)} className="p-2 text-slate-400 hover:text-sky-600 transition-colors" title="Copy Token"><Copy size={14} /></button>
+                                    <button onClick={() => deleteScreen(s._id)} className="p-2 text-slate-400 hover:text-rose-600 transition-colors"><Trash2 size={14} /></button>
+                                </div>
+                            </td>
+                        </tr>
+                    ))}
+                    </tbody>
+                </table>
+            </div>
+        </Card>
+      </div>
     </div>
   );
 };

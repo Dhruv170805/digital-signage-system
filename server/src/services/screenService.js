@@ -69,7 +69,7 @@ class ScreenService {
 
     const [playlist, tickers, settings, media, idleConfig] = await Promise.all([
       assignmentService.getActiveAssignmentsForScreen(screenId, groupId),
-      tickerService.getActive(),
+      tickerService.getActive(screenId, groupId),
       configService.getFullConfig(),
       mediaService.getAllApproved(),
       idleService.getIdleContent(screenId, groupId)

@@ -125,10 +125,8 @@ const Shell = ({ children, role, activeTab, setActiveTab }) => {
         </div>
       </aside>
 
-      <main className="flex-1 overflow-auto relative custom-scrollbar">
-        <div className="relative h-full min-h-screen">
-          {children}
-        </div>
+      <main className="flex-1 h-full overflow-hidden relative">
+        {children}
       </main>
     </div>
   );

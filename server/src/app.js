@@ -22,6 +22,7 @@ const settingsRoutes = require('./routes/settingsRoutes');
 const templateRoutes = require('./routes/templateRoutes');
 const auditRoutes = require('./routes/historyRoutes');
 const idleRoutes = require('./routes/idleRoutes');
+const groupRoutes = require('./routes/groupRoutes');
 
 const app = express();
 
@@ -71,6 +72,7 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/templates', templateRoutes);
 app.use('/api/history', auditRoutes);
 app.use('/api/idle', idleRoutes);
+app.use('/api/groups', groupRoutes);
 
 // Base route
 app.get('/', (req, res) => {

@@ -77,13 +77,18 @@ class MediaController {
 
   approve = async (req, res, next) => {
     try {
-      const updateData = { status: 'approved' };
-      if (req.body.startTime) updateData.requestedStartTime = req.body.startTime;
-      if (req.body.endTime) updateData.requestedEndTime = req.body.endTime;
+      const { startTime, endTime, ...rest } = req.body;
+      const updateData = { status: 'approved', ...rest };
+      
+      if (startTime) updateData.requestedStartTime = startTime;
+      if (endTime) updateData.requestedEndTime = endTime;
       
       const media = await mediaService.updateStatus(req.params.id, updateData);
       
-      await loggerService.logAudit(req.user.id, 'APPROVE', 'Media', media._id, { filename: media.originalName });
+      await loggerService.logAudit(req.user.id, 'APPROVE', 'Media', media._id, { 
+        filename: media.originalName,
+        overrides: Object.keys(req.body)
+      });
 
       const screenService = require('../services/screenService');
       await screenService.broadcastManifestUpdate();

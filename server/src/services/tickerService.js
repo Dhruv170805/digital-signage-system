@@ -27,11 +27,26 @@ class TickerService {
     return await Ticker.findByIdAndDelete(id);
   }
 
-  async getActive() {
+  async getActive(screenId = null, groupId = null) {
     const now = new Date();
     const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
 
-    const tickers = await Ticker.find({ isActive: true }).sort({ priority: -1 });
+    const query = {
+      isActive: true,
+      $or: [
+        { targetType: 'all' }
+      ]
+    };
+
+    if (screenId) {
+      query.$or.push({ targetType: 'screen', targetIds: { $in: [screenId.toString()] } });
+    }
+
+    if (groupId) {
+      query.$or.push({ targetType: 'group', targetIds: { $in: [groupId.toString()] } });
+    }
+
+    const tickers = await Ticker.find(query).sort({ priority: -1 });
 
     const validTickers = tickers.filter(t => {
       if (t.startTime && t.endTime) {

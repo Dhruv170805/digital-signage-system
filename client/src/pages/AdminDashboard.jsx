@@ -4,7 +4,7 @@ import api from '../services/api';
 import Shell from '../components/Shell';
 import { 
   XCircle, Eye, Activity, LayoutGrid, CheckSquare, Calendar, FileText, 
-  Type as TypeIcon, Tv, Monitor, MonitorPlay, Users as UsersIcon, Settings as SettingsIcon
+  Type as TypeIcon, Tv, Monitor, MonitorPlay, Users as UsersIcon, Settings as SettingsIcon, RefreshCw
 } from 'lucide-react';
 
 import DashboardOverview from '../components/admin/DashboardOverview';
@@ -91,7 +91,7 @@ const AdminDashboard = () => {
     switch (activeTab) {
       case 'dashboard':
         return (
-          <div className="space-y-10 animate-fade-in">
+          <div className="space-y-10 animate-fade-in h-full overflow-y-auto custom-scrollbar pb-20 pr-4">
             <DashboardOverview screens={screens} schedules={schedules} pendingMedia={pendingMedia} media={media} setActiveTab={setActiveTab} />
             <Card title="Network Activity" icon={Activity} subtitle="System Activity Logs">
                <SystemHistory />
@@ -161,16 +161,23 @@ const AdminDashboard = () => {
 
   return (
     <Shell role="admin" activeTab={activeTab} setActiveTab={setActiveTab}>
-      <div className="p-10 max-w-7xl mx-auto">
-        <header className="mb-12 pb-8 flex justify-between items-end border-b border-slate-200 relative">
-          <div>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-sky-500/10 rounded-lg">{getTabIcon()}</div>
+      <div className="h-full flex flex-col p-10 overflow-hidden">
+        <header className="mb-12 shrink-0">
+          <div className="flex justify-between items-end pb-8 border-b border-slate-200">
+            <div>
+                <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-sky-500/10 rounded-lg">{getTabIcon()}</div>
+                </div>
+                <h1 className="text-8xl font-black tracking-tighter leading-none text-text uppercase">{getTabLabel()}</h1>
             </div>
-            <h1 className="text-8xl font-black tracking-tighter leading-none text-text uppercase">{getTabLabel()}</h1>
           </div>
         </header>
-        {renderView()}
+
+        <div className="flex-1 overflow-hidden">
+            <div className="h-full max-w-7xl mx-auto">
+                {renderView()}
+            </div>
+        </div>
       </div>
       <PreviewModal isOpen={showPreview} onClose={() => { setShowPreview(false); setPreviewFile(null); }} file={previewFile} />
     </Shell>

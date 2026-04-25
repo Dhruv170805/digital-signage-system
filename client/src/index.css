@@ -38,14 +38,18 @@
   --glass-shine: linear-gradient(135deg, rgba(255,255,255,1) 0%, rgba(255,255,255,0.8) 50%, rgba(255,255,255,0.9) 100%);
 }
 
+html, body, #root {
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+
 @layer base {
   body {
     @apply text-text antialiased selection:bg-accent selection:text-white;
     background-color: #F1F5F9 !important;
     background: var(--bg-gradient) !important;
-    min-height: 100vh;
     letter-spacing: -0.01em;
-    overflow-x: hidden;
   }
 
   h1, h2, h3, h4 {

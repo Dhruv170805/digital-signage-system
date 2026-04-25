@@ -298,20 +298,24 @@ const UserDashboard = () => {
 
   return (
     <Shell role="user" activeTab={activeTab} setActiveTab={setActiveTab}>
-      <div className="p-12 max-w-7xl mx-auto">
-        <header className="mb-16 relative">
+      <div className="h-full flex flex-col p-12 overflow-hidden">
+        <header className="mb-16 shrink-0 relative">
           <div className="flex items-center gap-4 mb-6">
              <div className="w-12 h-12 bg-blue-500/10 border border-blue-500/20 rounded-2xl flex items-center justify-center text-blue-600 shadow-inner">
                 {getTabIcon()}
              </div>
              <div>
                <p className="text-[10px] tracking-[6px] font-black uppercase text-blue-600">Screen Operator</p>
-
                <h1 className="text-6xl font-black tracking-tighter text-text leading-none uppercase mt-1">{getTabLabel()}</h1>
              </div>
           </div>
         </header>
-        {renderView()}
+        
+        <div className="flex-1 overflow-y-auto custom-scrollbar pr-4 pb-20">
+            <div className="max-w-7xl mx-auto">
+                {renderView()}
+            </div>
+        </div>
       </div>
     </Shell>
   );

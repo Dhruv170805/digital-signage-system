@@ -11,13 +11,14 @@ const useBuilderStore = create((set) => ({
 
   addFrame: () => set((state) => {
     const id = `Frame-${Date.now()}`;
+    const offset = (state.frames.length * 5) % 30; // Staggered placement to avoid direct overlap
     return {
       frames: [
         ...state.frames,
         {
           i: id,
-          x: 10,
-          y: 10,
+          x: 10 + offset,
+          y: 10 + offset,
           w: 30,
           h: 20,
           zIndex: state.frames.length + 1,
