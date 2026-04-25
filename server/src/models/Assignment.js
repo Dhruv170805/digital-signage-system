@@ -10,7 +10,7 @@ const assignmentSchema = new mongoose.Schema({
   tickerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Ticker' },
   
   // Mapping for templates
-  mediaMapping: { type: Map, of: String }, // { frameId: mediaId }
+  mediaMapping: { type: Map, of: mongoose.Schema.Types.Mixed }, // { frameId: [items] or mediaId }
   
   // Targets
   screenId: { type: mongoose.Schema.Types.ObjectId, ref: 'Screen' },

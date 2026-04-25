@@ -102,6 +102,24 @@ const AdminDashboard = () => {
       case 'settings': return <IdleScreenManager />;
       case 'system': return <SystemSettings fetchData={fetchData} />;
       case 'history': return <SystemHistory />;
+      case 'live':
+        return (
+            <div className="h-full overflow-hidden p-10 bg-slate-50/30 flex items-center justify-center">
+                <div className="relative w-full max-w-6xl">
+                    <div className="absolute -inset-4 bg-indigo-500/10 rounded-[60px] blur-3xl opacity-50" />
+                    <div className="aspect-video bg-slate-950 rounded-[48px] overflow-hidden border-[8px] border-slate-900 shadow-2xl relative group">
+                        <iframe src="/display" className="w-full h-full border-none pointer-events-none scale-[1.001]" title="Admin Live Preview" />
+                        <div className="absolute inset-0 bg-slate-900/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-700 backdrop-blur-md">
+                            <div className="w-24 h-24 bg-white/10 rounded-[32px] flex items-center justify-center mb-8 border border-white/20 shadow-2xl">
+                                <Tv size={40} className="text-white animate-pulse" />
+                            </div>
+                            <p className="text-white text-xl tracking-[20px] font-black uppercase">Master Signal</p>
+                            <p className="text-[10px] text-white/40 font-black uppercase tracking-[6px] mt-6">Administrative Monitoring Pipeline</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
       default: return null;
     }
   };

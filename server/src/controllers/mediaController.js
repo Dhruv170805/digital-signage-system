@@ -51,12 +51,18 @@ class MediaController {
         status: req.user.role === 'admin' ? 'approved' : 'pending',
         requestedStartTime: req.body.requestedStartTime || null,
         requestedEndTime: req.body.requestedEndTime || null,
+        requestedTargetType: req.body.requestedTargetType || 'all',
+        requestedTargetId: req.body.requestedTargetId || null,
         uploadedBy: req.user.id
       });
       
       mediaCreated = true;
       
-      await loggerService.logAudit(req.user.id, 'UPLOAD', 'Media', media._id, { filename: media.originalName, status: media.status });
+      await loggerService.logAudit(req.user.id, 'UPLOAD', 'Media', media._id, { 
+        filename: media.originalName, 
+        status: media.status,
+        uploader: req.user.name || 'Operator'
+      });
 
       if (media.status === 'approved') {
         const screenService = require('../services/screenService');
@@ -77,21 +83,66 @@ class MediaController {
 
   approve = async (req, res, next) => {
     try {
-      const { startTime, endTime, ...rest } = req.body;
+      const { startTime, endTime, startDate, endDate, priority, duration, targetType, targetId, ...rest } = req.body;
       const updateData = { status: 'approved', ...rest };
       
-      if (startTime) updateData.requestedStartTime = startTime;
-      if (endTime) updateData.requestedEndTime = endTime;
+      // Combine date and time strings into full Date objects for Media model
+      if (startDate && startTime) {
+          updateData.requestedStartTime = new Date(`${startDate}T${startTime}`);
+      } else if (startDate) {
+          updateData.requestedStartTime = new Date(startDate);
+      }
+
+      if (endDate && endTime) {
+          updateData.requestedEndTime = new Date(`${endDate}T${endTime}`);
+      } else if (endDate) {
+          updateData.requestedEndTime = new Date(endDate);
+      }
+
+      if (priority) updateData.requestedPriority = Number(priority);
+      if (duration) updateData.requestedDuration = Number(duration);
+      if (targetType) updateData.requestedTargetType = targetType;
+      if (targetId) updateData.requestedTargetId = targetId;
       
       const media = await mediaService.updateStatus(req.params.id, updateData);
-      
+      if (!media) return res.status(404).json({ success: false, message: 'Media not found' });
+
       await loggerService.logAudit(req.user.id, 'APPROVE', 'Media', media._id, { 
         filename: media.originalName,
+        approver: req.user.name || 'Admin',
         overrides: Object.keys(req.body)
       });
 
+      // Create an assignment so it actually shows up on screens
+      const assignmentService = require('../services/assignmentService');
+      const assignmentData = {
+          name: `Auto-Deploy: ${media.originalName}`,
+          mediaId: media._id,
+          priority: Number(priority) || media.requestedPriority || 1,
+          duration: Number(duration) || media.requestedDuration || 10,
+          startTime: startTime || (media.requestedStartTime ? new Date(media.requestedStartTime).toTimeString().slice(0,5) : '00:00'),
+          endTime: endTime || (media.requestedEndTime ? new Date(media.requestedEndTime).toTimeString().slice(0,5) : '23:59'),
+          startDate: startDate ? new Date(startDate) : (media.requestedStartTime || new Date()),
+          endDate: endDate ? new Date(endDate) : (media.requestedEndTime || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)),
+          status: 'approved'
+      };
+
+      const type = targetType || media.requestedTargetType || 'all';
+      const tid = targetId || media.requestedTargetId;
+
+      if (type === 'all') {
+          assignmentData.isGlobal = true;
+      } else if (type === 'screen' && tid) {
+          assignmentData.screenId = tid;
+      } else if (type === 'group' && tid) {
+          assignmentData.groupId = tid;
+      }
+
+      await assignmentService.createAssignment(assignmentData);
+
       const screenService = require('../services/screenService');
       await screenService.broadcastManifestUpdate();
+      
       res.json(this._formatMedia(media));
     } catch (error) {
       next(error);

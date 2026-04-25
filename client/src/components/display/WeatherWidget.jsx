@@ -4,13 +4,27 @@ import io from 'socket.io-client';
 
 const WeatherWidget = ({ location }) => {
   const [temp, setTemp] = useState('--');
-  const [area, setArea] = useState(location || 'Local');
+  const [area, setArea] = useState(location || 'Detecting...');
 
   useEffect(() => {
     let mounted = true;
 
     const fetchWeather = async (lat, lon) => {
       try {
+        // Reverse Geocoding to get actual place name
+        try {
+            const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`, {
+                headers: { 'User-Agent': 'NexusSignageSystem/1.0' }
+            });
+            const geoData = await geoRes.json();
+            if (mounted && geoData?.address) {
+                const placeName = geoData.address.city || geoData.address.town || geoData.address.village || geoData.address.suburb || geoData.address.county || 'Current Hub';
+                setArea(location || placeName);
+            }
+        } catch (geoErr) {
+            console.warn('Reverse geocoding failed:', geoErr);
+        }
+
         const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
         const data = await res.json();
         if (mounted && data?.current_weather) {

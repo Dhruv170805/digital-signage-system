@@ -35,6 +35,46 @@ const PDFThumbnail = ({ url }) => {
     );
 };
 
+const AppleTimeInput = ({ value, onChange, label }) => {
+    const [h, m] = (value || "00:00").split(':');
+    
+    const updateTime = (newH, newM) => {
+        const cleanH = newH.replace(/\D/g, '').slice(0, 2);
+        const cleanM = newM.replace(/\D/g, '').slice(0, 2);
+        
+        let finalH = cleanH === '' ? '00' : cleanH;
+        let finalM = cleanM === '' ? '00' : cleanM;
+
+        if (parseInt(finalH) > 23) finalH = '23';
+        if (parseInt(finalM) > 59) finalM = '59';
+
+        onChange(`${finalH.padStart(2, '0')}:${finalM.padStart(2, '0')}`);
+    };
+
+    return (
+        <div className="space-y-1">
+            <label className="text-[8px] font-black uppercase text-slate-500 ml-1">{label}</label>
+            <div className="flex items-center justify-center bg-white border border-slate-200 rounded-xl p-1.5 shadow-sm group focus-within:border-indigo-500 transition-all">
+                <input 
+                    type="text" 
+                    className="w-7 text-center bg-transparent font-black text-[11px] outline-none text-slate-900" 
+                    value={h} 
+                    onChange={(e) => updateTime(e.target.value, m)}
+                    onBlur={(e) => updateTime(e.target.value.padStart(2, '0'), m)}
+                />
+                <span className="text-slate-300 font-bold animate-pulse">:</span>
+                <input 
+                    type="text" 
+                    className="w-7 text-center bg-transparent font-black text-[11px] outline-none text-slate-900" 
+                    value={m} 
+                    onChange={(e) => updateTime(h, e.target.value)}
+                    onBlur={(e) => updateTime(h, e.target.value.padStart(2, '0'))}
+                />
+            </div>
+        </div>
+    );
+};
+
 const BroadcastScheduler = ({ fetchData }) => {
   const { data: screens = [] } = useScreens();
   const [groups, setGroups] = useState([]);
@@ -324,12 +364,12 @@ return (
                                                             <div className="space-y-1"><label className="text-[8px] font-black uppercase text-slate-500">Pri</label><input type="number" min="1" className="nexus-input py-1.5 px-2 text-[10px] bg-slate-50" value={item.priority} onChange={(e) => updateMappedItem(selectedFrame, item.uid, 'priority', Number(e.target.value))} /></div>
                                                         </div>
                                                         <div className="grid grid-cols-2 gap-3">
-                                                            <div className="space-y-1"><label className="text-[8px] font-black uppercase text-slate-500">Start</label><input type="time" className="nexus-input py-1.5 px-2 text-[10px] bg-slate-50" value={item.startTime} onChange={(e) => updateMappedItem(selectedFrame, item.uid, 'startTime', e.target.value)} /></div>
-                                                            <div className="space-y-1"><label className="text-[8px] font-black uppercase text-slate-500">End</label><input type="time" className="nexus-input py-1.5 px-2 text-[10px] bg-slate-50" value={item.endTime} onChange={(e) => updateMappedItem(selectedFrame, item.uid, 'endTime', e.target.value)} /></div>
+                                                            <AppleTimeInput label="Start" value={item.startTime} onChange={(val) => updateMappedItem(selectedFrame, item.uid, 'startTime', val)} />
+                                                            <AppleTimeInput label="End" value={item.endTime} onChange={(val) => updateMappedItem(selectedFrame, item.uid, 'endTime', val)} />
                                                         </div>
                                                         <div className="grid grid-cols-2 gap-3">
-                                                            <div className="space-y-1"><label className="text-[8px] font-black uppercase text-slate-500">From</label><input type="date" className="nexus-input py-1.5 px-2 text-[10px] bg-slate-50" value={item.startDate} onChange={(e) => updateMappedItem(selectedFrame, item.uid, 'startDate', e.target.value)} /></div>
-                                                            <div className="space-y-1"><label className="text-[8px] font-black uppercase text-slate-500">To</label><input type="date" className="nexus-input py-1.5 px-2 text-[10px] bg-slate-50" value={item.endDate} onChange={(e) => updateMappedItem(selectedFrame, item.uid, 'endDate', e.target.value)} /></div>
+                                                            <div className="space-y-1"><label className="text-[8px] font-black uppercase text-slate-500">From</label><input type="date" className="nexus-input py-1.5 px-2 text-[10px] bg-white border-slate-200 text-slate-900" value={item.startDate} onChange={(e) => updateMappedItem(selectedFrame, item.uid, 'startDate', e.target.value)} /></div>
+                                                            <div className="space-y-1"><label className="text-[8px] font-black uppercase text-slate-500">To</label><input type="date" className="nexus-input py-1.5 px-2 text-[10px] bg-white border-slate-200 text-slate-900" value={item.endDate} onChange={(e) => updateMappedItem(selectedFrame, item.uid, 'endDate', e.target.value)} /></div>
                                                         </div>
                                                     </div>
                                                 </div>
