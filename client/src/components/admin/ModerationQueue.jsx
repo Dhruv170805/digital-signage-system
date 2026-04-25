@@ -335,7 +335,7 @@ const ModerationQueue = ({ fetchData, setPreviewFile, setShowPreview }) => {
                 </div>
                 )
             ) : (
-                pendingSchedules.length === 0 ? (
+                (!pendingSchedules || pendingSchedules.length === 0) ? (
                     <div className="text-center py-40 border-2 border-dashed border-slate-200 rounded-[40px]">
                       <div className="w-20 h-20 bg-indigo-50 rounded-[24px] flex items-center justify-center mx-auto mb-6 border border-indigo-100">
                         <Calendar className="text-indigo-500" size={32} />

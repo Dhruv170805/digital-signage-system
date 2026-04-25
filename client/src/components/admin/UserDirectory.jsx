@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, UserPlus, Trash2, Shield, Mail, Key, RefreshCw, Zap, ShieldCheck } from 'lucide-react';
+import { Users, UserPlus, Trash2, Shield, Mail, Key, RefreshCw, Zap, ShieldCheck, ShieldAlert } from 'lucide-react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 
@@ -25,6 +25,16 @@ const UserDirectory = ({ users = [], fetchData }) => {
       toast.success('Access Terminated');
       fetchData();
     } catch (err) { toast.error('Termination failed'); }
+  };
+
+  const toggleUserLock = async (user) => {
+    const isCurrentlyLocked = user.status === 'locked';
+    try {
+        const endpoint = `/api/auth/users/${user._id}/${isCurrentlyLocked ? 'unlock' : 'lock'}`;
+        await api.post(endpoint);
+        toast.success(`Personnel access ${isCurrentlyLocked ? 'restored' : 'suspended'}`);
+        fetchData();
+    } catch (err) { toast.error('Lock state update failed'); }
   };
 
   return (
@@ -145,14 +155,25 @@ const UserDirectory = ({ users = [], fetchData }) => {
                                         </td>
                                         <td className="py-6 px-8">
                                             <div className="flex items-center gap-2">
-                                                <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                                                <span className="text-[9px] font-black uppercase text-emerald-600 tracking-widest">Authorized</span>
+                                                <div className={`w-2 h-2 rounded-full ${u.status === 'locked' ? 'bg-rose-500' : 'bg-emerald-500'}`} />
+                                                <span className={`text-[9px] font-black uppercase tracking-widest ${u.status === 'locked' ? 'text-rose-600' : 'text-emerald-600'}`}>
+                                                    {u.status === 'locked' ? 'Suspended' : 'Authorized'}
+                                                </span>
                                             </div>
                                         </td>
                                         <td className="py-6 px-8 text-right">
-                                            <button onClick={() => deleteUser(u._id)} className="p-3 bg-rose-50 text-rose-500 rounded-xl opacity-0 group-hover:opacity-100 hover:bg-rose-600 hover:text-white transition-all shadow-sm">
-                                                <Trash2 size={16}/>
-                                            </button>
+                                            <div className="flex justify-end gap-2">
+                                                <button 
+                                                    onClick={() => toggleUserLock(u)} 
+                                                    className={`p-3 rounded-xl transition-all shadow-sm opacity-0 group-hover:opacity-100 ${u.status === 'locked' ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white' : 'bg-orange-50 text-orange-600 hover:bg-orange-600 hover:text-white'}`}
+                                                    title={u.status === 'locked' ? 'Unlock Account' : 'Lock Account'}
+                                                >
+                                                    {u.status === 'locked' ? <Key size={16}/> : <ShieldAlert size={16}/>}
+                                                </button>
+                                                <button onClick={() => deleteUser(u._id)} className="p-3 bg-rose-50 text-rose-500 rounded-xl opacity-0 group-hover:opacity-100 hover:bg-rose-600 hover:text-white transition-all shadow-sm">
+                                                    <Trash2 size={16}/>
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}

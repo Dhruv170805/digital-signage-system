@@ -4,7 +4,7 @@ import axios from 'axios';
 import io from 'socket.io-client';
 import { useSearchParams } from 'react-router-dom';
 import { 
-  CloudSun, MapPin, AlertCircle, Zap, Activity, Monitor, Clock as ClockIcon, RefreshCw
+  CloudSun, MapPin, AlertCircle, Zap, Activity, Monitor, Clock as ClockIcon, RefreshCw, ShieldAlert, QrCode, WifiOff
 } from 'lucide-react';
 import FrameManager from '../components/display/FrameManager';
 import WeatherWidget from '../components/display/WeatherWidget';
@@ -46,6 +46,19 @@ const DisplayScreen = () => {
     }
   }, [searchParams]);
 
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
   const getTelemetry = () => {
     const telemetry = {
         uptime: Math.round(performance.now() / 1000),
@@ -54,6 +67,17 @@ const DisplayScreen = () => {
         telemetry.ramUsage = Math.round(window.performance.memory.usedJSHeapSize / (1024 * 1024));
     }
     return telemetry;
+  };
+
+  const saveToLocalCache = (data) => {
+    try { localStorage.setItem('nexus_manifest_cache', JSON.stringify(data)); } catch (e) {}
+  };
+
+  const loadFromLocalCache = () => {
+    try {
+      const cached = localStorage.getItem('nexus_manifest_cache');
+      return cached ? JSON.parse(cached) : null;
+    } catch (e) { return null; }
   };
 
   const fetchData = useCallback(async () => {
@@ -71,52 +95,56 @@ const DisplayScreen = () => {
 
     setIsSyncing(true);
     try {
-      // Use the new Manifest-Only API (Issue 4.2 Fix)
       if (token) {
         const manifestRes = await axios.get(`${import.meta.env.VITE_API_URL}/api/screens/manifest`, authConfig);
         const { screen, playlist: newPlaylist, tickers: newTickers, settings: newSettings, media: newMedia, idleMedia: newIdleMedia, idleConfig: newIdleConfig } = manifestRes.data;
         
         setScreenInfo(screen);
+        
+        saveToLocalCache(manifestRes.data);
+        setIsOffline(false);
 
-        // Issue 5.1 Fix: Deep compare playlist IDs to prevent unnecessary restarts
+        // Deep compare playlist IDs to prevent unnecessary restarts
         const currentIds = playlist.map(p => p.id || p._id).join(',');
-        const newIds = newPlaylist.map(p => p.id || p._id).join(',');
+        const newIds = (newPlaylist || []).map(p => p.id || p._id).join(',');
 
         if (newIds !== currentIds) {
-          setPlaylist(newPlaylist);
+          setPlaylist(newPlaylist || []);
           setCurrentIdx(0);
         }
 
-        setTickers(newTickers);
-        setSettings(newSettings);
-        setAllMedia(newMedia);
-        setIdleMedia(newIdleMedia);
-        setIdleConfig(newIdleConfig);
-      } else {
-        // Fallback for screens without tokens (legacy or initial setup)
-        const screenId = searchParams.get('screenId');
-        const [playlistRes, mediaRes, tickerRes, settingsRes] = await Promise.all([
-          axios.get(`${import.meta.env.VITE_API_URL}/api/schedule/active${screenId ? `?screenId=${screenId}` : ''}`),
-          axios.get(`${import.meta.env.VITE_API_URL}/api/media`),
-          axios.get(`${import.meta.env.VITE_API_URL}/api/ticker/active`),
-          axios.get(`${import.meta.env.VITE_API_URL}/api/settings`)
-        ]);
-
-        setPlaylist(playlistRes.data);
-        setAllMedia(mediaRes.data);
-        setTickers(tickerRes.data);
-        setSettings(settingsRes.data);
+        setTickers(newTickers || []);
+        setSettings(newSettings || {});
+        setAllMedia(newMedia || []);
+        setIdleMedia(newIdleMedia || null);
+        setIdleConfig(newIdleConfig || null);
       }
-
     } catch (err) {
       console.error("Data sync error", err);
+      
+      if (err.response && (err.response.status === 401 || err.response.status === 403)) {
+         localStorage.removeItem('screenToken');
+         window.location.reload();
+         return;
+      }
+
+      setIsOffline(true);
+      const cached = loadFromLocalCache();
+      if (cached) {
+         setPlaylist(cached.playlist || []);
+         setTickers(cached.tickers || []);
+         setSettings(cached.settings || {});
+         setAllMedia(cached.media || []);
+         setIdleMedia(cached.idleMedia || null);
+         setIdleConfig(cached.idleConfig || null);
+      }
     } finally {
       setTimeout(() => {
         setIsSyncing(false);
         setIsInitialLoading(false);
       }, 1500);
     }
-  }, [searchParams, playlist]);
+  }, [playlist]);
 
   useEffect(() => {
     const socket = io(import.meta.env.VITE_API_URL);
@@ -360,6 +388,50 @@ const DisplayScreen = () => {
         </div>
     );
   };
+
+  if (error === 'IDENTITY_REVOKED' || (!localStorage.getItem('screenToken') && !searchParams.get('screenId'))) {
+    return (
+        <div className="fixed inset-0 bg-slate-950 flex flex-col items-center justify-center z-[200] font-sans">
+            <div className="p-16 glass rounded-[60px] border border-rose-500/20 bg-rose-500/5 max-w-3xl w-full text-center shadow-2xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-rose-500/20 blur-[100px] rounded-full" />
+                <div className="w-24 h-24 bg-rose-500/10 rounded-full flex items-center justify-center border border-rose-500/20 mx-auto mb-10 shadow-[0_0_40px_rgba(244,63,94,0.3)]">
+                    <ShieldAlert size={40} className="text-rose-500 animate-pulse" />
+                </div>
+                <h1 className="text-4xl font-black text-white uppercase tracking-tighter mb-4 leading-none">Security Clearance Required</h1>
+                <p className="text-[12px] font-bold text-rose-200 uppercase tracking-[6px] mb-12 leading-relaxed">This node is currently unlinked from the main network manifest.</p>
+                
+                <div className="p-8 bg-black/40 rounded-[32px] border border-white/5 space-y-4">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Administrator Pairing Sequence</p>
+                    <div className="bg-white px-8 py-6 rounded-2xl border-4 border-dashed border-slate-200 flex items-center justify-center gap-4">
+                        <QrCode size={48} className="text-black"/>
+                        <div className="text-left">
+                            <p className="text-3xl font-black text-black tracking-tighter uppercase">NEXUS-PAIR</p>
+                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Access control center to authorize</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+  }
+
+  if (isOffline && !playlist.length) {
+    return (
+        <div className="fixed inset-0 bg-slate-950 flex flex-col items-center justify-center z-[200] font-sans">
+            <div className="p-16 glass rounded-[60px] border border-amber-500/20 bg-amber-500/5 max-w-3xl w-full text-center shadow-2xl">
+                <div className="w-24 h-24 bg-amber-500/10 rounded-full flex items-center justify-center border border-amber-500/20 mx-auto mb-10 shadow-[0_0_40px_rgba(245,158,11,0.3)]">
+                    <WifiOff size={40} className="text-amber-500 animate-pulse" />
+                </div>
+                <h1 className="text-4xl font-black text-white uppercase tracking-tighter mb-4 leading-none">Network Isolation Detected</h1>
+                <p className="text-[12px] font-bold text-amber-200 uppercase tracking-[6px] mb-12 leading-relaxed">Awaiting reconnection to master server. No local cache found.</p>
+                <div className="flex items-center justify-center gap-4 text-slate-400">
+                    <Activity size={16} className="animate-spin" />
+                    <span className="text-[10px] font-black uppercase tracking-widest">Polling fallback relays...</span>
+                </div>
+            </div>
+        </div>
+    );
+  }
 
   if (isInitialLoading) return (
     <div className="fixed inset-0 bg-bg flex items-center justify-center z-[100] font-sans">

@@ -207,9 +207,15 @@ const TickerManager = () => {
                                             <div className="space-y-2">
                                                 <label className="text-[9px] font-black uppercase text-slate-500 ml-1">Typography</label>
                                                 <select className="nexus-input" value={draftTicker.fontFamily} onChange={(e) => setDraftTicker({ ...draftTicker, fontFamily: e.target.value })}>
-                                                    <option value="sans-serif">Sans Serif</option>
+                                                    <option value="sans-serif">System Sans</option>
+                                                    <option value="'Plus Jakarta Sans', sans-serif">Jakarta Sans (Premium)</option>
                                                     <option value="'JetBrains Mono', monospace">Terminal Mono</option>
-                                                    <option value="'Plus Jakarta Sans', sans-serif">Jakarta Sans</option>
+                                                    <option value="'Bebas Neue', sans-serif">Bebas Neue (Impact)</option>
+                                                    <option value="'Orbitron', sans-serif">Orbitron (Future)</option>
+                                                    <option value="'Montserrat', sans-serif">Montserrat (Geometric)</option>
+                                                    <option value="'Oswald', sans-serif">Oswald (Compact)</option>
+                                                    <option value="'Playfair Display', serif">Playfair (Serif)</option>
+                                                    <option value="'Roboto', sans-serif">Roboto (Modern)</option>
                                                 </select>
                                             </div>
                                             <div className="space-y-2">
@@ -218,6 +224,12 @@ const TickerManager = () => {
                                                     <option value="normal">Standard</option>
                                                     <option value="bold">Bold</option>
                                                     <option value="900">Black</option>
+                                                </select>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-[9px] font-black uppercase text-slate-500 ml-1">Scale (Size)</label>
+                                                <select className="nexus-input" value={draftTicker.fontSize} onChange={(e) => setDraftTicker({ ...draftTicker, fontSize: e.target.value })}>
+                                                    {['text-xs', 'text-sm', 'text-base', 'text-lg', 'text-xl', 'text-2xl', 'text-4xl', 'text-6xl', 'text-8xl'].map(s => <option key={s} value={s}>{s.replace('text-', '').toUpperCase()}</option>)}
                                                 </select>
                                             </div>
                                         </div>

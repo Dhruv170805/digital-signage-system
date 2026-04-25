@@ -136,9 +136,10 @@ const LayoutArchitect = ({ fetchData }) => {
                         <div className={`absolute -inset-1 bg-gradient-to-r from-indigo-500/20 to-sky-500/20 rounded-[32px] blur opacity-25 group-hover:opacity-40 transition duration-1000 ${collisions.length > 0 ? 'from-rose-500/30 to-rose-500/30 opacity-60' : ''}`} />
                         <div 
                             ref={architectRef}
-                            className="relative aspect-[21/9] bg-slate-950 border-4 border-slate-900 rounded-[32px] overflow-hidden shadow-2xl"
+                            className="relative aspect-[21/7] bg-slate-950 border-4 border-slate-900 rounded-[32px] overflow-hidden shadow-2xl"
                             style={{ backgroundImage: 'radial-gradient(circle, #1e293b 1px, transparent 1px)', backgroundSize: '50px 50px' }}
                         >
+
                             {frames.map((f) => (
                                 <Rnd
                                     key={f.i}
@@ -183,7 +184,7 @@ const LayoutArchitect = ({ fetchData }) => {
           </div>
 
           {/* STUDIO CONTENT */}
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 overflow-hidden min-h-0">
             {activeTab === 'editor' ? (
                 <div className="h-full flex flex-col lg:flex-row divide-x divide-slate-200/50">
                     
