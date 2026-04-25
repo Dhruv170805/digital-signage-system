@@ -2,19 +2,32 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import FrameManager from './FrameManager';
 import TickerEngine from './TickerEngine';
 import PreloadLayer from './PreloadLayer';
+import FrameOverlay from './FrameOverlay';
 import useInterruptStore from '../../store/useInterruptStore';
 import { Radio } from 'lucide-react';
 
-const LocalFramePlayer = ({ zone, frameItems, allMedia, tickers }) => {
+const LocalFramePlayer = ({ zone, frameItems, allMedia, tickers, screenInfo }) => {
   const [currentIndex, setCurrentIdx] = useState(0);
   const [nextIsReady, setNextIsReady] = useState(false);
   const [minuteTick, setMinuteTick] = useState(0);
   const { activeInterrupt, clearInterrupt } = useInterruptStore();
+  const mediaRef = useRef(null);
 
-  // 🧠 MINUTE TICKER: Forces scheduler re-validation every 60s
+  // 🧠 CLOCK-ALIGNED MINUTE TICKER: Fixes "Lazy Tick" drift (Issue 5)
   useEffect(() => {
-    const timer = setInterval(() => setMinuteTick(t => t + 1), 60000);
-    return () => clearInterval(timer);
+    const alignTick = () => {
+        const now = new Date();
+        const delay = 60000 - (now.getSeconds() * 1000 + now.getMilliseconds());
+        
+        const timeoutId = setTimeout(() => {
+            setMinuteTick(t => t + 1);
+            const intervalId = setInterval(() => setMinuteTick(t => t + 1), 60000);
+            return () => clearInterval(intervalId);
+        }, delay);
+        
+        return () => clearTimeout(timeoutId);
+    };
+    return alignTick();
   }, []);
 
   // Normalize mapping items
@@ -30,8 +43,6 @@ const LocalFramePlayer = ({ zone, frameItems, allMedia, tickers }) => {
     const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
     const currentDate = now.toISOString().split('T')[0];
     
-    console.log(`[Scheduler:${zone.i}] Re-validating at ${currentTime}`);
-
     const valid = items.filter(item => {
       if (item.startDate && item.startDate > currentDate) return false;
       if (item.endDate && item.endDate < currentDate) return false;
@@ -48,7 +59,7 @@ const LocalFramePlayer = ({ zone, frameItems, allMedia, tickers }) => {
     if (valid.length === 0) return [];
     const maxPriority = Math.max(...valid.map(i => i.priority || 1));
     return valid.filter(i => (i.priority || 1) === maxPriority);
-  }, [items, minuteTick, zone.i]);
+  }, [items, minuteTick]);
 
   const currentItem = validPlaylist[currentIndex];
   const nextIndex = (currentIndex + 1) % validPlaylist.length;
@@ -73,13 +84,23 @@ const LocalFramePlayer = ({ zone, frameItems, allMedia, tickers }) => {
     }
   }, [validPlaylist.length, nextIndex, nextIsReady]);
 
+  // 🛡️ PRELOAD CIRCUIT BREAKER: Fixes "Infinite Black Hole" (Issue 4)
+  useEffect(() => {
+    if (nextAsset && !nextIsReady) {
+      const timeout = setTimeout(() => {
+        console.warn(`[Scheduler] Preload timeout for ${nextAsset.fileName || 'Asset'}. Forcing ready.`);
+        setNextIsReady(true); 
+      }, 8000); // 8s grace period
+      return () => clearTimeout(timeout);
+    }
+  }, [nextAsset, nextIsReady]);
+
   // 🚀 PLAYLIST ROTATION
   useEffect(() => {
     if (validPlaylist.length <= 1 || !currentAsset) return;
 
     const isVideo = currentAsset.fileType === 'video' || (currentAsset.mimeType && currentAsset.mimeType.startsWith('video/'));
 
-    // Non-video assets use duration-based timeout
     if (!isVideo) {
         const duration = (currentItem.duration || 10) * 1000;
         const timer = setTimeout(advance, duration);
@@ -103,11 +124,6 @@ const LocalFramePlayer = ({ zone, frameItems, allMedia, tickers }) => {
     );
   }
 
-  // ---------------------------------------------------------
-  // RENDER SELECTION
-  // ---------------------------------------------------------
-  
-  // 1. HARD OVERRIDE LAYER (Highest Z-Index)
   if (activeInterrupt) {
     return (
       <div className="absolute inset-0 z-[9999] bg-black animate-fade-in">
@@ -116,31 +132,32 @@ const LocalFramePlayer = ({ zone, frameItems, allMedia, tickers }) => {
     );
   }
 
-  // 2. TICKER SPECIAL HANDLING
   if (zone.type === 'ticker') {
     const tickerData = tickers.find(t => t.id === currentItem.mediaId || t._id === currentItem.mediaId);
     return <TickerEngine ticker={tickerData} />;
   }
 
-  // 3. MAIN BUFFERED STAGE
   return (
     <div className="w-full h-full relative overflow-hidden bg-black">
-      {/* Visible Layer */}
       <FrameManager 
         item={currentAsset} 
         zone={zone}
         onMediaEnd={advance}
         onMediaError={advance}
+        mediaRef={mediaRef}
       />
 
-      {/* Hidden Buffer (Preload) */}
+      <FrameOverlay 
+        frame={zone} 
+        tickers={tickers} 
+        screenInfo={screenInfo} 
+        mediaRef={mediaRef} 
+      />
+
       {nextAsset && (
         <PreloadLayer 
             item={nextAsset} 
-            onReady={() => {
-                console.log(`[Preload] Asset Ready: ${nextAsset.fileName || 'Next'}`);
-                setNextIsReady(true);
-            }} 
+            onReady={() => setNextIsReady(true)} 
         />
       )}
     </div>

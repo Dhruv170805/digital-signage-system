@@ -9,7 +9,7 @@ const authenticate = async (req, res, next) => {
       const token = authHeader.split(' ')[1];
       
       // Stateless validation (No DB hit!)
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret');
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
       
       // Immediate revocation check via Redis
       const isLocked = await redisClient.get(`locked_user:${decoded.id}`);

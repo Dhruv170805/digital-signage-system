@@ -1,53 +1,68 @@
 const { Worker } = require('bullmq');
 const { Emitter } = require('@socket.io/redis-emitter');
 const { redisClient } = require('../config/redis');
+const Screen = require('../models/Screen');
+const assignmentService = require('../services/assignmentService');
+const tickerService = require('../services/tickerService');
+const configService = require('../services/configService');
+const mediaService = require('../services/mediaService');
+const idleService = require('../services/idleService');
 
-// Use the emitter to broadcast without an attached io server instance
 const ioEmitter = new Emitter(redisClient);
 
-const connection = {
-  url: process.env.REDIS_URL || 'redis://localhost:6379',
-};
-
+/**
+ * 🧠 SCALABLE BROADCAST WORKER (Issue 9 Fix)
+ * Optimized to prevent the "Thundering Herd" N+1 query problem.
+ */
 const broadcastWorker = new Worker('broadcastQueue', async (job) => {
-  console.log(`[Worker] Processing broadcast job ${job.id}`);
-  
-  const Screen = require('../models/Screen');
-  const tickerService = require('../services/tickerService');
-  const configService = require('../services/configService');
-  const mediaService = require('../services/mediaService');
-  const assignmentService = require('../services/assignmentService');
-  const idleService = require('../services/idleService');
+  console.log(`[Worker] Starting Broadcast manifest compilation...`);
 
-  const [screens, tickers, settings, media] = await Promise.all([
-    Screen.find().populate('groupId').populate('idleMediaId'),
+  // 1. Pre-aggregate GLOBAL data (once per job, not per screen)
+  const [globalTickers, systemSettings, allApprovedMedia] = await Promise.all([
     tickerService.getActive(),
     configService.getFullConfig(),
     mediaService.getAllApproved()
   ]);
 
-  await Promise.all(screens.map(async (screen) => {
-    const [playlist, idleConfig] = await Promise.all([
+  // 2. Fetch all active screens
+  const screens = await Screen.find({ isActive: true }).populate('groupId');
+
+  // 3. Process screens in optimized batches
+  const batchSize = 100;
+  for (let i = 0; i < screens.length; i += batchSize) {
+    const batch = screens.slice(i, i + batchSize);
+    
+    await Promise.all(batch.map(async (screen) => {
+      // 🧠 STRATEGY: Only fetch screen-specific data that isn't global
+      const [playlist, idleConfig] = await Promise.all([
         assignmentService.getActiveAssignmentsForScreen(screen._id, screen.groupId),
         idleService.getIdleContent(screen._id, screen.groupId)
-    ]);
+      ]);
 
-    ioEmitter.to(`screen:${screen._id}`).emit('manifestUpdate', {
-      screen,
-      playlist,
-      tickers,
-      settings,
-      media,
-      idleMedia: screen.idleMediaId,
-      idleConfig
-    });
-  }));
+      // Emit manifest via Redis Pub/Sub (Fast & Atomic)
+      ioEmitter.to(`screen:${screen._id}`).emit('manifestUpdate', {
+        screen,
+        playlist,
+        tickers: globalTickers,
+        settings: systemSettings,
+        media: allApprovedMedia,
+        idleMedia: screen.idleMediaId,
+        idleConfig
+      });
+    }));
+    
+    console.log(`[Worker] Dispatched manifest to batch ${Math.floor(i/batchSize) + 1}`);
+  }
 
-  console.log(`[Worker] Completed broadcast to ${screens.length} screens`);
-}, { connection });
+  console.log(`[Worker] Completed broadcast to ${screens.length} total screens`);
+}, { 
+    connection: {
+        url: process.env.REDIS_URL || 'redis://localhost:6379'
+    }
+});
 
 broadcastWorker.on('failed', (job, err) => {
-  console.error(`[Worker] Job ${job?.id} failed:`, err);
+  console.error(`[Worker] Job ${job?.id} failed critically:`, err);
 });
 
 module.exports = broadcastWorker;

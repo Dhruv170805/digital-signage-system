@@ -10,10 +10,12 @@ import FrameManager from '../components/display/FrameManager';
 import WeatherWidget from '../components/display/WeatherWidget';
 import TickerEngine from '../components/display/TickerEngine';
 import LocalFramePlayer from '../components/display/LocalFramePlayer';
+import useLayoutStore from '../store/useLayoutStore';
 
 // --- Main Display Screen ---
 const DisplayScreen = () => {
   const [searchParams] = useSearchParams();
+  const { topBarPosition, tickerPosition } = useLayoutStore();
   
   const [screenInfo, setScreenInfo] = useState(null);
   const [playlist, setPlaylist] = useState([]);
@@ -345,7 +347,7 @@ const DisplayScreen = () => {
                         zIndex: zone.zIndex || 1 
                     }}
                 >
-                    <LocalFramePlayer zone={zone} frameItems={frameItems} allMedia={allMedia} tickers={tickers} />
+                    <LocalFramePlayer zone={zone} frameItems={frameItems} allMedia={allMedia} tickers={tickers} screenInfo={screenInfo} />
                 </div>
               );
           })}
@@ -421,59 +423,6 @@ const DisplayScreen = () => {
       <div ref={transitionRef} className="absolute inset-0 z-10 transition-opacity duration-1000 ease-in-out">
         {playlist.length > 0 && currentIdx < playlist.length ? renderMediaContent(playlist[currentIdx]) : (
           <div className="w-full h-full animate-fade-in relative">{renderIdleContent()}</div>
-        )}
-      </div>
-
-      {/* 3. OVERLAY HUD (FLOATING) */}
-      <div className="absolute inset-0 pointer-events-none z-50">
-        
-        {/* LIGHT BROADCAST OVERLAY (TOP BAR) */}
-        <div className="absolute top-0 left-0 w-full px-10 py-4 flex items-center justify-between pointer-events-auto">
-            {/* BACKGROUND GRADIENT FADE */}
-            <div className="absolute inset-0 bg-gradient-to-b from-black/70 to-transparent backdrop-blur-[2px] pointer-events-none" />
-
-            {/* LEFT: STATUS */}
-            <div className="relative flex items-center gap-3">
-                <div className={`w-2 h-2 rounded-full ${isSyncing ? 'bg-indigo-400' : (isOffline ? 'bg-rose-500' : 'bg-green-400')} animate-pulse shadow-[0_0_15px_rgba(74,222,128,0.4)]`} />
-                <span className="text-[10px] font-black uppercase tracking-[5px] text-white/60">
-                    {isOffline ? 'OFFLINE' : (isSyncing ? 'SYNCING' : 'LIVE')}
-                </span>
-            </div>
-
-            {/* CENTER: LOCATION + WEATHER */}
-            <div className="relative flex items-center gap-4 px-6 py-1.5 rounded-lg bg-white/5 backdrop-blur-md border border-white/5 shadow-2xl">
-                <WeatherWidget location={screenInfo?.location} />
-            </div>
-
-            {/* RIGHT: TIME/DATE */}
-            <div className="relative flex items-center gap-6 text-right">
-                <div className="flex flex-col items-end">
-                    <div className="text-2xl font-black tracking-tighter tabular-nums leading-none text-white drop-shadow-lg">
-                        {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
-                    </div>
-                    <div className="text-[9px] font-black opacity-50 tracking-[3px] uppercase mt-1">
-                        {time.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })}
-                    </div>
-                </div>
-                {(screenInfo || searchParams.get('screenId')) && (
-                    <div className="h-8 w-px bg-white/10 hidden lg:block" />
-                )}
-                {(screenInfo || searchParams.get('screenId')) && (
-                    <span className="text-[10px] font-black text-indigo-400/50 uppercase tracking-[2px] hidden lg:block">{screenInfo?.name || 'NODE-01'}</span>
-                )}
-            </div>
-        </div>
-
-        {/* ULTRA-THIN BROADCAST TICKER */}
-        {tickers.length > 0 && (
-            <div className="absolute bottom-0 left-0 w-full pb-0 pointer-events-auto">
-                <div className="absolute bottom-0 left-0 w-full h-[15vh] bg-gradient-to-t from-black/80 to-transparent pointer-events-none" />
-                <div className="h-[45px] w-full flex items-center overflow-hidden bg-black/40 backdrop-blur-xl border-t border-white/5 relative z-10 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
-                    <div className="absolute left-0 top-0 bottom-0 w-40 bg-gradient-to-r from-black/80 to-transparent z-10" />
-                    <div className="absolute right-0 top-0 bottom-0 w-40 bg-gradient-to-l from-black/80 to-transparent z-10" />
-                    <TickerEngine ticker={tickers[currentTickerIdx]} />
-                </div>
-            </div>
         )}
       </div>
     </div>

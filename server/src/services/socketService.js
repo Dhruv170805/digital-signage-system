@@ -18,7 +18,7 @@ class SocketService {
 
         if (token) {
           const jwt = require('jsonwebtoken');
-          const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret');
+          const decoded = jwt.verify(token, process.env.JWT_SECRET); // ❌ Removed hardcoded 'secret' fallback
           socket.user = decoded;
           return next();
         } 
@@ -31,12 +31,11 @@ class SocketService {
           }
         }
 
-        // Allow unauthenticated connections but restrict their actions later
-        return next();
+        // ❌ REJECT unauthenticated connections
+        return next(new Error('Authentication failed: Valid User or Device token required'));
       } catch (err) {
-        // Log error but allow connection to see if it can authenticate via events (legacy support)
-        console.warn('Socket auth handshake error:', err.message);
-        return next();
+        console.warn('Socket auth handshake failure:', err.message);
+        return next(new Error('Authentication failed: Invalid credentials'));
       }
     });
 
@@ -50,7 +49,7 @@ class SocketService {
         // Only allow screens to send heartbeats
         if (!socket.screen) return;
         
-        const { ipAddress, telemetry } = data;
+        const { telemetry } = data;
         const screen = await screenService.updateHeartbeat(socket.screen.deviceToken, telemetry);
         if (screen) {
           socket.join(`screen:${screen._id}`);
@@ -61,40 +60,25 @@ class SocketService {
       });
 
       socket.on('screenPing', async (data) => {
-        const { token, screenId, telemetry } = data;
+        const { token, telemetry } = data;
         
-        // If already authenticated as screen via handshake
+        // If already authenticated as screen via handshake, join rooms immediately
         if (socket.screen) {
             socket.join(`screen:${socket.screen._id}`);
             if (socket.screen.groupId) socket.join(`group:${socket.screen.groupId}`);
             return;
         }
 
-        // Backward compatibility: allow screen to identify via token/screenId in event
-        let screen = null;
+        // Backward compatibility: allow screen to identify via token only (cryptographically secure)
         if (token) {
-            screen = await screenService.updateHeartbeat(token, telemetry);
-        } else if (screenId) {
-            // screenId is less secure, so we only fetch, not update heartbeat if no token
-            screen = await screenService.getScreenById(screenId);
-        }
-
-        if (screen) {
-            socket.join(`screen:${screen._id}`);
-            if (screen.groupId) socket.join(`group:${screen.groupId}`);
-        }
-
-        // If admin, allow joining any room for monitoring
-        if (socket.user && socket.user.role === 'admin') {
-            const { screenId: targetScreenId } = data;
-            if (targetScreenId) {
-                const targetScreen = await screenService.getScreenById(targetScreenId);
-                if (targetScreen) {
-                    socket.join(`screen:${targetScreen._id}`);
-                    if (targetScreen.groupId) socket.join(`group:${targetScreen.groupId}`);
-                }
+            const screen = await screenService.updateHeartbeat(token, telemetry);
+            if (screen) {
+                socket.join(`screen:${screen._id}`);
+                if (screen.groupId) socket.join(`group:${screen.groupId}`);
             }
         }
+        
+        // ❌ Removed insecure legacy 'screenId' room injection
       });
 
       socket.on('disconnect', () => {

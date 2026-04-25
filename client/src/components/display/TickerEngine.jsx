@@ -5,7 +5,7 @@ const TickerContent = ({ messages }) => {
     <div className="flex items-center flex-nowrap">
         {messages.map((msg, idx) => (
           <React.Fragment key={idx}>
-            <span className="uppercase font-black px-16 tracking-tighter whitespace-nowrap">
+            <span className="uppercase font-black px-16 tracking-tighter whitespace-nowrap drop-shadow-[0_2px_10px_rgba(0,0,0,1)]">
                 {msg}
             </span>
             {/* Professional Broadcast Separator */}

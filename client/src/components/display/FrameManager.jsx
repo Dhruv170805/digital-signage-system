@@ -10,7 +10,7 @@ const getMediaUrl = (filePath, zoneId) => {
   return zoneId ? `${url}?z=${zoneId}` : url;
 };
 
-const FrameManager = ({ item, zone, onMediaEnd, onMediaError }) => {
+const FrameManager = ({ item, zone, onMediaEnd, onMediaError, mediaRef }) => {
   const [displayItems, setDisplayItems] = useState({ current: item, next: null });
   const [transitioning, setTransitioning] = useState(false);
   const [textContents, setTextContents] = useState({});
@@ -71,6 +71,10 @@ const FrameManager = ({ item, zone, onMediaEnd, onMediaError }) => {
     const fileType = getFileType(mediaItem);
     const src = getMediaUrl(filePath, zone?.i) || undefined;
     
+    // Only attach the external ref to the current active layer
+    const isCurrent = layer === 'current';
+    const attachRef = isCurrent ? mediaRef : null;
+    
     // Determine Transition Style
     let transitionClass = "absolute inset-0 w-full h-full ";
     if (layer === 'next') {
@@ -87,6 +91,7 @@ const FrameManager = ({ item, zone, onMediaEnd, onMediaError }) => {
     if (fileType === 'video') {
       return (
         <video 
+          ref={attachRef}
           key={`vid-${mediaItem._id || mediaItem.id}`}
           src={src} 
           autoPlay 
@@ -101,7 +106,7 @@ const FrameManager = ({ item, zone, onMediaEnd, onMediaError }) => {
     
     if (fileType === 'text') {
       return (
-        <div key={`txt-${mediaItem._id || mediaItem.id}`} className={`${transitionClass} flex items-center justify-center p-[5vw] bg-slate-900`}>
+        <div ref={attachRef} key={`txt-${mediaItem._id || mediaItem.id}`} className={`${transitionClass} flex items-center justify-center p-[5vw] bg-slate-900`}>
            <div className="w-full h-full glass p-[4vw] rounded-[40px] border-white/10 shadow-2xl flex items-center justify-center overflow-auto hide-scrollbar">
               <pre className="text-[min(5vw,4rem)] font-black text-white whitespace-pre-wrap font-sans text-center leading-tight tracking-tighter uppercase drop-shadow-2xl">
                 {textContents[mediaItem._id || mediaItem.id] || 'Syncing...'}
@@ -113,7 +118,7 @@ const FrameManager = ({ item, zone, onMediaEnd, onMediaError }) => {
 
     if (fileType === 'pdf') {
       return (
-        <div key={`pdf-${mediaItem._id || mediaItem.id}`} className={`${transitionClass} w-full h-full`}>
+        <div ref={attachRef} key={`pdf-${mediaItem._id || mediaItem.id}`} className={`${transitionClass} w-full h-full`}>
           <PdfRenderer url={src} zone={zone} />
         </div>
       );
@@ -121,12 +126,12 @@ const FrameManager = ({ item, zone, onMediaEnd, onMediaError }) => {
 
     return (
       <img 
+        ref={attachRef}
         key={`img-${mediaItem._id || mediaItem.id}`}
         src={src} 
         alt="Broadcast Asset"
         onError={() => onMediaError && onMediaError()}
         className={`${transitionClass} object-cover bg-black`}
-        style={{ filter: 'brightness(0.7) blur(1px)' }}
       />
     );
   };
