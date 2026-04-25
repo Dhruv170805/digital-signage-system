@@ -1,85 +1,85 @@
 import React from 'react';
-import { Tv, Calendar, Activity, Monitor, FileText, Zap, ShieldCheck, Layers, Type as TypeIcon } from 'lucide-react';
+import { Tv, Calendar, Activity, Monitor, FileText, Zap, ShieldCheck, Layers, Type as TypeIcon, ChevronRight } from 'lucide-react';
 
 const DashboardOverview = ({ screens, schedules, pendingMedia, media, setActiveTab }) => {
   return (
     <div className="animate-fade-in h-full flex flex-col">
-       <div className="glass overflow-hidden flex flex-col h-full border-white/5 shadow-2xl rounded-[40px] bg-white/50">
           
           {/* STUDIO HEADER */}
-          <div className="bg-black/10 p-8 border-b border-white/5 shrink-0">
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8">
+          <div className="bg-white p-10 border-b border-slate-200 shrink-0">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-10">
                 <div>
                     <div className="flex items-center gap-3 mb-2">
-                        <Activity className="text-sky-500 animate-pulse" size={16} />
-                        <span className="text-[10px] font-black uppercase tracking-[4px] text-sky-500">System Pulse</span>
+                        <Activity className="text-indigo-600 animate-pulse" size={16} />
+                        <span className="text-[10px] font-black uppercase tracking-[4px] text-indigo-600">Omni-System Pulse</span>
                     </div>
-                    <h2 className="text-3xl font-black text-text uppercase tracking-tighter">Command Dashboard</h2>
+                    <h2 className="text-4xl font-black text-slate-900 uppercase tracking-tighter text-text">Command Center</h2>
                 </div>
 
-                <div className="flex gap-2 p-1.5 bg-black/5 rounded-2xl border border-white/10">
-                    <button className="px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest bg-white text-black shadow-xl">
-                        Overview Studio
-                    </button>
+                <div className="flex gap-4">
+                    <div className="flex items-center gap-3 px-6 py-3 bg-emerald-50 border border-emerald-100 rounded-2xl">
+                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                        <span className="text-[10px] font-black uppercase text-emerald-700 tracking-widest font-black">Network Synchronized</span>
+                    </div>
                 </div>
             </div>
 
             {/* INTEGRATED TELEMETRY */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
                 {[
-                    { label: 'Nodes Online', value: screens.filter(s => s.status === 'online').length, total: screens.length, icon: Tv, color: 'text-sky-500', bg: 'bg-sky-500/20' },
-                    { label: 'Live Streams', value: schedules.length, icon: Zap, color: 'text-amber-500', bg: 'bg-amber-500/20' },
-                    { label: 'Policy Queue', value: pendingMedia.length, icon: ShieldCheck, color: 'text-rose-500', bg: 'bg-rose-500/20' },
-                    { label: 'Asset Library', value: media.length, icon: Layers, color: 'text-indigo-500', bg: 'bg-indigo-500/20' }
+                    { label: 'Nodes Online', value: screens.filter(s => s.status === 'online').length, total: screens.length, icon: Tv, color: 'text-sky-600', bg: 'bg-sky-50', border: 'border-sky-100' },
+                    { label: 'Live Streams', value: schedules.length, icon: Zap, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100' },
+                    { label: 'Policy Queue', value: pendingMedia.length, icon: ShieldCheck, color: 'text-rose-600', bg: 'bg-rose-50', border: 'border-rose-100' },
+                    { label: 'Asset Library', value: media.length, icon: Layers, color: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-100' }
                 ].map((stat, idx) => (
-                    <div key={idx} className="p-5 bg-black/80 rounded-[32px] border border-white/10 flex items-center justify-between group overflow-hidden">
-                        <div className="relative z-10">
-                            <p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${stat.color}`}>{stat.label}</p>
-                            <h4 className="text-2xl font-black text-white tabular-nums uppercase">
-                                {stat.value} {stat.total && <span className="text-xs text-white/20">/ {stat.total}</span>}
+                    <div key={idx} className={`p-8 ${stat.bg} rounded-[32px] border ${stat.border} flex flex-col group hover:shadow-xl hover:shadow-indigo-500/5 transition-all cursor-pointer shadow-sm`}>
+                        <div className="flex items-center justify-between mb-4">
+                            <stat.icon className={`${stat.color}`} size={28} />
+                            <ChevronRight size={14} className="text-slate-300 group-hover:translate-x-1 transition-transform" />
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">{stat.label}</p>
+                            <h4 className="text-3xl font-black text-slate-900 tabular-nums uppercase">
+                                {stat.value} {stat.total !== undefined && <span className="text-sm font-bold text-slate-300 ml-1">/ {stat.total}</span>}
                             </h4>
                         </div>
-                        <stat.icon className={`${stat.bg} ${stat.color} p-2 rounded-xl group-hover:scale-110 transition-transform`} size={32} />
                     </div>
                 ))}
             </div>
           </div>
 
           {/* STUDIO CONTENT - Centered single-row focus */}
-          <div className="flex-1 overflow-hidden p-10 bg-slate-50/50 flex flex-col justify-center">
+          <div className="flex-1 overflow-hidden p-10 bg-slate-50/30 flex flex-col justify-center">
                 
                 {/* HORIZONTAL RAPID OPERATIONS (Static Focus) */}
                 <section className="max-w-7xl mx-auto w-full">
-                    <div className="flex items-center gap-3 mb-6 px-2">
-                        <Zap className="text-amber-500" size={16} />
-                        <span className="text-[10px] font-black uppercase tracking-[4px] text-slate-400">System Rapid Operations</span>
+                    <div className="flex items-center gap-3 mb-8 px-2">
+                        <Zap className="text-indigo-600" size={16} />
+                        <span className="text-[10px] font-black uppercase tracking-[4px] text-slate-400">Rapid Operations Engine</span>
                     </div>
-                    <div className="bg-slate-900 border border-slate-800 rounded-[48px] p-12 shadow-2xl relative overflow-hidden group">
-                        <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 to-transparent opacity-50" />
-                        <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
-                            {[
-                                { label: 'Moderate Requests', tab: 'approve', icon: ShieldCheck, color: 'text-rose-400', bg: 'bg-rose-400/10' },
-                                { label: 'Broadcast System', tab: 'schedule', icon: Zap, color: 'text-amber-400', bg: 'bg-amber-400/10' },
-                                { label: 'Architect Studio', tab: 'templates', icon: FileText, color: 'text-sky-400', bg: 'bg-sky-400/10' },
-                                { label: 'Ticker Studio', tab: 'ticker', icon: TypeIcon, color: 'text-emerald-400', bg: 'bg-emerald-400/10' }
-                            ].map(btn => (
-                                <button 
-                                    key={btn.tab}
-                                    onClick={() => setActiveTab(btn.tab)}
-                                    className="p-8 bg-white/5 border border-white/5 rounded-[40px] flex flex-col items-center justify-center text-center group/btn hover:bg-white/10 transition-all hover:scale-105 active:scale-95"
-                                >
-                                    <div className={`w-16 h-16 ${btn.bg} rounded-3xl flex items-center justify-center ${btn.color} transition-transform group-hover/btn:rotate-12 mb-6 shadow-2xl`}>
-                                        <btn.icon size={32} />
-                                    </div>
-                                    <span className="text-[10px] font-black uppercase text-white tracking-[3px]">{btn.label}</span>
-                                </button>
-                            ))}
-                        </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                        {[
+                            { label: 'Moderate Queue', desc: 'Policy compliance review', tab: 'approve', icon: ShieldCheck, color: 'text-rose-600', bg: 'bg-rose-100/50' },
+                            { label: 'Deploy Stream', desc: 'New broadcast transmission', tab: 'schedule', icon: Zap, color: 'text-amber-600', bg: 'bg-amber-100/50' },
+                            { label: 'Spatial Studio', desc: 'Create layout protocols', tab: 'templates', icon: FileText, color: 'text-sky-600', bg: 'bg-sky-100/50' },
+                            { label: 'Ticker Engine', desc: 'Configure live messages', tab: 'ticker', icon: TypeIcon, color: 'text-emerald-600', bg: 'bg-emerald-100/50' }
+                        ].map(btn => (
+                            <button 
+                                key={btn.tab}
+                                onClick={() => setActiveTab(btn.tab)}
+                                className="p-10 bg-white border border-slate-200 rounded-[40px] flex flex-col items-center justify-center text-center group hover:border-indigo-500 hover:shadow-2xl hover:shadow-indigo-500/10 transition-all hover:-translate-y-2 active:scale-95 shadow-sm"
+                            >
+                                <div className={`w-20 h-20 ${btn.bg} rounded-3xl flex items-center justify-center ${btn.color} transition-all group-hover:scale-110 group-hover:rotate-6 mb-8`}>
+                                    <btn.icon size={36} />
+                                </div>
+                                <span className="text-[12px] font-black uppercase text-slate-900 tracking-[3px] mb-2 font-black">{btn.label}</span>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity font-black">{btn.desc}</p>
+                            </button>
+                        ))}
                     </div>
                 </section>
           </div>
        </div>
-    </div>
   );
 };
 

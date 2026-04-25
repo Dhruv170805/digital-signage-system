@@ -9,6 +9,7 @@ import {
 import FrameManager from '../components/display/FrameManager';
 import WeatherWidget from '../components/display/WeatherWidget';
 import TickerEngine from '../components/display/TickerEngine';
+import LocalFramePlayer from '../components/display/LocalFramePlayer';
 
 
 
@@ -30,6 +31,7 @@ const DisplayScreen = () => {
   const [time, setTime] = useState(new Date());
   const [isSyncing, setIsSyncing] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const lastFetchRef = useRef(0);
 
@@ -124,7 +126,7 @@ const DisplayScreen = () => {
       
       if (err.response && (err.response.status === 401 || err.response.status === 403)) {
          localStorage.removeItem('screenToken');
-         window.location.reload();
+         setError('IDENTITY_REVOKED');
          return;
       }
 
@@ -273,9 +275,7 @@ const DisplayScreen = () => {
       return (
         <div className="w-full h-full relative animate-fade-in">
           {layout.map((zone) => {
-            const mappedMediaId = mapping[zone.i];
-            const mappedMedia = allMedia.find(m => (m.id === mappedMediaId || m._id === mappedMediaId)) || 
-                                (item.populatedMapping && item.populatedMapping[zone.i]);
+            const mappedItems = mapping[zone.i];
             
             // Support % based positioning (0-100)
             const left = Math.max(0, Math.min(zone.x || 0, 100));
@@ -299,18 +299,12 @@ const DisplayScreen = () => {
                   zIndex: zIndex
                 }}
               >
-                {zone.type === 'ticker' ? (
-                  <TickerEngine ticker={tickers.find(t => (t.id === mappedMediaId || t._id === mappedMediaId))} />
-                ) : (
-                  <FrameManager 
-                    item={mappedMedia} 
-                    zoneId={zone.i}
-                    onMediaError={() => {
-                        // For multi-frame, we don't necessarily want to skip the WHOLE layout
-                        // but maybe we should if the main frame fails.
-                    }}
-                  />
-                )}
+                <LocalFramePlayer 
+                    zone={zone} 
+                    frameItems={mappedItems} 
+                    allMedia={allMedia} 
+                    tickers={tickers} 
+                />
               </div>
             );
           })}
