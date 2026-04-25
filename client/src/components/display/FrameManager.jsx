@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { AlertCircle } from 'lucide-react';
 import PdfRenderer from './PdfRenderer';
 
@@ -10,10 +10,9 @@ const getMediaUrl = (filePath, zoneId) => {
   return zoneId ? `${url}?z=${zoneId}` : url;
 };
 
-const FrameManager = ({ item, zoneId, onMediaError }) => {
-  const [currentMedia, setCurrentMedia] = useState(item);
-  const [previousMedia, setPreviousMedia] = useState(null);
-  const [isTransitioning, setIsTransitioning] = useState(false);
+const FrameManager = ({ item, zone, onMediaEnd, onMediaError }) => {
+  const [displayItems, setDisplayItems] = useState({ current: item, next: null });
+  const [transitioning, setTransitioning] = useState(false);
   const [textContents, setTextContents] = useState({});
 
   const getFilePath = (media) => media?.filePath || media?.path || '';
@@ -28,6 +27,26 @@ const FrameManager = ({ item, zoneId, onMediaError }) => {
     return 'unknown';
   };
 
+  // 🧠 TRANSITION ENGINE: Handle dual-layer swaps
+  useEffect(() => {
+    const currentId = displayItems.current?._id || displayItems.current?.id;
+    const incomingId = item?._id || item?.id;
+
+    if (incomingId !== currentId) {
+      setTransitioning(true);
+      setDisplayItems(prev => ({ ...prev, next: item }));
+
+      // Duration must match CSS transitions (0.8s - 1s)
+      const timer = setTimeout(() => {
+        setDisplayItems({ current: item, next: null });
+        setTransitioning(false);
+      }, 1000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [item]);
+
+  // 🧠 TEXT LOADER
   useEffect(() => {
     const fetchText = async (media) => {
         const id = media._id || media.id;
@@ -39,67 +58,53 @@ const FrameManager = ({ item, zoneId, onMediaError }) => {
             const text = await res.text();
             setTextContents(prev => ({ ...prev, [id]: text }));
         } catch (e) {
-            console.error('Failed to fetch text content:', e);
-            setTextContents(prev => ({ ...prev, [id]: 'Error loading text content.' }));
+            setTextContents(prev => ({ ...prev, [id]: 'Signal Error' }));
         }
     };
-
     if (getFileType(item) === 'text') fetchText(item);
-    if (getFileType(previousMedia) === 'text') fetchText(previousMedia);
-  }, [item, previousMedia, textContents]);
+  }, [item]);
 
-  useEffect(() => {
-    const currentId = currentMedia?.id || currentMedia?._id;
-    const newId = item?.id || item?._id;
-
-    if (currentId !== newId) {
-      setPreviousMedia(currentMedia);
-      setCurrentMedia(item);
-      setIsTransitioning(true);
-      
-      const timer = setTimeout(() => {
-        setPreviousMedia(null);
-        setIsTransitioning(false);
-      }, 1000); // 1s crossfade
-      return () => clearTimeout(timer);
-    }
-  }, [item, currentMedia]);
-
-  const renderMedia = (mediaItem, isFadingOut) => {
+  const renderMedia = (mediaItem, layer) => {
     if (!mediaItem) return null;
 
     const filePath = getFilePath(mediaItem);
     const fileType = getFileType(mediaItem);
-    const src = getMediaUrl(filePath, zoneId) || undefined;
-    const opacity = isFadingOut ? 0 : 1;
-    const transitionClass = "transition-opacity duration-1000 absolute inset-0 w-full h-full";
+    const src = getMediaUrl(filePath, zone?.i) || undefined;
+    
+    // Determine Transition Style
+    let transitionClass = "absolute inset-0 w-full h-full ";
+    if (layer === 'next') {
+        const style = zone?.transition || 'fade';
+        if (style === 'slide') transitionClass += "animate-slide-in";
+        else if (style === 'zoom') transitionClass += "animate-zoom-in";
+        else transitionClass += "animate-fade-in"; // Default fade
+    } else if (layer === 'current' && transitioning) {
+        const style = zone?.transition || 'fade';
+        if (style === 'slide') transitionClass += "animate-slide-out";
+        else transitionClass += "transition-opacity duration-1000 opacity-0";
+    }
 
     if (fileType === 'video') {
       return (
         <video 
-          key={`vid-${mediaItem.id || mediaItem._id}`}
+          key={`vid-${mediaItem._id || mediaItem.id}`}
           src={src} 
           autoPlay 
           muted 
-          loop 
           playsInline
+          onEnded={() => onMediaEnd && onMediaEnd()}
           onError={() => onMediaError && onMediaError()}
           className={`${transitionClass} object-cover bg-black`}
-          style={{ opacity, zIndex: isFadingOut ? 1 : 2 }}
         />
       );
     }
     
     if (fileType === 'text') {
       return (
-        <div 
-          key={`txt-${mediaItem.id || mediaItem._id}`}
-          className={`${transitionClass} flex items-center justify-center p-[5vw] bg-slate-900`}
-          style={{ opacity, zIndex: isFadingOut ? 1 : 2 }}
-        >
-           <div className="w-full h-full glass p-[4vw] rounded-[40px] border-white/10 shadow-2xl flex items-center justify-center overflow-auto custom-scrollbar">
+        <div key={`txt-${mediaItem._id || mediaItem.id}`} className={`${transitionClass} flex items-center justify-center p-[5vw] bg-slate-900`}>
+           <div className="w-full h-full glass p-[4vw] rounded-[40px] border-white/10 shadow-2xl flex items-center justify-center overflow-auto hide-scrollbar">
               <pre className="text-[min(5vw,4rem)] font-black text-white whitespace-pre-wrap font-sans text-center leading-tight tracking-tighter uppercase drop-shadow-2xl">
-                {textContents[mediaItem.id || mediaItem._id] || 'Loading...'}
+                {textContents[mediaItem._id || mediaItem.id] || 'Syncing...'}
               </pre>
            </div>
         </div>
@@ -108,41 +113,28 @@ const FrameManager = ({ item, zoneId, onMediaError }) => {
 
     if (fileType === 'pdf') {
       return (
-        <div 
-          key={`pdf-${mediaItem.id || mediaItem._id}`}
-          className={`${transitionClass} w-full h-full`}
-          style={{ opacity, zIndex: isFadingOut ? 1 : 2 }}
-        >
-          <PdfRenderer url={src} />
+        <div key={`pdf-${mediaItem._id || mediaItem.id}`} className={`${transitionClass} w-full h-full`}>
+          <PdfRenderer url={src} zone={zone} />
         </div>
       );
     }
 
     return (
       <img 
-        key={`img-${mediaItem.id || mediaItem._id}`}
+        key={`img-${mediaItem._id || mediaItem.id}`}
         src={src} 
-        alt={mediaItem.fileName || mediaItem.filename || mediaItem.originalName} 
+        alt="Broadcast Asset"
         onError={() => onMediaError && onMediaError()}
         className={`${transitionClass} object-cover bg-black`}
-        style={{ opacity, zIndex: isFadingOut ? 1 : 2 }}
+        style={{ filter: 'brightness(0.7) blur(1px)' }}
       />
     );
   };
 
-  if (!currentMedia && !previousMedia) return (
-    <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900/50 gap-4">
-      <div className="w-16 h-16 rounded-full bg-rose-500/10 flex items-center justify-center border border-rose-500/20">
-        <AlertCircle className="text-rose-500/50" size={32} />
-      </div>
-      <span className="text-[10px] font-black text-rose-500/40 uppercase tracking-[6px]">Asset Missing</span>
-    </div>
-  );
-
   return (
     <div className="w-full h-full relative overflow-hidden bg-black">
-      {previousMedia && renderMedia(previousMedia, true)}
-      {renderMedia(currentMedia, false)}
+      {displayItems.current && renderMedia(displayItems.current, 'current')}
+      {displayItems.next && renderMedia(displayItems.next, 'next')}
     </div>
   );
 };

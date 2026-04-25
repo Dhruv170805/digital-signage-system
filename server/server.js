@@ -29,7 +29,8 @@ const io = socketIo(server, {
     origin: process.env.CLIENT_URL || '*',
     methods: ['GET', 'POST'],
     credentials: true
-  }
+  },
+  transports: ['websocket', 'polling']
 });
 
 io.adapter(createAdapter(redisClient, subClient));

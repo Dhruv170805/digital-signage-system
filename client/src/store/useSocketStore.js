@@ -49,6 +49,8 @@ const useSocketStore = create((set, get) => ({
 
     socket.on('emergency_override', (data) => {
       console.log('Emergency override received:', data);
+      const { triggerInterrupt } = useInterruptStore.getState();
+      triggerInterrupt(data);
     });
 
     set({ socket });

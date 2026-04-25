@@ -32,6 +32,15 @@ const DisplayScreen = () => {
   const [error, setError] = useState(null);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
 
+  // 🧠 1. SCREEN DETECTION ENGINE
+  const [screenConfig, setScreenConfig] = useState({
+    width: window.innerWidth,
+    height: window.innerHeight,
+    ratio: window.innerWidth / window.innerHeight,
+    type: window.innerWidth / window.innerHeight > 1.7 ? 'landscape' : (window.innerWidth / window.innerHeight < 0.8 ? 'portrait' : 'square'),
+    scale: window.innerWidth > 3000 ? 1.5 : (window.innerWidth > 1920 ? 1.2 : 1)
+  });
+
   const lastFetchRef = useRef(0);
   const transitionRef = useRef(null);
 
@@ -45,6 +54,24 @@ const DisplayScreen = () => {
       window.location.reload();
     }
   }, [searchParams]);
+
+  // 🧠 LIVE RESIZE SUPPORT
+  useEffect(() => {
+    const handleResize = () => {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      const ratio = w / h;
+      setScreenConfig({
+        width: w,
+        height: h,
+        ratio,
+        type: ratio > 1.7 ? 'landscape' : (ratio < 0.8 ? 'portrait' : 'square'),
+        scale: w > 3000 ? 1.5 : (w > 1920 ? 1.2 : 1)
+      });
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     const handleOnline = () => setIsOffline(false);
@@ -129,7 +156,8 @@ const DisplayScreen = () => {
     const deviceToken = localStorage.getItem('deviceToken');
     
     const socket = io(import.meta.env.VITE_API_URL, {
-      auth: { token, deviceToken }
+      auth: { token, deviceToken },
+      transports: ['websocket', 'polling']
     });
     
     fetchData();
@@ -190,30 +218,138 @@ const DisplayScreen = () => {
     try { return JSON.parse(data); } catch { return fallback; }
   };
 
+  // 🧠 --- AI LAYOUT ENGINE CORE ---
+  const analyzeContent = (item, mapping = {}) => {
+    const type = item?.fileType || (item?.mimeType?.startsWith('video/') ? 'video' : (item?.mimeType === 'application/pdf' ? 'pdf' : 'image'));
+    const frameCount = Object.keys(mapping).length;
+    return {
+      type,
+      isTextHeavy: type === 'pdf' || type === 'text',
+      isVideo: type === 'video',
+      isMultiFrame: frameCount > 1,
+      count: frameCount || 1
+    };
+  };
+
+  const scoreLayouts = (analyzed) => {
+    const scores = { IMMERSIVE: 1, FOCUS: 1, SPLIT: 1, GRID: 1 };
+
+    if (analyzed.isVideo) {
+      scores.IMMERSIVE += 12; // Video always wants edge-to-edge
+      scores.FOCUS += 4;
+    } else if (analyzed.isTextHeavy) {
+      scores.FOCUS += 15;     // PDF needs margins for readability
+      scores.IMMERSIVE += 2;
+    } else if (analyzed.count >= 3) {
+      scores.GRID += 10;      // High density content
+      scores.SPLIT += 5;
+    } else if (analyzed.count === 2) {
+      scores.SPLIT += 12;     // Balanced comparison
+      scores.FOCUS += 4;
+    } else {
+      scores.FOCUS += 10;     // Default elegant focus
+    }
+
+    // Orientation Penalty/Bonus
+    if (screenConfig.type === 'portrait') {
+      scores.SPLIT -= 8; // Vertical screens hate side-by-side
+      scores.GRID += 5;  // Vertical screens love stacking
+    }
+
+    return scores;
+  };
+
+  const getAILayout = (intent, analyzed) => {
+    const isPortrait = screenConfig.type === 'portrait';
+    
+    switch (intent) {
+      case 'IMMERSIVE':
+        return [{ i: 'main', x: 0, y: 0, w: 100, h: 100 }];
+      
+      case 'FOCUS':
+        // Elegant centered frame with 10% breathing room
+        return [{ i: 'main', x: 10, y: 8, w: 80, h: 80 }];
+      
+      case 'SPLIT':
+        return isPortrait 
+          ? [{ i: 'top', x: 0, y: 0, w: 100, h: 50 }, { i: 'bottom', x: 0, y: 50, w: 100, h: 50 }]
+          : [{ i: 'left', x: 0, y: 0, w: 50, h: 100 }, { i: 'right', x: 50, y: 0, w: 50, h: 100 }];
+      
+      case 'GRID':
+        return [
+          { i: 'g1', x: 0, y: 0, w: 50, h: 50 }, { i: 'g2', x: 50, y: 0, w: 50, h: 50 },
+          { i: 'g3', x: 0, y: 50, w: 50, h: 50 }, { i: 'g4', x: 50, y: 50, w: 50, h: 50 }
+        ];
+      
+      default:
+        return [{ i: 'main', x: 0, y: 0, w: 100, h: 100 }];
+    }
+  };
+
   const renderMediaContent = (item) => {
     if (!item) return null;
     const layoutSource = item.layout || (item.templateId && item.templateId.layout);
-    const layout = layoutSource ? safeParse(layoutSource) : null;
+    const originalLayout = layoutSource ? safeParse(layoutSource) : null;
     const mapping = item.mediaMapping ? safeParse(item.mediaMapping, {}) : {};
 
-    if (layout && layout.length > 0) {
-      return (
-        <div className="w-full h-full relative">
-          <div className="w-full h-full relative overflow-hidden bg-slate-950">
-            {layout.map((zone) => (
-                <div key={zone.i} className="absolute overflow-hidden bg-black/20" style={{ left: `${zone.x}%`, top: `${zone.y}%`, width: `${zone.w}%`, height: `${zone.h}%`, zIndex: zone.zIndex || 1 }}>
-                    <LocalFramePlayer zone={zone} frameItems={mapping[zone.i]} allMedia={allMedia} tickers={tickers} />
-                </div>
-            ))}
-          </div>
-        </div>
-      );
-    }
+    // 🧠 AI ANALYSIS
+    const mainMedia = item.mediaId || item;
+    const analyzed = analyzeContent(mainMedia, mapping);
+    const scores = scoreLayouts(analyzed);
+    const bestIntent = Object.entries(scores).sort((a, b) => b[1] - a[1])[0][0];
+    
+    // 🧩 1. GENERATE DYNAMIC FRAMES
+    // If user provided a specific multi-frame layout, we optimize it. 
+    // Otherwise, the AI generates the perfect structure.
+    let targetLayout = (originalLayout && originalLayout.length > 0) 
+        ? originalLayout 
+        : getAILayout(bestIntent, analyzed);
 
-    const singleMedia = item.mediaId || item;
+    const SAFE_MARGIN = 2; // Broadcast overscan protection
+
+    const finalLayout = targetLayout.map((frame) => {
+        let { x, y, w, h } = frame;
+
+        // 🧠 2. CONTENT-AWARE REFINEMENTS
+        if (analyzed.isVideo && bestIntent === 'IMMERSIVE') {
+            // Force true edge-to-edge for video impact
+            x = 0; y = 0; w = 100; h = 100;
+        } else {
+            // Apply Safe Zone System for non-immersive content
+            if (x === 0) { x += SAFE_MARGIN; w -= SAFE_MARGIN; }
+            if (x + w >= 100) { w -= SAFE_MARGIN; }
+            if (y === 0) { y += SAFE_MARGIN; h -= SAFE_MARGIN; }
+            if (y + h >= 100) { h -= SAFE_MARGIN; }
+        }
+
+        return { ...frame, x, y, w, h };
+    });
+
     return (
-      <div className="w-full h-full bg-black">
-        <FrameManager item={singleMedia} onMediaError={() => setCurrentIdx((prev) => (prev + 1) % playlist.length)} />
+      <div className="w-full h-full relative">
+        <div className="broadcast-grid" />
+        <div className="w-full h-full relative overflow-hidden">
+          {finalLayout.map((zone) => {
+              // Map mapping keys (Frame-xxx) to AI slots (main, top, etc) if needed
+              const frameItems = mapping[zone.i] || (zone.i === 'main' ? [mainMedia] : []);
+              
+              return (
+                <div 
+                    key={zone.i} 
+                    className="absolute glass-frame transition-all duration-[1500ms] cubic-bezier(0.2, 0.8, 0.2, 1)" 
+                    style={{ 
+                        left: `${zone.x}%`, 
+                        top: `${zone.y}%`, 
+                        width: `${zone.w}%`, 
+                        height: `${zone.h}%`, 
+                        zIndex: zone.zIndex || 1 
+                    }}
+                >
+                    <LocalFramePlayer zone={zone} frameItems={frameItems} allMedia={allMedia} tickers={tickers} />
+                </div>
+              );
+          })}
+        </div>
       </div>
     );
   };
@@ -271,56 +407,70 @@ const DisplayScreen = () => {
   );
 
   return (
-    <div className="fixed inset-0 w-full h-full bg-[#020617] overflow-hidden text-white select-none font-sans">
-      <div className="fixed inset-0 pointer-events-none z-0">
-        <div className="absolute top-[-30%] left-[-10%] w-[80%] h-[80%] bg-indigo-600/10 rounded-full blur-[250px] animate-pulse" />
-        <div className="absolute bottom-[-30%] right-[-10%] w-[80%] h-[80%] bg-blue-500/5 rounded-full blur-[250px] animate-pulse" style={{ animationDelay: '4s' }} />
+    <div 
+        className="fixed inset-0 w-full h-full bg-[#000] overflow-hidden text-white select-none font-sans"
+        style={{ '--scale': screenConfig.scale, fontSize: 'calc(16px * var(--scale))' }}
+    >
+      {/* 1. CINEMATIC DEPTH BASE */}
+      <div className="fixed inset-0 pointer-events-none z-0" style={{ background: 'radial-gradient(circle at center, #111 0%, #000 100%)' }}>
+        <div className="absolute top-[-20%] left-[-10%] w-[70%] h-[70%] bg-indigo-600/5 rounded-full blur-[200px]" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[70%] h-[70%] bg-blue-500/5 rounded-full blur-[200px]" />
       </div>
 
-      {/* STAGE (FULLSCREEN LAYER) */}
-      <div ref={transitionRef} className="absolute inset-0 z-10 transition-opacity duration-700 ease-in-out bg-black">
+      {/* 2. STAGE (TRUE FULLSCREEN CONTENT) */}
+      <div ref={transitionRef} className="absolute inset-0 z-10 transition-opacity duration-1000 ease-in-out">
         {playlist.length > 0 && currentIdx < playlist.length ? renderMediaContent(playlist[currentIdx]) : (
           <div className="w-full h-full animate-fade-in relative">{renderIdleContent()}</div>
         )}
       </div>
 
-      {/* OVERLAY LAYER (HUD) */}
-      <div className="absolute inset-0 pointer-events-none z-50 flex flex-col justify-between">
+      {/* 3. OVERLAY HUD (FLOATING) */}
+      <div className="absolute inset-0 pointer-events-none z-50">
         
-        {/* TOP HUD (FLOAT) */}
-        <div className="w-full pt-[3vh] pb-[6vh] px-[5vw] bg-gradient-to-b from-black/80 via-black/30 to-transparent flex items-center justify-between pointer-events-auto">
-            <div className="flex items-center gap-[4vw]">
-                <div className="flex items-center gap-[1.5vw]">
-                    <div className={`w-[1.2vw] h-[1.2vw] min-w-[14px] min-h-[14px] rounded-full ${isSyncing ? 'bg-indigo-500 shadow-[0_0_30px_rgba(99,102,241,0.8)]' : (isOffline ? 'bg-rose-500 shadow-[0_0_30px_rgba(244,63,94,0.8)]' : 'bg-emerald-500 shadow-[0_0_30px_rgba(16,185,129,0.8)]')} animate-pulse`} />
-                    <span className="text-[1.2vw] font-black uppercase tracking-[8px] text-white/50">
-                        {isOffline ? 'OFFLINE WARNING' : (isSyncing ? 'SYNCING MANIFEST' : 'BROADCASTING')}
-                    </span>
-                </div>
-                {(screenInfo || searchParams.get('screenId')) && (
-                    <div className="px-6 py-2 bg-white/5 rounded-full border border-white/10 flex items-center gap-3 backdrop-blur-md">
-                        <Monitor size={18} className="text-indigo-400" />
-                        <span className="text-[1vw] font-black text-white/70 uppercase tracking-widest">{screenInfo?.name || 'TERMINAL-01'}</span>
-                    </div>
-                )}
+        {/* LIGHT BROADCAST OVERLAY (TOP BAR) */}
+        <div className="absolute top-0 left-0 w-full px-10 py-4 flex items-center justify-between pointer-events-auto">
+            {/* BACKGROUND GRADIENT FADE */}
+            <div className="absolute inset-0 bg-gradient-to-b from-black/70 to-transparent backdrop-blur-[2px] pointer-events-none" />
+
+            {/* LEFT: STATUS */}
+            <div className="relative flex items-center gap-3">
+                <div className={`w-2 h-2 rounded-full ${isSyncing ? 'bg-indigo-400' : (isOffline ? 'bg-rose-500' : 'bg-green-400')} animate-pulse shadow-[0_0_15px_rgba(74,222,128,0.4)]`} />
+                <span className="text-[10px] font-black uppercase tracking-[5px] text-white/60">
+                    {isOffline ? 'OFFLINE' : (isSyncing ? 'SYNCING' : 'LIVE')}
+                </span>
             </div>
 
-            <div className="flex items-center gap-[4vw]">
+            {/* CENTER: LOCATION + WEATHER */}
+            <div className="relative flex items-center gap-4 px-6 py-1.5 rounded-lg bg-white/5 backdrop-blur-md border border-white/5 shadow-2xl">
                 <WeatherWidget location={screenInfo?.location} />
-                <div className="h-12 w-px bg-white/10" />
-                <div className="text-right">
-                    <p className="text-[5.5vw] font-black tracking-tighter tabular-nums leading-none text-white drop-shadow-[0_10px_30px_rgba(0,0,0,0.5)]">{time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}</p>
-                    <p className="text-[1vw] font-black uppercase tracking-[8px] text-white/40 mt-2 flex items-center justify-end gap-2"><ClockIcon size={14} className="text-indigo-400" /> {time.toLocaleDateString([], { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+            </div>
+
+            {/* RIGHT: TIME/DATE */}
+            <div className="relative flex items-center gap-6 text-right">
+                <div className="flex flex-col items-end">
+                    <div className="text-2xl font-black tracking-tighter tabular-nums leading-none text-white drop-shadow-lg">
+                        {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
+                    </div>
+                    <div className="text-[9px] font-black opacity-50 tracking-[3px] uppercase mt-1">
+                        {time.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })}
+                    </div>
                 </div>
+                {(screenInfo || searchParams.get('screenId')) && (
+                    <div className="h-8 w-px bg-white/10 hidden lg:block" />
+                )}
+                {(screenInfo || searchParams.get('screenId')) && (
+                    <span className="text-[10px] font-black text-indigo-400/50 uppercase tracking-[2px] hidden lg:block">{screenInfo?.name || 'NODE-01'}</span>
+                )}
             </div>
         </div>
 
-        {/* BOTTOM HUD (TICKER FLOAT) */}
+        {/* ULTRA-THIN BROADCAST TICKER */}
         {tickers.length > 0 && (
-            <div className="w-full pb-[4vh] pointer-events-auto">
-                <div className="absolute bottom-0 left-0 w-full h-[25vh] bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
-                <div className="h-28 mx-[5vw] mb-4 flex items-center overflow-hidden rounded-[2rem] border border-white/10 bg-black/40 backdrop-blur-3xl relative shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
-                    <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-black/60 to-transparent z-10" />
-                    <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-black/60 to-transparent z-10" />
+            <div className="absolute bottom-0 left-0 w-full pb-0 pointer-events-auto">
+                <div className="absolute bottom-0 left-0 w-full h-[15vh] bg-gradient-to-t from-black/80 to-transparent pointer-events-none" />
+                <div className="h-[45px] w-full flex items-center overflow-hidden bg-black/40 backdrop-blur-xl border-t border-white/5 relative z-10 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+                    <div className="absolute left-0 top-0 bottom-0 w-40 bg-gradient-to-r from-black/80 to-transparent z-10" />
+                    <div className="absolute right-0 top-0 bottom-0 w-40 bg-gradient-to-l from-black/80 to-transparent z-10" />
                     <TickerEngine ticker={tickers[currentTickerIdx]} />
                 </div>
             </div>
