@@ -4,26 +4,35 @@ import io from 'socket.io-client';
 
 const WeatherWidget = ({ location }) => {
   const [temp, setTemp] = useState('--');
-  const [area, setArea] = useState(location || 'Detecting...');
+  const [area, setArea] = useState(location || 'Locating...');
 
   useEffect(() => {
     let mounted = true;
 
-    const fetchWeather = async (lat, lon) => {
+    const fetchWeather = async (lat, lon, name = null) => {
       try {
-        // Reverse Geocoding to get actual place name
-        try {
-            const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`, {
-                headers: { 'User-Agent': 'NexusSignageSystem/1.0' }
-            });
-            const geoData = await geoRes.json();
-            if (mounted && geoData?.address) {
-                const placeName = geoData.address.city || geoData.address.town || geoData.address.village || geoData.address.suburb || geoData.address.county || 'Current Hub';
-                setArea(location || placeName);
-            }
-        } catch (geoErr) {
-            console.warn('Reverse geocoding failed:', geoErr);
+        // High-Precision Reverse Geocoding
+        if (!name) {
+          try {
+              const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=14`, {
+                  headers: { 'User-Agent': 'NexusSignageSystem/1.1' }
+              });
+              const geoData = await geoRes.json();
+              if (mounted && geoData?.address) {
+                  // Prioritize Suburb/Neighborhood for "High Accuracy" feel
+                  name = geoData.address.suburb || 
+                         geoData.address.neighbourhood || 
+                         geoData.address.district || 
+                         geoData.address.city_district || 
+                         geoData.address.city || 
+                         geoData.address.town || 'Secure Hub';
+              }
+          } catch (geoErr) {
+              console.warn('Reverse geocoding failed:', geoErr);
+          }
         }
+
+        if (mounted && name) setArea(name);
 
         const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
         const data = await res.json();
@@ -35,32 +44,53 @@ const WeatherWidget = ({ location }) => {
       }
     };
 
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          fetchWeather(pos.coords.latitude, pos.coords.longitude);
-        },
-        (err) => {
-          console.warn('Geolocation denied or failed. Fallback to NY.', err);
-          fetchWeather(40.7128, -74.0060); // New York
-        },
-        { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
-      );
-    } else {
-      fetchWeather(40.7128, -74.0060);
-    }
-
-    const interval = setInterval(() => {
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition((pos) => fetchWeather(pos.coords.latitude, pos.coords.longitude));
+    const initWeather = async () => {
+      // 1. Check for manual location override from Admin
+      if (location) {
+        try {
+          const searchRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}&limit=1`);
+          const searchData = await searchRes.json();
+          if (searchData && searchData[0]) {
+            fetchWeather(searchData[0].lat, searchData[0].lon, location);
+            return;
+          }
+        } catch (e) {
+          console.warn('Manual location geocode failed:', e);
+        }
       }
-    }, 900000); // 15 mins
+
+      // 2. High-Accuracy Browser Geolocation
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => fetchWeather(pos.coords.latitude, pos.coords.longitude),
+          async () => {
+            // 3. Ultra-Reliable IP-based Fallback (No user prompt needed)
+            try {
+              const ipRes = await fetch('https://ipapi.co/json/');
+              const ipData = await ipRes.json();
+              if (mounted && ipData.latitude) {
+                fetchWeather(ipData.latitude, ipData.longitude, ipData.city);
+              }
+            } catch (ipErr) {
+              fetchWeather(28.6139, 77.2090, "New Delhi");
+            }
+          },
+          { enableHighAccuracy: true, timeout: 5000 }
+        );
+      } else {
+        // 4. Global Fallback
+        fetchWeather(28.6139, 77.2090, "New Delhi");
+      }
+    };
+
+    initWeather();
+    const interval = setInterval(initWeather, 900000); // 15 mins sync
 
     return () => {
       mounted = false;
       clearInterval(interval);
     };
-  }, []);
+  }, [location]);
 
   const tempF = temp !== '--' ? Math.round(Number(temp) * 9/5 + 32) : '--';
 

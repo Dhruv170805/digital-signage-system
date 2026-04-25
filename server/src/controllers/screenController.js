@@ -75,6 +75,18 @@ class ScreenController {
     }
   }
 
+  async getPublicManifest(req, res, next) {
+    try {
+      const manifest = await screenService.getPublicManifest();
+      res.json({
+        screen: { name: 'Public Terminal', isPublic: true },
+        ...manifest
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async resetScreen(req, res, next) {
     try {
       const { targetType, targetId } = req.body; // targetType: 'screen', 'group', 'all'

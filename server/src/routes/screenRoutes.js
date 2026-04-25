@@ -5,6 +5,7 @@ const { authenticate, authorize } = require('../middlewares/authMiddleware');
 const screenAuth = require('../middlewares/screenAuth');
 
 router.get('/', authenticate, screenController.getAll);
+router.get('/public-manifest', screenController.getPublicManifest);
 router.get('/me', screenAuth, screenController.getMe);
 router.get('/manifest', screenAuth, screenController.getManifest);
 router.get('/:id', authenticate, screenController.getById);

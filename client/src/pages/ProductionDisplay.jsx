@@ -13,7 +13,7 @@ const ProductionDisplay = () => {
   
   // In production, these would come from local storage or environment
   const screenId = localStorage.getItem('screenId') || 1;
-  const macAddress = localStorage.getItem('macAddress') || '00:00:00:00:00:00';
+  const deviceToken = localStorage.getItem('deviceToken');
 
   const fetchPlaylist = React.useCallback(async () => {
     await Promise.resolve();
@@ -37,12 +37,12 @@ const ProductionDisplay = () => {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchPlaylist();
-    connect(macAddress, screenId);
+    connect(deviceToken);
 
     // Refresh playlist every minute as a fallback
     const interval = setInterval(fetchPlaylist, 60000);
     return () => clearInterval(interval);
-  }, [fetchPlaylist, connect, macAddress, screenId]);
+  }, [fetchPlaylist, connect, deviceToken]);
 
   if (loading) return <div className="loading bg-bg text-text flex items-center justify-center min-h-screen">Initializing Nexus Engine...</div>;
 

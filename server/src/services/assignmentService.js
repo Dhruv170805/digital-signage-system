@@ -13,9 +13,9 @@ class AssignmentService {
     return await Assignment.findById(id);
   }
 
-  async createAssignment(data, session = null) {
+  async createAssignment(data) {
     const assignment = new Assignment(data);
-    return await assignment.save({ session });
+    return await assignment.save();
   }
 
   async deleteAssignment(id) {
@@ -54,13 +54,12 @@ class AssignmentService {
         if (!a.daysOfWeek.includes(currentDay)) return false;
       }
 
-      // Time window check
+      // Time window check (HH:mm format)
       if (a.startTime && a.endTime) {
         if (a.startTime <= a.endTime) {
-          // Normal daylight hours (e.g., 09:00 - 17:00)
           if (currentTime < a.startTime || currentTime > a.endTime) return false;
         } else {
-          // Crosses midnight (e.g., 22:00 - 02:00)
+          // Midnight crossing
           if (currentTime < a.startTime && currentTime > a.endTime) return false;
         }
       }
@@ -70,9 +69,10 @@ class AssignmentService {
 
     if (validAssignments.length === 0) return [];
 
-    // Only return the highest priority assignments (so emergency broadcasts preempt regular playlists)
-    const highestPriority = validAssignments[0].priority;
-    return validAssignments.filter(a => a.priority === highestPriority);
+    // BROADCAST LOGIC: Only return items with the highest found priority.
+    // This allows a Priority 10 "Emergency" item to hide all Priority 1 "Regular" items.
+    const maxPriority = Math.max(...validAssignments.map(a => a.priority || 1));
+    return validAssignments.filter(a => (a.priority || 1) === maxPriority);
   }
 }
 

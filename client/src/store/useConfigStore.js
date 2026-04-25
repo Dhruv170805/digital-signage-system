@@ -1,7 +1,5 @@
 import { create } from 'zustand';
-import axios from 'axios';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+import api from '../services/api';
 
 const useConfigStore = create((set) => ({
   config: {},
@@ -11,7 +9,7 @@ const useConfigStore = create((set) => ({
   fetchConfig: async () => {
     set({ loading: true });
     try {
-      const response = await axios.get(`${API_URL}/config`);
+      const response = await api.get('/settings');
       set({ config: response.data.data, loading: false });
     } catch (error) {
       set({ error: error.message, loading: false });
@@ -20,7 +18,7 @@ const useConfigStore = create((set) => ({
 
   updateConfig: async (key, value) => {
     try {
-      await axios.post(`${API_URL}/config`, { key, value });
+      await api.post('/settings', { key, value });
       set((state) => ({
         config: { ...state.config, [key]: value }
       }));

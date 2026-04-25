@@ -26,7 +26,7 @@ const broadcastWorker = new Worker('broadcastQueue', async (job) => {
     mediaService.getAllApproved()
   ]);
 
-  for (const screen of screens) {
+  await Promise.all(screens.map(async (screen) => {
     const [playlist, idleConfig] = await Promise.all([
         assignmentService.getActiveAssignmentsForScreen(screen._id, screen.groupId),
         idleService.getIdleContent(screen._id, screen.groupId)
@@ -41,7 +41,7 @@ const broadcastWorker = new Worker('broadcastQueue', async (job) => {
       idleMedia: screen.idleMediaId,
       idleConfig
     });
-  }
+  }));
 
   console.log(`[Worker] Completed broadcast to ${screens.length} screens`);
 }, { connection });

@@ -53,43 +53,30 @@ class AssignmentController {
       
       const createdAssignments = [];
       const screenService = require('../services/screenService');
-      const mongoose = require('mongoose');
-      
-      const session = await mongoose.startSession();
-      session.startTransaction();
 
-      try {
-        if (targetType === 'all' || !targetIds || targetIds.length === 0) {
-          const assignment = await assignmentService.createAssignment({ ...baseData, isGlobal: true }, session);
+      if (targetType === 'all' || !targetIds || targetIds.length === 0) {
+        const assignment = await assignmentService.createAssignment({ ...baseData, isGlobal: true });
+        createdAssignments.push(assignment);
+        if (assignment.status === 'approved') await screenService.broadcastManifestUpdate();
+      } else {
+        for (const tid of targetIds) {
+          const targetedData = { ...baseData };
+          if (targetType === 'screen') targetedData.screenId = tid;
+          else targetedData.groupId = tid;
+          
+          const assignment = await assignmentService.createAssignment(targetedData);
           createdAssignments.push(assignment);
-          if (assignment.status === 'approved') await screenService.broadcastManifestUpdate();
-        } else {
-          for (const tid of targetIds) {
-            const targetedData = { ...baseData };
-            if (targetType === 'screen') targetedData.screenId = tid;
-            else targetedData.groupId = tid;
-            
-            const assignment = await assignmentService.createAssignment(targetedData, session);
-            createdAssignments.push(assignment);
-            
-            if (assignment.status === 'approved') {
-              if (targetType === 'screen') await screenService.pushManifestToScreen(tid);
-              else {
-                // Group update: find all screens in group
-                const screens = await screenService.getAllScreens();
-                const groupScreens = screens.filter(s => s.groupId?._id.toString() === tid || s.groupId?.toString() === tid);
-                for (const gs of groupScreens) await screenService.pushManifestToScreen(gs._id);
-              }
+          
+          if (assignment.status === 'approved') {
+            if (targetType === 'screen') await screenService.pushManifestToScreen(tid);
+            else {
+              // Group update: find all screens in group
+              const screens = await screenService.getAllScreens();
+              const groupScreens = screens.filter(s => s.groupId?._id.toString() === tid || s.groupId?.toString() === tid);
+              for (const gs of groupScreens) await screenService.pushManifestToScreen(gs._id);
             }
           }
         }
-        
-        await session.commitTransaction();
-      } catch (err) {
-        await session.abortTransaction();
-        throw err;
-      } finally {
-        session.endSession();
       }
 
       // Log first one for audit

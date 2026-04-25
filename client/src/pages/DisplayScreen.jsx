@@ -58,7 +58,10 @@ const DisplayScreen = () => {
   }, []);
 
   const getTelemetry = () => {
-    const telemetry = { uptime: Math.round(performance.now() / 1000) };
+    const telemetry = { 
+      uptime: Math.round(performance.now() / 1000),
+      connection: navigator.connection ? navigator.connection.effectiveType : 'unknown'
+    };
     if (window.performance && window.performance.memory) {
         telemetry.ramUsage = Math.round(window.performance.memory.usedJSHeapSize / (1024 * 1024));
     }
@@ -95,11 +98,24 @@ const DisplayScreen = () => {
         setAllMedia(newMedia || []);
         setIdleMedia(newIdleMedia || null);
         setIdleConfig(newIdleConfig || null);
+      } else {
+        // Fallback for non-registered screens
+        const publicRes = await axios.get(`${import.meta.env.VITE_API_URL}/api/screens/public-manifest`);
+        const { screen, playlist: newPlaylist, tickers: newTickers, settings: newSettings, media: newMedia, idleConfig: newIdleConfig } = publicRes.data;
+        
+        setScreenInfo(screen);
+        setPlaylist(newPlaylist || []);
+        setTickers(newTickers || []);
+        setSettings(newSettings || {});
+        setAllMedia(newMedia || []);
+        setIdleConfig(newIdleConfig || null);
       }
     } catch (err) {
-      if (err.response && (err.response.status === 401 || err.response.status === 403)) {
+      if (err.response && (err.response.status === 401 || err.response.status === 403) && token) {
          localStorage.removeItem('screenToken');
-         setError('IDENTITY_REVOKED');
+         // Retry once with public manifest
+         lastFetchRef.current = 0;
+         fetchData();
          return;
       }
       setIsOffline(true);
@@ -109,22 +125,28 @@ const DisplayScreen = () => {
   }, [playlist]);
 
   useEffect(() => {
-    const socket = io(import.meta.env.VITE_API_URL);
+    const token = localStorage.getItem('screenToken');
+    const deviceToken = localStorage.getItem('deviceToken');
+    
+    const socket = io(import.meta.env.VITE_API_URL, {
+      auth: { token, deviceToken }
+    });
+    
     fetchData();
     const t = setInterval(() => setTime(new Date()), 1000);
     const hb = setInterval(() => {
-        const token = localStorage.getItem('screenToken');
+        const currentToken = localStorage.getItem('screenToken');
         const telemetry = getTelemetry();
-        if (token) socket.emit('screenPing', { token, telemetry });
+        if (currentToken) socket.emit('screenPing', { token: currentToken, telemetry });
     }, 10000);
 
     socket.on('manifestUpdate', (manifest) => {
         const { screen, playlist: newPlaylist, tickers: newTickers, media: newMedia, idleConfig: newIdleConfig } = manifest;
         setScreenInfo(screen);
-        setPlaylist(newPlaylist);
-        setTickers(newTickers);
-        setAllMedia(newMedia);
-        setIdleConfig(newIdleConfig);
+        setPlaylist(newPlaylist || []);
+        setTickers(newTickers || []);
+        setAllMedia(newMedia || []);
+        setIdleConfig(newIdleConfig || null);
     });
 
     socket.on('connect', () => { fetchData(); });
@@ -149,6 +171,19 @@ const DisplayScreen = () => {
     }
   }, [currentIdx, playlist]);
 
+  // Ticker Transition Engine
+  useEffect(() => {
+    if (tickers.length > 1) {
+      const duration = 15000; // Show each ticker for 15 seconds
+      const timer = setInterval(() => {
+        setCurrentTickerIdx((prev) => (prev + 1) % tickers.length);
+      }, duration);
+      return () => clearInterval(timer);
+    } else {
+      if (currentTickerIdx !== 0) setCurrentTickerIdx(0);
+    }
+  }, [tickers, currentTickerIdx]);
+
   const safeParse = (data, fallback = []) => {
     if (!data) return fallback;
     if (typeof data === 'object') return data;
@@ -163,8 +198,8 @@ const DisplayScreen = () => {
 
     if (layout && layout.length > 0) {
       return (
-        <div className="w-full h-full relative p-[2vw]">
-          <div className="w-full h-full relative rounded-[3vw] overflow-hidden shadow-[0_0_120px_rgba(0,0,0,0.5)] border border-white/5 bg-slate-950">
+        <div className="w-full h-full relative">
+          <div className="w-full h-full relative overflow-hidden bg-slate-950">
             {layout.map((zone) => (
                 <div key={zone.i} className="absolute overflow-hidden bg-black/20" style={{ left: `${zone.x}%`, top: `${zone.y}%`, width: `${zone.w}%`, height: `${zone.h}%`, zIndex: zone.zIndex || 1 }}>
                     <LocalFramePlayer zone={zone} frameItems={mapping[zone.i]} allMedia={allMedia} tickers={tickers} />
@@ -177,10 +212,8 @@ const DisplayScreen = () => {
 
     const singleMedia = item.mediaId || item;
     return (
-      <div className="w-full h-full p-[2vw]">
-        <div className="w-full h-full rounded-[4vw] overflow-hidden shadow-[0_0_150px_rgba(0,0,0,0.6)] border border-white/10 bg-black ring-[1vw] ring-black/40">
-          <FrameManager item={singleMedia} onMediaError={() => setCurrentIdx((prev) => (prev + 1) % playlist.length)} />
-        </div>
+      <div className="w-full h-full bg-black">
+        <FrameManager item={singleMedia} onMediaError={() => setCurrentIdx((prev) => (prev + 1) % playlist.length)} />
       </div>
     );
   };
@@ -238,54 +271,61 @@ const DisplayScreen = () => {
   );
 
   return (
-    <div className="fixed inset-0 w-full h-full bg-[#020617] overflow-hidden flex flex-col text-white select-none font-sans">
-      <div className="fixed inset-0 pointer-events-none">
+    <div className="fixed inset-0 w-full h-full bg-[#020617] overflow-hidden text-white select-none font-sans">
+      <div className="fixed inset-0 pointer-events-none z-0">
         <div className="absolute top-[-30%] left-[-10%] w-[80%] h-[80%] bg-indigo-600/10 rounded-full blur-[250px] animate-pulse" />
         <div className="absolute bottom-[-30%] right-[-10%] w-[80%] h-[80%] bg-blue-500/5 rounded-full blur-[250px] animate-pulse" style={{ animationDelay: '4s' }} />
       </div>
 
-      {/* GOD-LEVEL HEADER */}
-      <div className="h-[14vh] min-h-[100px] bg-black/60 backdrop-blur-2xl border-b border-white/5 flex items-center justify-between px-[5vw] z-50">
-        <div className="flex items-center gap-[4vw]">
-            <div className="flex items-center gap-[1.5vw]">
-                <div className={`w-[1.2vw] h-[1.2vw] min-w-[14px] min-h-[14px] rounded-full ${isSyncing ? 'bg-indigo-500 shadow-[0_0_30px_rgba(99,102,241,0.8)]' : 'bg-emerald-500 shadow-[0_0_30px_rgba(16,185,129,0.8)]'} animate-pulse`} />
-                <span className="text-[1.2vw] font-black uppercase tracking-[8px] text-white/40">Broadcasting</span>
-            </div>
-            {(screenInfo || searchParams.get('screenId')) && (
-                <div className="px-6 py-2 bg-white/5 rounded-full border border-white/10 flex items-center gap-3">
-                    <Monitor size={18} className="text-indigo-400" />
-                    <span className="text-[1vw] font-black text-white/60 uppercase tracking-widest">{screenInfo?.name || 'TERMINAL-01'}</span>
-                </div>
-            )}
-        </div>
-
-        <div className="flex items-center gap-[4vw]">
-          <WeatherWidget location={screenInfo?.location} />
-          <div className="h-12 w-px bg-white/10" />
-          <div className="flex items-center gap-6">
-             <div className="text-right">
-                <p className="text-[5.5vw] font-black tracking-tighter tabular-nums leading-none text-white drop-shadow-[0_0_40px_rgba(255,255,255,0.2)]">{time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}</p>
-                <p className="text-[1vw] font-black uppercase tracking-[8px] text-white/30 mt-2 flex items-center justify-end gap-2"><ClockIcon size={14} className="text-indigo-400" /> {time.toLocaleDateString([], { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
-             </div>
-          </div>
-        </div>
-      </div>
-
-      {/* CINEMATIC STAGE */}
-      <div ref={transitionRef} className="flex-1 relative overflow-hidden z-10 transition-opacity duration-700 ease-in-out">
+      {/* STAGE (FULLSCREEN LAYER) */}
+      <div ref={transitionRef} className="absolute inset-0 z-10 transition-opacity duration-700 ease-in-out bg-black">
         {playlist.length > 0 && currentIdx < playlist.length ? renderMediaContent(playlist[currentIdx]) : (
-          <div className="w-full h-full p-20 animate-fade-in"><div className="w-full h-full rounded-[4vw] overflow-hidden shadow-2xl border border-white/5 bg-black relative">{renderIdleContent()}<div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20 pointer-events-none" /></div></div>
+          <div className="w-full h-full animate-fade-in relative">{renderIdleContent()}</div>
         )}
       </div>
 
-      {/* DYNAMIC SIGNAL TICKER */}
-      {tickers.length > 0 && (
-          <div className="h-32 flex items-center overflow-hidden z-50 border-t border-white/5 bg-black/80 backdrop-blur-3xl relative shadow-[0_-20px_100px_rgba(0,0,0,0.5)]">
-             <div className="absolute left-0 top-0 bottom-0 w-48 bg-gradient-to-r from-black via-black/80 to-transparent z-10" />
-             <div className="absolute right-0 top-0 bottom-0 w-48 bg-gradient-to-l from-black via-black/80 to-transparent z-10" />
-             <TickerEngine ticker={tickers[currentTickerIdx]} />
-          </div>
-      )}
+      {/* OVERLAY LAYER (HUD) */}
+      <div className="absolute inset-0 pointer-events-none z-50 flex flex-col justify-between">
+        
+        {/* TOP HUD (FLOAT) */}
+        <div className="w-full pt-[3vh] pb-[6vh] px-[5vw] bg-gradient-to-b from-black/80 via-black/30 to-transparent flex items-center justify-between pointer-events-auto">
+            <div className="flex items-center gap-[4vw]">
+                <div className="flex items-center gap-[1.5vw]">
+                    <div className={`w-[1.2vw] h-[1.2vw] min-w-[14px] min-h-[14px] rounded-full ${isSyncing ? 'bg-indigo-500 shadow-[0_0_30px_rgba(99,102,241,0.8)]' : (isOffline ? 'bg-rose-500 shadow-[0_0_30px_rgba(244,63,94,0.8)]' : 'bg-emerald-500 shadow-[0_0_30px_rgba(16,185,129,0.8)]')} animate-pulse`} />
+                    <span className="text-[1.2vw] font-black uppercase tracking-[8px] text-white/50">
+                        {isOffline ? 'OFFLINE WARNING' : (isSyncing ? 'SYNCING MANIFEST' : 'BROADCASTING')}
+                    </span>
+                </div>
+                {(screenInfo || searchParams.get('screenId')) && (
+                    <div className="px-6 py-2 bg-white/5 rounded-full border border-white/10 flex items-center gap-3 backdrop-blur-md">
+                        <Monitor size={18} className="text-indigo-400" />
+                        <span className="text-[1vw] font-black text-white/70 uppercase tracking-widest">{screenInfo?.name || 'TERMINAL-01'}</span>
+                    </div>
+                )}
+            </div>
+
+            <div className="flex items-center gap-[4vw]">
+                <WeatherWidget location={screenInfo?.location} />
+                <div className="h-12 w-px bg-white/10" />
+                <div className="text-right">
+                    <p className="text-[5.5vw] font-black tracking-tighter tabular-nums leading-none text-white drop-shadow-[0_10px_30px_rgba(0,0,0,0.5)]">{time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}</p>
+                    <p className="text-[1vw] font-black uppercase tracking-[8px] text-white/40 mt-2 flex items-center justify-end gap-2"><ClockIcon size={14} className="text-indigo-400" /> {time.toLocaleDateString([], { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                </div>
+            </div>
+        </div>
+
+        {/* BOTTOM HUD (TICKER FLOAT) */}
+        {tickers.length > 0 && (
+            <div className="w-full pb-[4vh] pointer-events-auto">
+                <div className="absolute bottom-0 left-0 w-full h-[25vh] bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
+                <div className="h-28 mx-[5vw] mb-4 flex items-center overflow-hidden rounded-[2rem] border border-white/10 bg-black/40 backdrop-blur-3xl relative shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+                    <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-black/60 to-transparent z-10" />
+                    <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-black/60 to-transparent z-10" />
+                    <TickerEngine ticker={tickers[currentTickerIdx]} />
+                </div>
+            </div>
+        )}
+      </div>
     </div>
   );
 };

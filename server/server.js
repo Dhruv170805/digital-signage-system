@@ -38,10 +38,22 @@ io.adapter(createAdapter(redisClient, subClient));
 socketService.init(io);
 app.set('socketio', io);
 
-server.listen(PORT, () => {
-  console.log(`🚀 NEXUS PRODUCTION ENGINE: Running on port ${PORT}`);
-  console.log(`📡 REAL-TIME SYNC: Active with Redis Adapter`);
-});
+const startServer = async () => {
+  try {
+    await mongoose.connect(mongoUri);
+    console.log('📦 Database connected successfully');
+    
+    server.listen(PORT, () => {
+      console.log(`🚀 NEXUS PRODUCTION ENGINE: Running on port ${PORT}`);
+      console.log(`📡 REAL-TIME SYNC: Active with Redis Adapter`);
+    });
+  } catch (err) {
+    console.error('❌ Failed to start server:', err.message);
+    process.exit(1);
+  }
+};
+
+startServer();
 
 // Graceful Shutdown Logic
 const shutdown = async (signal) => {

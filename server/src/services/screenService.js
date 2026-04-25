@@ -61,8 +61,8 @@ class ScreenService {
 
   async getManifest(screenId, groupId) {
     const { redisClient } = require('../config/redis');
-    const cacheKey = `manifest:${screenId}`;
-    
+    const cacheKey = `manifest:${screenId || 'public'}`;
+
     // Try to get from cache first
     try {
       const cached = await redisClient.get(cacheKey);
@@ -76,7 +76,6 @@ class ScreenService {
     const configService = require('./configService');
     const mediaService = require('./mediaService');
     const idleService = require('./idleService');
-    const Screen = require('../models/Screen');
 
     const [playlist, tickers, settings, media, idleConfig] = await Promise.all([
       assignmentService.getActiveAssignmentsForScreen(screenId, groupId),
@@ -94,7 +93,7 @@ class ScreenService {
       idleConfig
     };
 
-    // Cache the result for 1 hour
+    // Cache the result
     try {
       await redisClient.setex(cacheKey, 3600, JSON.stringify(manifest));
     } catch (err) {
@@ -102,6 +101,10 @@ class ScreenService {
     }
 
     return manifest;
+  }
+
+  async getPublicManifest() {
+    return await this.getManifest(null, null);
   }
 
   async pushManifestToScreen(screenId) {

@@ -5,13 +5,6 @@ const cookieParser = require('cookie-parser');
 const connectDB = require('./config/db');
 const errorMiddleware = require('./middlewares/errorMiddleware');
 
-// Connect to Database
-connectDB().then(() => {
-  console.log('📦 Database handshake verified.');
-}).catch(err => {
-  console.error('❌ Database connection critical failure:', err.message);
-});
-
 // Routes
 const screenRoutes = require('./routes/screenRoutes');
 const authRoutes = require('./routes/authRoutes');
@@ -28,10 +21,7 @@ const app = express();
 
 // Middlewares
 const allowedOrigins = [
-  process.env.CLIENT_URL,
-  'http://localhost:5173',
-  'http://localhost:3000',
-  'http://localhost:5006'
+  process.env.CLIENT_URL
 ].filter(Boolean);
 
 app.use(cors({
@@ -39,8 +29,8 @@ app.use(cors({
     // allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
-    // In development, allow all localhost origins
-    if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+    // In development, allow localhost origins
+    if (process.env.NODE_ENV !== 'production' && (origin.includes('localhost') || origin.includes('127.0.0.1'))) {
       return callback(null, true);
     }
 

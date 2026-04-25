@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { io } from 'socket.io-client';
+import useAuthStore from './useAuthStore';
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
 
@@ -7,14 +8,31 @@ const useSocketStore = create((set, get) => ({
   socket: null,
   connected: false,
 
-  connect: (macAddress, screenId) => {
+  connect: (deviceToken = null) => {
     if (get().socket) return;
 
-    const socket = io(SOCKET_URL);
+    const token = useAuthStore.getState().token;
+    // deviceToken can be passed or retrieved from localStorage if it's a screen
+    const effectiveDeviceToken = deviceToken || localStorage.getItem('deviceToken');
+
+    const socket = io(SOCKET_URL, {
+      auth: {
+        token,
+        deviceToken: effectiveDeviceToken
+      }
+    });
 
     socket.on('connect', () => {
       set({ connected: true });
-      socket.emit('heartbeat', { macAddress, screenId });
+      if (effectiveDeviceToken) {
+        socket.emit('heartbeat', { 
+          telemetry: {
+            uptime: window.performance ? window.performance.now() : 0,
+            memory: navigator.deviceMemory || 0,
+            connection: navigator.connection ? navigator.connection.effectiveType : 'unknown'
+          }
+        });
+      }
     });
 
     socket.on('disconnect', () => {
@@ -22,8 +40,11 @@ const useSocketStore = create((set, get) => ({
     });
 
     socket.on('sync_config', (data) => {
-      // Handle config sync (can trigger useConfigStore.fetchConfig())
       console.log('Config sync event received:', data);
+    });
+
+    socket.on('manifestUpdate', (data) => {
+        console.log('Manifest update received:', data);
     });
 
     socket.on('emergency_override', (data) => {

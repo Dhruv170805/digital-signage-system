@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AlertCircle } from 'lucide-react';
+import PdfRenderer from './PdfRenderer';
 
 const getMediaUrl = (filePath, zoneId) => {
   if (!filePath) return '';
@@ -15,13 +16,26 @@ const FrameManager = ({ item, zoneId, onMediaError }) => {
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [textContents, setTextContents] = useState({});
 
+  const getFilePath = (media) => media?.filePath || media?.path || '';
+  const getFileType = (media) => {
+    if (media?.fileType) return media.fileType;
+    if (media?.mimeType) {
+      if (media.mimeType.startsWith('image/')) return 'image';
+      if (media.mimeType.startsWith('video/')) return 'video';
+      if (media.mimeType === 'application/pdf') return 'pdf';
+      if (media.mimeType.startsWith('text/')) return 'text';
+    }
+    return 'unknown';
+  };
+
   useEffect(() => {
     const fetchText = async (media) => {
         const id = media._id || media.id;
-        if (textContents[id]) return;
+        const path = getFilePath(media);
+        if (textContents[id] || !path) return;
         try {
             const apiBase = (import.meta.env.VITE_API_URL || '').replace(/\/api\/?$/, '').replace(/\/$/, '');
-            const res = await fetch(`${apiBase}/${media.filePath}`);
+            const res = await fetch(`${apiBase}/${path}`);
             const text = await res.text();
             setTextContents(prev => ({ ...prev, [id]: text }));
         } catch (e) {
@@ -30,8 +44,8 @@ const FrameManager = ({ item, zoneId, onMediaError }) => {
         }
     };
 
-    if (item?.fileType === 'text') fetchText(item);
-    if (previousMedia?.fileType === 'text') fetchText(previousMedia);
+    if (getFileType(item) === 'text') fetchText(item);
+    if (getFileType(previousMedia) === 'text') fetchText(previousMedia);
   }, [item, previousMedia, textContents]);
 
   useEffect(() => {
@@ -54,11 +68,13 @@ const FrameManager = ({ item, zoneId, onMediaError }) => {
   const renderMedia = (mediaItem, isFadingOut) => {
     if (!mediaItem) return null;
 
-    const src = getMediaUrl(mediaItem.filePath, zoneId) || undefined;
+    const filePath = getFilePath(mediaItem);
+    const fileType = getFileType(mediaItem);
+    const src = getMediaUrl(filePath, zoneId) || undefined;
     const opacity = isFadingOut ? 0 : 1;
     const transitionClass = "transition-opacity duration-1000 absolute inset-0 w-full h-full";
 
-    if (mediaItem.fileType === 'video') {
+    if (fileType === 'video') {
       return (
         <video 
           key={`vid-${mediaItem.id || mediaItem._id}`}
@@ -68,13 +84,13 @@ const FrameManager = ({ item, zoneId, onMediaError }) => {
           loop 
           playsInline
           onError={() => onMediaError && onMediaError()}
-          className={`${transitionClass} object-fill bg-black`}
+          className={`${transitionClass} object-cover bg-black`}
           style={{ opacity, zIndex: isFadingOut ? 1 : 2 }}
         />
       );
     }
     
-    if (mediaItem.fileType === 'text') {
+    if (fileType === 'text') {
       return (
         <div 
           key={`txt-${mediaItem.id || mediaItem._id}`}
@@ -90,15 +106,15 @@ const FrameManager = ({ item, zoneId, onMediaError }) => {
       );
     }
 
-    if (mediaItem.fileType === 'pdf') {
+    if (fileType === 'pdf') {
       return (
-        <iframe 
+        <div 
           key={`pdf-${mediaItem.id || mediaItem._id}`}
-          src={src ? `${src}#toolbar=0&navpanes=0&scrollbar=0&view=FitH` : undefined} 
-          className={`${transitionClass} border-none bg-white pointer-events-none object-fill`}
-          style={{ opacity, zIndex: isFadingOut ? 1 : 2, width: '100%', height: '100%' }}
-          title={mediaItem.fileName} 
-        />
+          className={`${transitionClass} w-full h-full`}
+          style={{ opacity, zIndex: isFadingOut ? 1 : 2 }}
+        >
+          <PdfRenderer url={src} />
+        </div>
       );
     }
 
@@ -106,9 +122,9 @@ const FrameManager = ({ item, zoneId, onMediaError }) => {
       <img 
         key={`img-${mediaItem.id || mediaItem._id}`}
         src={src} 
-        alt={mediaItem.fileName} 
+        alt={mediaItem.fileName || mediaItem.filename || mediaItem.originalName} 
         onError={() => onMediaError && onMediaError()}
-        className={`${transitionClass} object-fill bg-black`}
+        className={`${transitionClass} object-cover bg-black`}
         style={{ opacity, zIndex: isFadingOut ? 1 : 2 }}
       />
     );
