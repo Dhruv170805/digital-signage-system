@@ -3,7 +3,7 @@ import axios from 'axios';
 import useSocketStore from '../store/useSocketStore';
 import '../App.css'; // Assume some base styles
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5006/api';
 
 const ProductionDisplay = () => {
   const [playlist, setPlaylist] = useState([]);
@@ -71,7 +71,6 @@ const ProductionDisplay = () => {
                     zIndex: frame.zIndex
                   }}
                 >
-                  {/* Logic to find media scheduled for this specific frame */}
                   <ContentRenderer frame={frame} schedule={item} />
                 </div>
               ))}
@@ -110,14 +109,14 @@ const ProductionDisplay = () => {
 };
 
 const ContentRenderer = ({ schedule }) => {
-  // Simplification: In a real system, there might be a nested lookup
-  // For now, if there's media in the schedule, render it in the frame
   if (schedule.media) return <MediaRenderer media={schedule.media} />;
   return <div className="empty-frame">No Content</div>;
 };
 
 const MediaRenderer = ({ media }) => {
-  const url = `${import.meta.env.VITE_UPLOAD_URL || 'http://localhost:5000/uploads'}/${media.filename}`;
+  if (!media || !media.filename) return null;
+  const uploadUrl = import.meta.env.VITE_UPLOAD_URL || 'http://localhost:5006/uploads';
+  const url = `${uploadUrl}/${media.filename}`;
   
   if (media.mimeType.startsWith('image/')) {
     return <img src={url} alt={media.originalName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />;

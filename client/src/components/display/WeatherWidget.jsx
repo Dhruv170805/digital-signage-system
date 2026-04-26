@@ -95,15 +95,23 @@ const WeatherWidget = ({ location }) => {
   const tempF = temp !== '--' ? Math.round(Number(temp) * 9/5 + 32) : '--';
 
   return (
-    <div className="flex items-center gap-4">
-        <span className="opacity-80 flex items-center gap-2 uppercase font-black tracking-widest text-[11px]">
-            <MapPin size={12} className="text-blue-400" /> {area}
-        </span>
-        <span className="opacity-20 text-white">|</span>
-        <div className="flex items-center gap-2 font-black text-[11px]">
-            <CloudSun size={14} className="text-amber-400" />
-            <span className="text-white">{temp}°C</span>
-            <span className="opacity-40 tabular-nums">/ {tempF}°F</span>
+    <div className="flex items-center gap-6">
+        <div className="flex flex-col">
+            <p className="text-[9px] font-black text-indigo-400/60 uppercase tracking-[3px] leading-none mb-1">Local Node</p>
+            <p className="text-sm font-black text-white uppercase tracking-wider">{area}</p>
+        </div>
+        <div className="w-px h-8 bg-white/10" />
+        <div className="flex items-center gap-4">
+            <div className="w-10 h-10 bg-amber-500/10 rounded-xl flex items-center justify-center">
+                <CloudSun size={20} className="text-amber-400" />
+            </div>
+            <div>
+                <p className="text-[9px] font-black text-amber-400/60 uppercase tracking-[3px] leading-none mb-1">Ambient</p>
+                <div className="flex items-baseline gap-2">
+                    <span className="text-xl font-black text-white uppercase tabular-nums">{temp}°C</span>
+                    <span className="text-[10px] font-bold text-white/30 tabular-nums uppercase">/ {tempF}°F</span>
+                </div>
+            </div>
         </div>
     </div>
   );

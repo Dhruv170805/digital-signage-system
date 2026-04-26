@@ -118,7 +118,7 @@ const LocalFramePlayer = ({ zone, frameItems, allMedia, tickers, screenInfo }) =
 
   if (validPlaylist.length === 0 && !activeInterrupt) {
     return (
-      <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900/40 backdrop-blur-sm relative">
+      <div className="w-full h-full flex flex-col items-center justify-center bg-black relative">
         <Radio className="text-white/5 animate-pulse" size={48} />
       </div>
     );

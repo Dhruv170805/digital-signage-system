@@ -3,11 +3,10 @@ import { AlertCircle } from 'lucide-react';
 import PdfRenderer from './PdfRenderer';
 
 const getMediaUrl = (filePath, zoneId) => {
-  if (!filePath) return '';
+  if (!filePath) return null;
   let apiBase = (import.meta.env.VITE_API_URL || '').replace(/\/api\/?$/, '').replace(/\/$/, '');
   
-  // 🛡️ Dynamic Port Recovery: If on localhost and VITE_API_URL is missing/wrong port,
-  // we attempt to reach the known signage server port (5006)
+  // 🛡️ Dynamic Port Recovery
   if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
     if (!apiBase || apiBase.includes(':5000')) {
        apiBase = 'http://localhost:5006';
@@ -30,6 +29,10 @@ const FrameManager = ({ item, zone, onMediaEnd, onMediaError, mediaRef }) => {
     // Assignment check: populated mediaId is the media object
     if (mediaOrAssignment.mediaId && typeof mediaOrAssignment.mediaId === 'object') {
       return mediaOrAssignment.mediaId;
+    }
+    // If it's already a media object (e.g. from a direct mapping)
+    if (mediaOrAssignment.filePath || mediaOrAssignment.path) {
+      return mediaOrAssignment;
     }
     return mediaOrAssignment;
   };
@@ -55,8 +58,8 @@ const FrameManager = ({ item, zone, onMediaEnd, onMediaError, mediaRef }) => {
 
   // 🧠 TRANSITION ENGINE: Handle dual-layer swaps
   useEffect(() => {
-    const currentId = displayItems.current?._id || displayItems.current?.id;
-    const incomingId = item?._id || item?.id;
+    const currentId = displayItems.current?._id || displayItems.current?.id || displayItems.current?.uid;
+    const incomingId = item?._id || item?.id || item?.uid;
 
     if (incomingId && incomingId !== currentId) {
       setTransitioning(true);
@@ -75,7 +78,7 @@ const FrameManager = ({ item, zone, onMediaEnd, onMediaError, mediaRef }) => {
   // 🧠 TEXT LOADER
   useEffect(() => {
     const fetchText = async (media) => {
-        const id = media._id || media.id;
+        const id = media._id || media.id || media.uid;
         const path = getFilePath(media);
         if (textContents[id] || !path) return;
         try {
@@ -89,7 +92,7 @@ const FrameManager = ({ item, zone, onMediaEnd, onMediaError, mediaRef }) => {
         }
     };
     const mediaData = getMediaData(item);
-    if (getFileType(item) === 'text') fetchText(mediaData);
+    if (getFileType(item) === 'text' && mediaData) fetchText(mediaData);
   }, [item]);
 
   const handleMediaError = (e) => {
@@ -105,6 +108,9 @@ const FrameManager = ({ item, zone, onMediaEnd, onMediaError, mediaRef }) => {
     const fileType = getFileType(mediaItem);
     const src = getMediaUrl(filePath, zone?.i);
     
+    // Safety check: if src is null, don't render media tags that expect it
+    if (!src && fileType !== 'text') return null;
+
     const isCurrent = layer === 'current';
     const attachRef = isCurrent ? mediaRef : null;
     
@@ -124,7 +130,7 @@ const FrameManager = ({ item, zone, onMediaEnd, onMediaError, mediaRef }) => {
       return (
         <video 
           ref={attachRef}
-          key={`vid-${mediaItem._id || mediaItem.id}`}
+          key={`vid-${mediaItem._id || mediaItem.id || mediaItem.uid}`}
           src={src} 
           autoPlay 
           muted 
@@ -137,11 +143,12 @@ const FrameManager = ({ item, zone, onMediaEnd, onMediaError, mediaRef }) => {
     }
     
     if (fileType === 'text') {
+      const textKey = mediaItem._id || mediaItem.id || mediaItem.uid;
       return (
-        <div ref={attachRef} key={`txt-${mediaItem._id || mediaItem.id}`} className={`${transitionClass} flex items-center justify-center p-[5vw] bg-slate-900`}>
+        <div ref={attachRef} key={`txt-${textKey}`} className={`${transitionClass} flex items-center justify-center p-[5vw] bg-slate-900`}>
            <div className="w-full h-full glass p-[4vw] rounded-[40px] border-white/10 shadow-2xl flex items-center justify-center overflow-auto hide-scrollbar">
               <pre className="text-[min(5vw,4rem)] font-black text-white whitespace-pre-wrap font-sans text-center leading-tight tracking-tighter uppercase drop-shadow-2xl">
-                {textContents[mediaItem._id || mediaItem.id] || 'Syncing...'}
+                {textContents[textKey] || 'Syncing...'}
               </pre>
            </div>
         </div>
@@ -150,7 +157,7 @@ const FrameManager = ({ item, zone, onMediaEnd, onMediaError, mediaRef }) => {
 
     if (fileType === 'pdf') {
       return (
-        <div ref={attachRef} key={`pdf-${mediaItem._id || mediaItem.id}`} className={`${transitionClass} w-full h-full`}>
+        <div ref={attachRef} key={`pdf-${mediaItem._id || mediaItem.id || mediaItem.uid}`} className={`${transitionClass} w-full h-full`}>
           <PdfRenderer url={src} zone={zone} />
         </div>
       );
@@ -159,7 +166,7 @@ const FrameManager = ({ item, zone, onMediaEnd, onMediaError, mediaRef }) => {
     return (
       <img 
         ref={attachRef}
-        key={`img-${mediaItem._id || mediaItem.id}`}
+        key={`img-${mediaItem._id || mediaItem.id || mediaItem.uid}`}
         src={src} 
         alt="Broadcast Asset"
         onError={handleMediaError}

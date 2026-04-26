@@ -33,7 +33,7 @@ const TickerEngine = ({ ticker }) => {
   const animDuration = Math.max(10, 150 - (ticker.speed || 50)) + 's';
 
   return (
-      <div className="w-full h-full relative overflow-hidden bg-black/20 group">
+      <div className="w-full h-full relative overflow-hidden bg-black group">
           {/* 1. CINEMATIC EDGE MASKS */}
           <div className="absolute left-0 top-0 bottom-0 w-48 bg-gradient-to-r from-black via-black/60 to-transparent z-20 pointer-events-none" />
           <div className="absolute right-0 top-0 bottom-0 w-48 bg-gradient-to-l from-black via-black/60 to-transparent z-20 pointer-events-none" />

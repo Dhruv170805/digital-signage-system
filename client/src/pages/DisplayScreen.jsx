@@ -9,6 +9,7 @@ import {
 import FrameManager from '../components/display/FrameManager';
 import WeatherWidget from '../components/display/WeatherWidget';
 import TickerEngine from '../components/display/TickerEngine';
+import LocalFramePlayer from '../components/display/LocalFramePlayer';
 import useLayoutStore from '../store/useLayoutStore';
 
 // --- Main Display Screen ---
@@ -77,7 +78,6 @@ const DisplayScreen = () => {
     const token = screenToken;
     const authConfig = { headers: token ? { Authorization: `Bearer ${token}` } : {} };
 
-    // 🛡️ Resolve API Base with fallback for 5006
     let apiBase = (import.meta.env.VITE_API_URL || '').replace(/\/api\/?$/, '').replace(/\/$/, '');
     if (!apiBase && typeof window !== 'undefined' && window.location.hostname === 'localhost') {
         apiBase = 'http://localhost:5006';
@@ -146,7 +146,6 @@ const DisplayScreen = () => {
     const token = screenToken;
     const deviceToken = localStorage.getItem('deviceToken');
     
-    // 🛡️ Resolve API Base for socket
     let apiBase = (import.meta.env.VITE_API_URL || '');
     if (!apiBase && typeof window !== 'undefined' && window.location.hostname === 'localhost') {
         apiBase = 'http://localhost:5006';
@@ -182,7 +181,6 @@ const DisplayScreen = () => {
         socket.off('connect');
         socket.off('manifestUpdate');
         socket.off('forceReset');
-        // Delay disconnect slightly to avoid "closed before established" error in StrictMode
         setTimeout(() => socket.disconnect(), 10);
       }
       clearInterval(t);
@@ -234,6 +232,73 @@ const DisplayScreen = () => {
 
   const currentItem = playlist[currentIdx];
 
+  const renderContent = () => {
+    if (!currentItem) return (
+      <div className="flex-1 flex flex-col items-center justify-center relative">
+        {idleConfig ? (
+           <FrameManager item={idleConfig.mediaId || idleConfig} />
+        ) : (
+            <div className="relative z-10 flex flex-col items-center space-y-12">
+                <div className="w-32 h-32 bg-white/5 backdrop-blur-3xl border border-white/10 rounded-[48px] flex items-center justify-center shadow-2xl">
+                    <Monitor className="text-indigo-500/40" size={64} />
+                </div>
+                <div className="text-center space-y-4">
+                    <h3 className="text-white text-4xl font-black uppercase tracking-[16px]">Standby</h3>
+                    <p className="text-indigo-400/40 text-[10px] font-black uppercase tracking-[6px]">Awaiting Broadcast Manifest</p>
+                </div>
+            </div>
+        )}
+      </div>
+    );
+
+    // TEMPLATE RENDERER
+    if (currentItem.templateId && currentItem.templateId.frames) {
+      return (
+        <div className="flex-1 relative w-full h-full overflow-hidden">
+          {currentItem.templateId.frames.map((frame) => (
+            <div 
+              key={frame._id || frame.i}
+              style={{
+                position: 'absolute',
+                left: `${frame.x}%`,
+                top: `${frame.y}%`,
+                width: `calc(${frame.w}% + 0.5px)`,
+                height: `calc(${frame.h}% + 0.5px)`,
+                zIndex: frame.zIndex || 1
+              }}
+            >
+              <LocalFramePlayer 
+                zone={frame}
+                frameItems={currentItem.mediaMapping ? currentItem.mediaMapping[frame.i] : []}
+                allMedia={[]} 
+                tickers={tickers}
+              />
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    // SIMPLE MEDIA RENDERER
+    return (
+      <div className="flex-1 relative w-full h-full">
+          <FrameManager item={currentItem} />
+          
+          {/* HUD OVERLAY */}
+          <div className="absolute bottom-40 right-12 z-40 max-w-xl text-right animate-fade-in-up" key={currentIdx}>
+              <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[8px] mb-4">Live Manifest</p>
+              <h1 className="text-6xl font-black text-white uppercase tracking-tighter leading-none mb-6 drop-shadow-2xl">
+                  {currentItem?.name || currentItem?.mediaId?.fileName || currentItem?.mediaId?.originalName || 'Broadcast Stream'}
+              </h1>
+              <div className="flex items-center justify-end gap-3 opacity-40">
+                  <Activity size={14} className="text-indigo-400" />
+                  <span className="text-[10px] font-black text-white uppercase tracking-[4px]">Channel-0{currentIdx + 1}</span>
+              </div>
+          </div>
+      </div>
+    );
+  };
+
   return (
     <div className={`h-screen w-screen bg-black overflow-hidden relative cursor-none select-none ${screenConfig.type}`}>
       
@@ -247,10 +312,10 @@ const DisplayScreen = () => {
       <div className="absolute top-12 left-12 z-50 flex items-center gap-6">
         <div className="bg-white/5 backdrop-blur-3xl border border-white/10 px-8 py-4 rounded-[32px] flex items-center gap-4 shadow-2xl">
           <div className="w-12 h-12 bg-indigo-500/10 rounded-2xl flex items-center justify-center">
-            <ClockIcon className="text-indigo-400" size={24} />
+            <ClockIcon className="text-indigo-500" size={24} />
           </div>
           <div>
-            <p className="text-[10px] font-black text-indigo-400/60 uppercase tracking-widest leading-none mb-1">System Time</p>
+            <p className="text-[11px] font-black text-indigo-400 uppercase tracking-widest leading-none mb-1">System Time</p>
             <p className="text-2xl font-black text-white uppercase tabular-nums tracking-tighter">
               {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
             </p>
@@ -265,53 +330,37 @@ const DisplayScreen = () => {
         )}
       </div>
 
-      <div className="absolute top-12 right-12 z-50 flex items-center gap-4">
-        <WeatherWidget />
-        <div className="bg-white/5 backdrop-blur-3xl border border-white/10 p-4 rounded-[32px] group hover:bg-white/10 transition-all">
+      <div className="absolute top-12 right-12 z-50 flex items-center gap-6">
+        <div className="bg-white/5 backdrop-blur-3xl border border-white/10 px-8 py-4 rounded-[32px] flex items-center shadow-2xl">
+          <WeatherWidget />
+        </div>
+        <div className="bg-white/5 backdrop-blur-3xl border border-white/10 p-4 rounded-[32px] group hover:bg-white/10 transition-all shadow-2xl">
             <MapPin className="text-white/40 group-hover:text-white transition-colors" size={20} />
         </div>
       </div>
 
-      {/* 🚀 MAIN CONTENT */}
-      <div className="h-full w-full relative z-10 flex flex-col">
-        {playlist.length > 0 ? (
-            <div className="flex-1 relative">
-                <FrameManager item={currentItem} />
-                
-                {/* HUD OVERLAY */}
-                <div className="absolute bottom-40 right-12 z-40 max-w-xl text-right animate-fade-in-up" key={currentIdx}>
-                    <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[8px] mb-4">Live Manifest</p>
-                    <h1 className="text-6xl font-black text-white uppercase tracking-tighter leading-none mb-6 drop-shadow-2xl">
-                        {currentItem?.name || currentItem?.mediaId?.originalName || 'Broadcast Stream'}
-                    </h1>
-                    <div className="flex items-center justify-end gap-3 opacity-40">
-                        <Activity size={14} className="text-indigo-400" />
-                        <span className="text-[10px] font-black text-white uppercase tracking-[4px]">Channel-0{currentIdx + 1}</span>
-                    </div>
-                </div>
-            </div>
-        ) : (
-            <div className="flex-1 flex flex-col items-center justify-center relative">
-                {idleConfig ? (
-                   <FrameManager item={idleConfig.mediaId || idleConfig} />
-                ) : (
-                    <div className="relative z-10 flex flex-col items-center space-y-12">
-                        <div className="w-32 h-32 bg-white/5 backdrop-blur-3xl border border-white/10 rounded-[48px] flex items-center justify-center shadow-2xl">
-                            <Monitor className="text-indigo-500/40" size={64} />
-                        </div>
-                        <div className="text-center space-y-4">
-                            <h3 className="text-white text-4xl font-black uppercase tracking-[16px]">Standby</h3>
-                            <p className="text-indigo-400/40 text-[10px] font-black uppercase tracking-[6px]">Awaiting Broadcast Manifest</p>
-                        </div>
-                    </div>
-                )}
-            </div>
-        )}
+      {/* 🚀 MAIN CONTENT ENGINE */}
+      <div 
+        className="h-full w-full relative z-10 grid bg-black"
+        style={{ 
+            gridTemplateRows: tickerPosition === 'top' ? '120px 1fr' : '1fr 120px',
+            gap: 0
+        }}
+      >
+        <div className="relative overflow-hidden w-full h-full">
+          {renderContent()}
+        </div>
 
         {/* 📟 TICKER */}
         {tickers.length > 0 && (
-            <div className={`h-32 w-full z-50 shrink-0 ${tickerPosition === 'top' ? 'order-first' : ''}`}>
-                <div className="h-full w-full bg-black/60 backdrop-blur-3xl border-t border-white/5 relative overflow-hidden flex items-center">
+            <div 
+                className="h-[120px] w-full z-50 overflow-hidden bg-black"
+                style={{
+                    marginTop: tickerPosition === 'top' ? 0 : '-1px',
+                    marginBottom: tickerPosition === 'top' ? '-1px' : 0
+                }}
+            >
+                <div className="h-full w-full relative flex items-center">
                     <div className="absolute left-0 top-0 bottom-0 w-40 bg-gradient-to-r from-black/90 to-transparent z-10" />
                     <div className="absolute right-0 top-0 bottom-0 w-40 bg-gradient-to-l from-black/90 to-transparent z-10" />
                     <TickerEngine ticker={tickers[currentTickerIdx]} />

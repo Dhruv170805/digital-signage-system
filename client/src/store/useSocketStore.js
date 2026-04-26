@@ -3,24 +3,30 @@ import { io } from 'socket.io-client';
 import useAuthStore from './useAuthStore';
 import useInterruptStore from './useInterruptStore';
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL || 'http://localhost:5006';
 
 const useSocketStore = create((set, get) => ({
   socket: null,
   connected: false,
 
   connect: (deviceToken = null) => {
-    if (get().socket) return;
+    const currentSocket = get().socket;
+    if (currentSocket) return;
 
     const token = useAuthStore.getState().token;
     // deviceToken can be passed or retrieved from localStorage if it's a screen
     const effectiveDeviceToken = deviceToken || localStorage.getItem('deviceToken');
 
+    console.log('🔗 Attempting connection to Signal Server:', SOCKET_URL);
+
     const socket = io(SOCKET_URL, {
       auth: {
         token,
         deviceToken: effectiveDeviceToken
-      }
+      },
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionDelay: 1000
     });
 
     socket.on('connect', () => {

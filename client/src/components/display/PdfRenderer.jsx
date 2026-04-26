@@ -60,12 +60,6 @@ const PdfRenderer = ({ url, zone }) => {
     return 'scroll';                         
   }, [zone]);
 
-  const renderWidth = useMemo(() => {
-    if (mode === 'fit') return 1200;
-    if (mode === 'slide') return 1000;
-    return 800;
-  }, [mode]);
-
   const onDocumentLoadSuccess = ({ numPages }) => {
     setNumPages(numPages);
   };
@@ -101,12 +95,10 @@ const PdfRenderer = ({ url, zone }) => {
       ref={containerRef}
       className="w-full h-full bg-black overflow-hidden relative flex items-center justify-center"
     >
-      {/* ❌ REMOVED REDUNDANT GHOST LAYER TO PREVENT MEMORY LEAKS */}
-
       {/* 2. MAIN DOCUMENT STAGE */}
       <div 
         ref={scrollRef}
-        className={`w-full h-full relative z-10 flex justify-center hide-scrollbar \${mode === 'scroll' ? 'overflow-y-auto pt-[10%]' : 'overflow-hidden items-center'}`}
+        className={`w-full h-full relative z-10 flex justify-center hide-scrollbar ${mode === 'scroll' ? 'overflow-y-auto' : 'overflow-hidden items-center'}`}
       >
         <Document
           file={url}
@@ -119,25 +111,25 @@ const PdfRenderer = ({ url, zone }) => {
           }
         >
           {mode === 'scroll' ? (
-             <div className="flex flex-col items-center gap-8 pb-[20vh]">
+             <div className="flex flex-col items-center w-full">
                 {Array.from(new Array(numPages), (el, index) => (
                     <Page 
                         key={index}
                         pageNumber={index + 1} 
-                        width={containerRef.current ? containerRef.current.offsetWidth * 0.8 : 800}
+                        width={containerRef.current ? containerRef.current.offsetWidth : 800}
                         onRenderSuccess={handlePageRenderSuccess}
                         renderTextLayer={false}
                         renderAnnotationLayer={false}
-                        className="shadow-2xl border border-white/5 rounded-sm transform scale-110 origin-top"
+                        className="w-full"
                     />
                 ))}
              </div>
           ) : (
-            <div className="animate-fade-in transition-all duration-1000 transform scale-110" key={currentPage}>
-                <div className="shadow-[0_40px_100px_rgba(0,0,0,0.8)] rounded-sm overflow-hidden border border-white/5">
+            <div className="animate-fade-in transition-all duration-1000 w-full h-full flex items-center justify-center" key={currentPage}>
+                <div className="w-full h-full flex items-center justify-center">
                     <Page 
                         pageNumber={currentPage} 
-                        width={containerRef.current ? containerRef.current.offsetWidth * (mode === 'fit' ? 0.85 : 0.75) : 800}
+                        width={containerRef.current ? containerRef.current.offsetWidth : 800}
                         onRenderSuccess={handlePageRenderSuccess}
                         renderTextLayer={false}
                         renderAnnotationLayer={false}
@@ -147,9 +139,8 @@ const PdfRenderer = ({ url, zone }) => {
           )}
         </Document>
       </div>
+    </div>
+  );
+};
 
-      </div>
-      );
-      };
-
-      export default PdfRenderer;
+export default PdfRenderer;

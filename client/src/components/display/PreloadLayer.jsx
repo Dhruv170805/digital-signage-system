@@ -1,7 +1,7 @@
 import React from 'react';
 
 const getMediaUrl = (filePath) => {
-  if (!filePath) return '';
+  if (!filePath) return null;
   const apiBase = (import.meta.env.VITE_API_URL || '').replace(/\/api\/?$/, '').replace(/\/$/, '');
   const cleanPath = filePath.startsWith('/') ? filePath : `/${filePath}`;
   return `${apiBase}${cleanPath}`.replace(/([^:]\/)\/+/g, "$1");
@@ -14,6 +14,11 @@ const PreloadLayer = ({ item, onReady }) => {
   const fileType = item.fileType || (item.mimeType?.startsWith('video/') ? 'video' : 'image');
   const src = getMediaUrl(filePath);
 
+  if (!src) {
+    onReady();
+    return null;
+  }
+
   if (fileType === 'video') {
     return (
       <video 
@@ -22,6 +27,7 @@ const PreloadLayer = ({ item, onReady }) => {
         muted 
         style={{ display: 'none' }} 
         onCanPlayThrough={onReady} 
+        onError={onReady}
       />
     );
   }
