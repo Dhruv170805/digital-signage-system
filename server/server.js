@@ -47,6 +47,37 @@ const startServer = async () => {
     server.listen(PORT, () => {
       console.log(`🚀 NEXUS PRODUCTION ENGINE: Running on port ${PORT}`);
       console.log(`📡 REAL-TIME SYNC: Active with Redis Adapter`);
+
+      // 🧠 STALE SCREEN CLEANUP ENGINE
+      // Check every 30s for screens that haven't pinged in 60s
+      setInterval(async () => {
+        try {
+          const Screen = require('./src/models/Screen');
+          const staleTime = new Date(Date.now() - 60000);
+          
+          const staleScreens = await Screen.find({ 
+            status: 'online', 
+            lastSeen: { $lt: staleTime } 
+          });
+
+          if (staleScreens.length > 0) {
+            await Screen.updateMany(
+              { _id: { $in: staleScreens.map(s => s._id) } },
+              { $set: { status: 'offline' } }
+            );
+
+            staleScreens.forEach(screen => {
+               socketService.broadcast('screenStatusUpdate', { 
+                 screenId: screen._id, 
+                 status: 'offline' 
+               });
+            });
+            console.log(`[Cleanup] Set ${staleScreens.length} stale screens to offline`);
+          }
+        } catch (err) {
+          console.error('[Cleanup Error]', err.message);
+        }
+      }, 30000);
     });
   } catch (err) {
     console.error('❌ Failed to start server:', err.message);

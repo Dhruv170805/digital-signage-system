@@ -69,17 +69,17 @@ const WeatherWidget = ({ location }) => {
               const ipRes = await fetch('https://ipapi.co/json/');
               const ipData = await ipRes.json();
               if (mounted && ipData.latitude) {
-                fetchWeather(ipData.latitude, ipData.longitude, ipData.city);
+                fetchWeather(ipData.latitude, ipData.longitude, ipData.city || "Vadodara");
               }
             } catch (ipErr) {
-              fetchWeather(28.6139, 77.2090, "New Delhi");
+              fetchWeather(22.3072, 73.1812, "Vadodara");
             }
           },
           { enableHighAccuracy: true, timeout: 5000 }
         );
       } else {
         // 4. Global Fallback
-        fetchWeather(28.6139, 77.2090, "New Delhi");
+        fetchWeather(22.3072, 73.1812, "Vadodara");
       }
     };
 

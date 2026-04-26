@@ -3,11 +3,11 @@ import React, { useState, useCallback } from 'react';
 import api from '../services/api';
 import Shell from '../components/Shell';
 import useAuthStore from '../store/useAuthStore';
-import { usePendingMedia, useMedia, useScreens } from '../hooks/useAdminData';
+import { usePendingMedia, useMedia, useScreens, useMyMedia } from '../hooks/useAdminData';
 import toast from 'react-hot-toast';
 import { 
   Upload, FileText, Play, Image as ImageIcon, Layers, XCircle, Eye,
-  Clock, RefreshCw, Send, Monitor, Tv, Timer, CheckCircle, History, ChevronRight, Activity, ShieldCheck, Zap, Globe, Smartphone
+  Clock, RefreshCw, Send, Monitor, Tv, Timer, CheckCircle, History as HistoryIcon, ChevronRight, Activity, ShieldCheck, Zap, Globe, Smartphone
 } from 'lucide-react';
 
 const PreviewModal = ({ isOpen, onClose, file }) => {
@@ -64,15 +64,19 @@ const AppleTimeInput = ({ value, onChange, label }) => {
     );
 };
 
-const StatWidget = ({ label, value, icon: WidgetIcon, color = "indigo" }) => {
+const StatWidget = ({ label, value, icon: WidgetIcon, color = "indigo", onClick, isActive }) => {
   const colorMap = {
-    indigo: { text: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-100' },
-    emerald: { text: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100' },
-    amber: { text: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100' },
+    indigo: { text: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-100', active: 'ring-2 ring-indigo-500 ring-offset-2' },
+    emerald: { text: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100', active: 'ring-2 ring-emerald-500 ring-offset-2' },
+    amber: { text: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100', active: 'ring-2 ring-amber-500 ring-offset-2' },
+    rose: { text: 'text-rose-600', bg: 'bg-rose-50', border: 'border-rose-100', active: 'ring-2 ring-rose-500 ring-offset-2' },
   };
   const theme = colorMap[color] || colorMap.indigo;
   return (
-    <div className={`p-8 ${theme.bg} rounded-[32px] border ${theme.border} flex flex-col group hover:shadow-xl hover:shadow-indigo-500/5 transition-all cursor-pointer shadow-sm`}>
+    <div 
+        onClick={onClick}
+        className={`p-8 ${theme.bg} rounded-[32px] border ${theme.border} flex flex-col group hover:shadow-xl hover:shadow-indigo-500/5 transition-all cursor-pointer shadow-sm ${isActive ? theme.active : ''}`}
+    >
         <div className="flex items-center justify-between mb-4"><WidgetIcon className={`${theme.text}`} size={28} /><ChevronRight size={14} className="text-slate-300 group-hover:translate-x-1 transition-transform" /></div>
         <div><p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">{label}</p><h4 className="text-3xl font-black text-slate-900 tabular-nums uppercase">{value}</h4></div>
     </div>
@@ -81,12 +85,30 @@ const StatWidget = ({ label, value, icon: WidgetIcon, color = "indigo" }) => {
 
 const UserDashboard = () => {
   const [activeTab, setActiveTab] = useState('upload');
+  const [registryFilter, setRegistryFilter] = useState('all');
+
+  const getFileTypeStyle = (type, mime) => {
+    if (type === 'pdf' || (mime && mime.includes('pdf'))) return { icon: FileText, color: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-100' };
+    if (type === 'video' || (mime && mime.includes('video'))) return { icon: Play, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100' };
+    return { icon: ImageIcon, color: 'text-sky-600', bg: 'bg-sky-50', border: 'border-sky-100' };
+  };
+
+  const getStatusStyle = (status) => {
+    if (status === 'approved') return 'bg-emerald-50 text-emerald-600 border-emerald-100';
+    if (status === 'rejected') return 'bg-rose-50 text-rose-600 border-rose-100';
+    return 'bg-amber-50 text-amber-600 border-amber-100';
+  };
+
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   
   const [requestedStartDate, setRequestedStartDate] = useState(new Date().toISOString().slice(0, 10));
   const [requestedStartTime, setRequestedStartTime] = useState('09:00');
-  const [requestedEndDate, setRequestedEndDate] = useState(new Date(Date.now() + 86400000).toISOString().slice(0, 10));
+  const [requestedEndDate, setRequestedEndDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    return d.toISOString().slice(0, 10);
+  });
   const [requestedEndTime, setRequestedEndTime] = useState('18:00');
   
   const [requestedPriority, setRequestedPriority] = useState(1);
@@ -97,10 +119,19 @@ const UserDashboard = () => {
   
   const [previewFile, setPreviewFile] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [historyStartDate, setHistoryStartDate] = useState('');
+  const [historyEndDate, setHistoryEndDate] = useState('');
+
+  const setDateRange = (days) => {
+    const end = new Date();
+    const start = new Date();
+    start.setDate(end.getDate() - days);
+    setHistoryStartDate(start.toISOString().slice(0, 10));
+    setHistoryEndDate(end.toISOString().slice(0, 10));
+  };
 
   const user = useAuthStore((state) => state.user);
-  const { data: pendingMedia = [], refetch: refetchPending } = usePendingMedia();
-  const { data: approvedMedia = [], refetch: refetchApproved } = useMedia();
+  const { data: myMedia = [], refetch: refetchMyMedia } = useMyMedia();
   const { data: screens = [] } = useScreens();
 
   React.useEffect(() => {
@@ -108,12 +139,32 @@ const UserDashboard = () => {
     fetchGroups();
   }, []);
 
-  const myFiles = React.useMemo(() => {
-    const combined = [...pendingMedia, ...approvedMedia];
-    return combined
-      .filter(f => (f.uploaderId?._id === user?.id || f.uploaderId === user?.id || f.uploadedBy === user?.id))
-      .sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
-  }, [pendingMedia, approvedMedia, user?.id]);
+  const filteredMyFiles = React.useMemo(() => {
+    return myMedia.filter(f => {
+      // Status Filter
+      if (registryFilter !== 'all' && f.status !== registryFilter) return false;
+      
+      // Date Filter (based on createdAt)
+      if (historyStartDate) {
+        const start = new Date(historyStartDate);
+        if (new Date(f.createdAt) < start) return false;
+      }
+      if (historyEndDate) {
+        const end = new Date(historyEndDate);
+        end.setHours(23, 59, 59, 999);
+        if (new Date(f.createdAt) > end) return false;
+      }
+      
+      return true;
+    });
+  }, [myMedia, registryFilter, historyStartDate, historyEndDate]);
+
+  const stats = React.useMemo(() => ({
+    total: myMedia.length,
+    active: myMedia.filter(f => f.status === 'approved').length,
+    pending: myMedia.filter(f => f.status === 'pending').length,
+    rejected: myMedia.filter(f => f.status === 'rejected').length
+  }), [myMedia]);
 
   const handleUpload = async (e) => {
     e.preventDefault();
@@ -132,13 +183,13 @@ const UserDashboard = () => {
     try {
       await api.post(`/api/media/upload`, formData);
       toast.success('Asset Ingested');
-      setFile(null); refetchPending(); refetchApproved(); setActiveTab('myfiles');
+      setFile(null); refetchMyMedia(); setActiveTab('history');
     } catch (err) { toast.error(err.response?.data?.error || 'Sync failed'); }
     finally { setUploading(false); }
   };
 
   const handleResubmit = async (id) => {
-    try { await api.post(`/api/media/${id}/resubmit`, {}); toast.success('Re-Submitted'); refetchPending(); refetchApproved(); } catch { toast.error('Failed'); }
+    try { await api.post(`/api/media/${id}/resubmit`, {}); toast.success('Re-Submitted'); refetchMyMedia(); } catch { toast.error('Failed'); }
   };
 
   const renderView = () => {
@@ -146,11 +197,9 @@ const UserDashboard = () => {
       case 'upload':
         return (
           <div className="h-full flex flex-col lg:flex-row divide-x divide-slate-200">
-            <div className="lg:w-1/2 overflow-y-auto custom-scrollbar p-10 space-y-10 bg-white">
+            <div className="lg:w-1/2 overflow-y-auto custom-scrollbar p-10 space-y-10 bg-white flex flex-col justify-center">
                 <section>
-                    <h4 className="text-[10px] font-black uppercase text-indigo-600 mb-8 flex items-center gap-3"><div className="w-6 h-px bg-indigo-600/30" /> Ingestion Profile</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10"><StatWidget label="Total Ingested" value={myFiles.length} icon={Layers} /><StatWidget label="Active Protocols" value={myFiles.filter(f => f.status === 'approved').length} icon={CheckCircle} color="emerald" /></div>
-                    <div className={`border-4 border-dashed rounded-[48px] p-16 text-center transition-all cursor-pointer group relative overflow-hidden flex flex-col justify-center min-h-[300px] ${file ? 'border-indigo-500 bg-indigo-50 shadow-2xl shadow-indigo-500/10' : 'border-slate-100 hover:border-indigo-300 hover:bg-slate-50'}`} onClick={() => document.getElementById('media-upload').click()}>
+                    <div className={`border-4 border-dashed rounded-[48px] p-16 text-center transition-all cursor-pointer group relative overflow-hidden flex flex-col justify-center min-h-[400px] ${file ? 'border-indigo-500 bg-indigo-50 shadow-2xl shadow-indigo-500/10' : 'border-slate-100 hover:border-indigo-300 hover:bg-slate-50'}`} onClick={() => document.getElementById('media-upload').click()}>
                         <input id="media-upload" type="file" className="hidden" onChange={(e) => setFile(e.target.files[0])} />
                         <div className="w-24 h-24 rounded-3xl flex items-center justify-center mx-auto mb-8 bg-white border border-slate-200 group-hover:rotate-12 transition-all shadow-xl"><Upload className={`w-10 h-10 ${file ? 'text-indigo-600' : 'text-slate-300'}`} /></div>
                         {file ? (<div className="space-y-2"><p className="text-2xl font-black text-slate-900 truncate max-w-xs mx-auto uppercase tracking-tighter">{file.name}</p><p className="text-indigo-600 text-[10px] font-black uppercase tracking-[4px]">{(file.size / 1024 / 1024).toFixed(2)} MB • READY</p></div>) : (<div className="space-y-2"><p className="text-xl font-black text-slate-900 uppercase tracking-tighter">Initialize Payload</p><p className="text-slate-400 text-[10px] font-black uppercase tracking-[2px]">PDF, MP4, WEBM, JPG, PNG</p></div>)}
@@ -185,22 +234,131 @@ const UserDashboard = () => {
             </div>
           </div>
         );
-      case 'myfiles':
+      case 'history':
         return (
-            <div className="h-full overflow-y-auto custom-scrollbar p-10 bg-slate-50/30">
-                {myFiles.length === 0 ? (<div className="text-center py-40 border-2 border-dashed border-slate-200 rounded-[60px] bg-white"><History className="w-20 h-20 mx-auto mb-6 text-slate-200" /><p className="font-black uppercase tracking-[8px] text-[10px] text-slate-400">Null Set Detected</p></div>) : (
+            <div className="h-full overflow-y-auto custom-scrollbar p-10 bg-slate-50/30 space-y-10">
+                <section>
+                    <h4 className="text-[10px] font-black uppercase text-indigo-600 mb-8 flex items-center gap-3"><div className="w-6 h-px bg-indigo-600/30" /> Ingestion Profile</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        <StatWidget label="Total Ingested" value={stats.total} icon={Layers} onClick={() => setRegistryFilter('all')} isActive={registryFilter === 'all'} />
+                        <StatWidget label="Active Protocols" value={stats.active} icon={CheckCircle} color="emerald" onClick={() => setRegistryFilter('approved')} isActive={registryFilter === 'approved'} />
+                        <StatWidget label="Pending" value={stats.pending} icon={Clock} color="amber" onClick={() => setRegistryFilter('pending')} isActive={registryFilter === 'pending'} />
+                        <StatWidget label="Rejected" value={stats.rejected} icon={XCircle} color="rose" onClick={() => setRegistryFilter('rejected')} isActive={registryFilter === 'rejected'} />
+                    </div>
+                </section>
+
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                    <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-[4px]">Mission Registry</h4>
+                    <div className="flex flex-wrap items-center gap-4 bg-white p-3 rounded-[24px] border border-slate-200 shadow-sm">
+                        <div className="flex gap-2 p-1 bg-slate-50 rounded-xl border border-slate-100 mr-2">
+                            <button onClick={() => setDateRange(1)} className="px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest text-slate-500 hover:bg-white hover:text-indigo-600 hover:shadow-sm transition-all">24h</button>
+                            <button onClick={() => setDateRange(7)} className="px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest text-slate-500 hover:bg-white hover:text-indigo-600 hover:shadow-sm transition-all">7 Days</button>
+                            <button onClick={() => setDateRange(30)} className="px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest text-slate-500 hover:bg-white hover:text-indigo-600 hover:shadow-sm transition-all">Month</button>
+                        </div>
+                        <div className="flex items-center gap-3 px-4 py-2 bg-slate-50 rounded-xl border border-slate-100">
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">From</span>
+                            <input 
+                                type="date" 
+                                className="bg-transparent border-none outline-none text-[10px] font-black text-slate-700 w-28 cursor-pointer" 
+                                value={historyStartDate}
+                                onChange={(e) => setHistoryStartDate(e.target.value)}
+                            />
+                        </div>
+                        <div className="flex items-center gap-3 px-4 py-2 bg-slate-50 rounded-xl border border-slate-100">
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">To</span>
+                            <input 
+                                type="date" 
+                                className="bg-transparent border-none outline-none text-[10px] font-black text-slate-700 w-28 cursor-pointer" 
+                                value={historyEndDate}
+                                onChange={(e) => setHistoryEndDate(e.target.value)}
+                            />
+                        </div>
+                        {(historyStartDate || historyEndDate || registryFilter !== 'all') && (
+                            <button 
+                                onClick={() => { setHistoryStartDate(''); setHistoryEndDate(''); setRegistryFilter('all'); }}
+                                className="px-4 py-2 bg-rose-50 text-rose-600 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-rose-600 hover:text-white transition-all border border-rose-100"
+                            >
+                                Reset Filters
+                            </button>
+                        )}
+                    </div>
+                </div>
+
+                {filteredMyFiles.length === 0 ? (<div className="text-center py-40 border-2 border-dashed border-slate-200 rounded-[60px] bg-white"><HistoryIcon className="w-20 h-20 mx-auto mb-6 text-slate-200" /><p className="font-black uppercase tracking-[8px] text-[10px] text-slate-400">Null Set Detected</p></div>) : (
                 <div className="bg-white border border-slate-200 rounded-[40px] overflow-hidden shadow-sm">
                     <table className="w-full text-left">
-                    <thead className="bg-slate-50 border-b border-slate-200"><tr className="text-[9px] font-black uppercase text-slate-400 tracking-[3px]"><th className="py-6 px-10">Manifest</th><th className="py-6 px-10">Targeting</th><th className="py-6 px-10">Sync Window</th><th className="py-6 px-10">Status</th><th className="py-6 px-10 text-right">Ops</th></tr></thead>
+                    <thead className="bg-slate-50 border-b border-slate-200"><tr className="text-[9px] font-black uppercase text-slate-400 tracking-widest"><th className="py-6 px-10">Asset Manifest</th><th className="py-6 px-10">Deployment Target</th><th className="py-6 px-10">Broadcast Window</th><th className="py-6 px-10">Protocol Status</th><th className="py-6 px-10 text-right">Ops</th></tr></thead>
                     <tbody className="divide-y divide-slate-100">
-                        {myFiles.map(f => (
-                        <tr key={f.id || f._id} className="group hover:bg-slate-50/50 transition-colors">
-                            <td className="py-8 px-10"><div className="flex items-center gap-5"><div className="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center border border-slate-200 group-hover:border-indigo-300 transition-colors shadow-inner">{f.fileType === 'pdf' || (f.mimeType && f.mimeType.includes('pdf')) ? <FileText className="text-indigo-600" size={24}/> : f.fileType === 'video' || (f.mimeType && f.mimeType.includes('video')) ? <Play className="text-emerald-600" size={24}/> : <ImageIcon className="text-sky-600" size={24}/>}</div><div><p className="text-base font-black text-slate-900 uppercase tracking-tighter">{f.fileName || f.originalName}</p><p className="text-[9px] font-black uppercase text-slate-400 tracking-[2px] mt-1">{f.fileType || 'Asset'}</p></div></div></td>
-                            <td className="py-8 px-10"><div className="flex items-center gap-3">{f.requestedTargetType === 'all' ? <Globe className="text-slate-400" size={14} /> : f.requestedTargetType === 'screen' ? <Smartphone className="text-sky-500" size={14} /> : <Layers className="text-indigo-500" size={14} />}<div><p className="text-[10px] font-black text-slate-700 uppercase tracking-tight">{f.requestedTargetType}</p><p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-1">{f.requestedTargetId ? (screens.find(s => s._id === f.requestedTargetId)?.name || groups.find(g => g._id === f.requestedTargetId)?.name || 'Linked') : 'System Wide'}</p></div></div></td>
-                            <td className="py-8 px-10"><div className="space-y-1.5"><p className="text-[9px] font-black text-indigo-600 uppercase tracking-widest flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-indigo-600" /> ON: {new Date(f.requestedStartTime).toLocaleDateString([], {month:'short', day:'numeric'})} {new Date(f.requestedStartTime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</p><p className="text-[9px] font-black text-rose-600 uppercase tracking-widest flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-rose-600" /> OFF: {new Date(f.requestedEndTime).toLocaleDateString([], {month:'short', day:'numeric'})} {new Date(f.requestedEndTime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</p></div></td>
-                            <td className="py-8 px-10"><div className="flex flex-col items-start gap-2"><span className={`text-[9px] font-black uppercase px-4 py-1.5 rounded-xl border ${f.status === 'approved' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : f.status === 'pending' ? 'bg-amber-50 text-amber-600 border-amber-100' : 'bg-rose-50 text-rose-600 border-rose-100'}`}>{f.status}</span>{f.status === 'rejected' && f.rejectionReason && (<div className="p-3 bg-rose-50 border border-rose-100 rounded-xl mt-1 max-w-[200px]"><p className="text-[9px] font-black text-rose-600 uppercase tracking-widest leading-tight">Reason: {f.rejectionReason}</p></div>)}</div></td>
-                            <td className="py-8 px-10 text-right"><div className="flex justify-end gap-2"><button onClick={() => { setPreviewFile(f); setShowPreview(true); }} className="p-4 bg-indigo-50 border border-indigo-100 text-indigo-600 rounded-2xl hover:bg-indigo-600 hover:text-white transition-all shadow-sm active:scale-90"><Eye size={20} /></button><button onClick={() => handleResubmit(f.id || f._id)} className="p-4 bg-slate-50 border border-slate-200 text-slate-400 rounded-2xl hover:bg-emerald-600 hover:border-emerald-600 hover:text-white transition-all shadow-sm active:scale-90"><RefreshCw size={20} /></button></div></td>
-                        </tr>))}
+                        {filteredMyFiles.map(f => {
+                            const style = getFileTypeStyle(f.fileType, f.mimeType);
+                            const Icon = style.icon;
+                            return (
+                                <tr key={f.id || f._id} className="group hover:bg-slate-50/50 transition-colors">
+                                    <td className="py-8 px-10">
+                                        <div className="flex items-center gap-5">
+                                            <div className={`w-12 h-12 rounded-2xl border flex items-center justify-center transition-all ${style.bg} ${style.color} ${style.border}`}>
+                                                <Icon size={20} />
+                                            </div>
+                                            <div>
+                                                <p className="font-black text-xs text-slate-900 uppercase tracking-tight truncate max-w-[200px]">{f.fileName || f.originalName}</p>
+                                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[2px] mt-1">{f.fileType || 'ASSET'}</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td className="py-8 px-10">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500">
+                                                {f.requestedTargetType === 'all' ? <Globe size={14} /> : f.requestedTargetType === 'screen' ? <Smartphone size={14} /> : <Layers size={14} />}
+                                            </div>
+                                            <div>
+                                                <p className="text-xs font-black text-slate-700 uppercase">{f.requestedTargetType}</p>
+                                                <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                                                    {f.requestedTargetId ? (screens.find(s => s._id === f.requestedTargetId)?.name || groups.find(g => g._id === f.requestedTargetId)?.name || 'LINKED NODE') : 'SYSTEM WIDE'}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td className="py-8 px-10">
+                                        <div className="space-y-2">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-indigo-600" />
+                                                <p className="text-[9px] font-black text-slate-900 uppercase tracking-widest tabular-nums">
+                                                    {new Date(f.requestedStartTime).toLocaleDateString([], {month:'short', day:'numeric'})} • {new Date(f.requestedStartTime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
+                                                </p>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-rose-600" />
+                                                <p className="text-[9px] font-black text-slate-900 uppercase tracking-widest tabular-nums opacity-60">
+                                                    {new Date(f.requestedEndTime).toLocaleDateString([], {month:'short', day:'numeric'})} • {new Date(f.requestedEndTime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td className="py-8 px-10">
+                                        <div className="flex flex-col items-start gap-2">
+                                            <span className={`px-4 py-1.5 rounded-xl border text-[9px] font-black uppercase tracking-widest ${getStatusStyle(f.status)}`}>
+                                                {f.status}
+                                            </span>
+                                            {f.status === 'rejected' && f.rejectionReason && (
+                                                <div className="px-3 py-2 bg-rose-50 border border-rose-100 rounded-xl mt-1 max-w-[180px]">
+                                                    <p className="text-[8px] font-bold text-rose-600 uppercase leading-tight">Reason: {f.rejectionReason}</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </td>
+                                    <td className="py-8 px-10 text-right">
+                                        <div className="flex justify-end gap-2">
+                                            <button onClick={() => { setPreviewFile(f); setShowPreview(true); }} className="p-3 bg-indigo-50 border border-indigo-100 text-indigo-600 rounded-xl hover:bg-indigo-600 hover:text-white transition-all shadow-sm active:scale-95">
+                                                <Eye size={16} />
+                                            </button>
+                                            <button onClick={() => handleResubmit(f.id || f._id)} className="p-3 bg-slate-50 border border-slate-200 text-slate-400 rounded-xl hover:bg-emerald-600 hover:border-emerald-600 hover:text-white transition-all shadow-sm active:scale-95">
+                                                <RefreshCw size={16} />
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            );
+                        })}
                     </tbody></table>
                 </div>)}
             </div>
@@ -214,7 +372,7 @@ const UserDashboard = () => {
   return (
     <Shell role="user" activeTab={activeTab} setActiveTab={setActiveTab}>
       <div className="h-full flex flex-col">
-          <div className="bg-white p-8 border-b border-slate-200 shrink-0"><div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6"><div><div className="flex items-center gap-3 mb-2"><Activity className="text-indigo-600" size={16} /><span className="text-[10px] font-black uppercase tracking-[4px] text-indigo-600">Operations Hub</span></div><h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter">Operator Console</h2></div><div className="flex gap-2 p-1.5 bg-slate-100 rounded-2xl border border-slate-200"><button onClick={() => setActiveTab('upload')} className={`px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'upload' ? 'bg-white text-black shadow-xl' : 'text-slate-500 hover:text-slate-900'}`}>Ingestion Studio</button><button onClick={() => setActiveTab('myfiles')} className={`px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'myfiles' ? 'bg-white text-black shadow-xl' : 'text-slate-500 hover:text-slate-900'}`}>Registry</button><button onClick={() => setActiveTab('live')} className={`px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'live' ? 'bg-white text-black shadow-xl' : 'text-slate-500 hover:text-slate-900'}`}>Live Monitor</button></div></div></div>
+          <div className="bg-white p-8 border-b border-slate-200 shrink-0"><div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6"><div><div className="flex items-center gap-3 mb-2"><Activity className="text-indigo-600" size={16} /><span className="text-[10px] font-black uppercase tracking-[4px] text-indigo-600">Operations Hub</span></div><h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter">Operator Console</h2></div><div className="flex gap-2 p-1.5 bg-slate-100 rounded-2xl border border-slate-200"><button onClick={() => setActiveTab('upload')} className={`px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'upload' ? 'bg-white text-black shadow-xl' : 'text-slate-500 hover:text-slate-900'}`}>Ingestion Studio</button><button onClick={() => setActiveTab('history')} className={`px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'history' ? 'bg-white text-black shadow-xl' : 'text-slate-500 hover:text-slate-900'}`}>History</button><button onClick={() => setActiveTab('live')} className={`px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'live' ? 'bg-white text-black shadow-xl' : 'text-slate-500 hover:text-slate-900'}`}>Live Monitor</button></div></div></div>
           <div className="flex-1 overflow-hidden min-h-0 bg-white">{renderView()}</div>
       </div>
       <PreviewModal isOpen={showPreview} onClose={() => { setShowPreview(false); setPreviewFile(null); }} file={previewFile} />

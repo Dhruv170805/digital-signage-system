@@ -42,6 +42,11 @@ class SocketService {
     this.io.on('connection', (socket) => {
       console.log('New socket connection:', socket.id, socket.user ? `User: ${socket.user.id}` : socket.screen ? `Screen: ${socket.screen.screenId}` : 'Unknown');
 
+      // Join admin room if user is admin
+      if (socket.user && socket.user.role === 'admin') {
+        socket.join('admin:monitor');
+      }
+
       // Send cached weather immediately upon connection
       socket.emit('weatherUpdate', Object.fromEntries(weatherService.weatherCache));
 
@@ -53,32 +58,47 @@ class SocketService {
         const screen = await screenService.updateHeartbeat(socket.screen.deviceToken, telemetry);
         if (screen) {
           socket.join(`screen:${screen._id}`);
-          if (screen.groupId) {
-            socket.join(`group:${screen.groupId}`);
-          }
+          if (screen.groupId) socket.join(`group:${screen.groupId}`);
+          
+          // Notify admins
+          this.io.to('admin:monitor').emit('screenStatusUpdate', { 
+            screenId: screen._id, 
+            status: 'online', 
+            telemetry 
+          });
         }
       });
 
       socket.on('screenPing', async (data) => {
         const { token, telemetry } = data;
         
-        // If already authenticated as screen via handshake, join rooms immediately
+        // If already authenticated as screen via handshake
         if (socket.screen) {
             socket.join(`screen:${socket.screen._id}`);
             if (socket.screen.groupId) socket.join(`group:${socket.screen.groupId}`);
+            
+            await screenService.updateHeartbeat(socket.screen.deviceToken, telemetry);
+            this.io.to('admin:monitor').emit('screenStatusUpdate', { 
+              screenId: socket.screen._id, 
+              status: 'online', 
+              telemetry 
+            });
             return;
         }
 
-        // Backward compatibility: allow screen to identify via token only (cryptographically secure)
         if (token) {
             const screen = await screenService.updateHeartbeat(token, telemetry);
             if (screen) {
                 socket.join(`screen:${screen._id}`);
                 if (screen.groupId) socket.join(`group:${screen.groupId}`);
+                
+                this.io.to('admin:monitor').emit('screenStatusUpdate', { 
+                  screenId: screen._id, 
+                  status: 'online', 
+                  telemetry 
+                });
             }
         }
-        
-        // ❌ Removed insecure legacy 'screenId' room injection
       });
 
       socket.on('disconnect', () => {

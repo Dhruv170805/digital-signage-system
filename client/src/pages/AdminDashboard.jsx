@@ -22,6 +22,7 @@ import {
   useScreens, useMedia, usePendingMedia, useTemplates, 
   useTickers, useSettings, useSchedules, useUsers 
 } from '../hooks/useAdminData';
+import useSocketStore from '../store/useSocketStore';
 
 const PreviewModal = ({ isOpen, onClose, file }) => {
   if (!isOpen || !file) return null;
@@ -56,6 +57,8 @@ const PreviewModal = ({ isOpen, onClose, file }) => {
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [liveMode, setLiveMode] = useState('gallery'); // gallery, group, screen
+  const [liveTargetId, setLiveTargetId] = useState('');
   
   const { data: users = [], refetch: refetchUsers } = useUsers();
   const { data: media = [], refetch: refetchMedia } = useMedia();
@@ -69,6 +72,24 @@ const AdminDashboard = () => {
   const [previewFile, setPreviewFile] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
   const [groups, setGroups] = useState([]);
+
+  const { socket, connect, disconnect } = useSocketStore();
+
+  useEffect(() => {
+    connect();
+    return () => disconnect();
+  }, [connect, disconnect]);
+
+  useEffect(() => {
+    if (!socket) return;
+    
+    socket.on('screenStatusUpdate', (data) => {
+      console.log('📡 Real-time monitoring pulse:', data);
+      refetchScreens();
+    });
+
+    return () => socket.off('screenStatusUpdate');
+  }, [socket, refetchScreens]);
 
   const fetchGroups = useCallback(async () => {
     try {
@@ -102,24 +123,88 @@ const AdminDashboard = () => {
       case 'settings': return <IdleScreenManager />;
       case 'system': return <SystemSettings fetchData={fetchData} />;
       case 'history': return <SystemHistory />;
-      case 'live':
+      case 'live': {
+        const filteredScreens = liveMode === 'gallery' ? screens :
+                                liveMode === 'group' ? screens.filter(s => s.groupId?._id === liveTargetId || s.groupId === liveTargetId) :
+                                liveMode === 'screen' ? screens.filter(s => s._id === liveTargetId) : [];
+
         return (
-            <div className="h-full overflow-hidden p-10 bg-slate-50/30 flex items-center justify-center">
-                <div className="relative w-full max-w-6xl">
-                    <div className="absolute -inset-4 bg-indigo-500/10 rounded-[60px] blur-3xl opacity-50" />
-                    <div className="aspect-video bg-slate-950 rounded-[48px] overflow-hidden border-[8px] border-slate-900 shadow-2xl relative group">
-                        <iframe src="/display" className="w-full h-full border-none pointer-events-none scale-[1.001]" title="Admin Live Preview" />
-                        <div className="absolute inset-0 bg-slate-900/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-700 backdrop-blur-md">
-                            <div className="w-24 h-24 bg-white/10 rounded-[32px] flex items-center justify-center mb-8 border border-white/20 shadow-2xl">
-                                <Tv size={40} className="text-white animate-pulse" />
-                            </div>
-                            <p className="text-white text-xl tracking-[20px] font-black uppercase">Master Signal</p>
-                            <p className="text-[10px] text-white/40 font-black uppercase tracking-[6px] mt-6">Administrative Monitoring Pipeline</p>
+            <div className="h-full overflow-hidden flex flex-col bg-slate-50/30">
+                {/* LIVE SUB-NAV */}
+                <div className="bg-white p-6 border-b border-slate-200 flex flex-col lg:flex-row lg:items-center justify-between gap-6 shrink-0">
+                    <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-3 mb-1">
+                            <Activity className="text-indigo-600 animate-pulse" size={16} />
+                            <span className="text-[10px] font-black uppercase tracking-[4px] text-indigo-600">Signal Monitor</span>
                         </div>
+                        <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">Live Broadcast Wall</h2>
                     </div>
+
+                    <div className="flex items-center gap-4">
+                        <div className="flex gap-1 p-1 bg-slate-100 rounded-2xl border border-slate-200">
+                            <button onClick={() => { setLiveMode('gallery'); setLiveTargetId(''); }} className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${liveMode === 'gallery' ? 'bg-white text-black shadow-lg' : 'text-slate-500 hover:text-slate-900'}`}>Gallery</button>
+                            <button onClick={() => { setLiveMode('group'); setLiveTargetId(''); }} className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${liveMode === 'group' ? 'bg-white text-black shadow-lg' : 'text-slate-500 hover:text-slate-900'}`}>Group</button>
+                            <button onClick={() => { setLiveMode('screen'); setLiveTargetId(''); }} className={`px-8 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${liveMode === 'screen' ? 'bg-white text-black shadow-lg' : 'text-slate-500 hover:text-slate-900'}`}>Single</button>
+                        </div>
+
+                        {liveMode !== 'gallery' && (
+                            <select 
+                                className="nexus-input w-64 h-12 text-[10px] font-black uppercase bg-white border-slate-200"
+                                value={liveTargetId}
+                                onChange={(e) => setLiveTargetId(e.target.value)}
+                            >
+                                <option value="">{liveMode === 'group' ? 'Select Group...' : 'Select Screen...'}</option>
+                                {liveMode === 'group' ? groups.map(g => <option key={g._id} value={g._id}>{g.name}</option>) : screens.map(s => <option key={s._id} value={s._id}>{s.name}</option>)}
+                            </select>
+                        )}
+                    </div>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-10 custom-scrollbar">
+                    {filteredScreens.length === 0 ? (
+                        <div className="h-full flex flex-col items-center justify-center text-slate-300 py-40 border-2 border-dashed border-slate-200 rounded-[60px] bg-white">
+                            <div className="w-20 h-20 bg-slate-50 rounded-3xl flex items-center justify-center mb-6">
+                                <Tv size={40} className="opacity-20" />
+                            </div>
+                            <p className="text-[10px] font-black uppercase tracking-[8px]">No Active Signals Detected</p>
+                        </div>
+                    ) : (
+                        <div className={`grid gap-12 ${liveMode === 'screen' ? 'grid-cols-1 max-w-6xl mx-auto' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'}`}>
+                            {filteredScreens.map(s => (
+                                <div key={s._id} className="flex flex-col gap-6 animate-fade-in">
+                                    <div className="aspect-video bg-slate-950 rounded-[40px] overflow-hidden border-[6px] border-slate-900 shadow-2xl relative group" style={{ containerType: 'inline-size' }}>
+                                        <iframe 
+                                            src={`/display?token=${s.deviceToken}&preview=true`} 
+                                            className="w-[1920px] h-[1080px] absolute top-0 left-0 origin-top-left border-none pointer-events-none" 
+                                            style={{ transform: 'scale(calc(100cqi / 1920))' }}
+                                            title={s.name} 
+                                        />
+                                        <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-all duration-500 flex flex-col items-center justify-center backdrop-blur-sm">
+                                            <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center mb-4 border border-white/20">
+                                                <Monitor className="text-white" size={24} />
+                                            </div>
+                                            <p className="text-white text-xs font-black uppercase tracking-[4px]">{s.name}</p>
+                                            <p className="text-white/40 text-[8px] font-bold uppercase tracking-widest mt-2">{s.location}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center justify-between px-6 py-4 bg-white border border-slate-200 rounded-[24px] shadow-sm">
+                                        <div className="flex items-center gap-3">
+                                            <div className={`w-2.5 h-2.5 rounded-full ${s.status === 'online' ? 'bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.4)]' : 'bg-slate-300'}`} />
+                                            <div>
+                                                <p className="text-[10px] font-black text-slate-900 uppercase tracking-tight leading-none mb-1">{s.name}</p>
+                                                <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Signal Online</p>
+                                            </div>
+                                        </div>
+                                        <span className="text-[9px] font-black text-indigo-600 bg-indigo-50 px-3 py-1 rounded-lg border border-indigo-100 uppercase tabular-nums">{s.resolution}</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             </div>
         );
+      }
       default: return null;
     }
   };

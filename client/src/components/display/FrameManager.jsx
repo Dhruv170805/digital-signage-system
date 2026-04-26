@@ -4,7 +4,16 @@ import PdfRenderer from './PdfRenderer';
 
 const getMediaUrl = (filePath, zoneId) => {
   if (!filePath) return '';
-  const apiBase = (import.meta.env.VITE_API_URL || '').replace(/\/api\/?$/, '').replace(/\/$/, '');
+  let apiBase = (import.meta.env.VITE_API_URL || '').replace(/\/api\/?$/, '').replace(/\/$/, '');
+  
+  // 🛡️ Dynamic Port Recovery: If on localhost and VITE_API_URL is missing/wrong port,
+  // we attempt to reach the known signage server port (5006)
+  if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+    if (!apiBase || apiBase.includes(':5000')) {
+       apiBase = 'http://localhost:5006';
+    }
+  }
+
   const cleanPath = filePath.startsWith('/') ? filePath : `/${filePath}`;
   const url = `${apiBase}${cleanPath}`.replace(/([^:]\/)\/+/g, "$1");
   return zoneId ? `${url}?z=${zoneId}` : url;
@@ -14,9 +23,26 @@ const FrameManager = ({ item, zone, onMediaEnd, onMediaError, mediaRef }) => {
   const [displayItems, setDisplayItems] = useState({ current: item, next: null });
   const [transitioning, setTransitioning] = useState(false);
   const [textContents, setTextContents] = useState({});
+  const [loadError, setLoadError] = useState(false);
 
-  const getFilePath = (media) => media?.filePath || media?.path || '';
-  const getFileType = (media) => {
+  const getMediaData = (mediaOrAssignment) => {
+    if (!mediaOrAssignment) return null;
+    // Assignment check: populated mediaId is the media object
+    if (mediaOrAssignment.mediaId && typeof mediaOrAssignment.mediaId === 'object') {
+      return mediaOrAssignment.mediaId;
+    }
+    return mediaOrAssignment;
+  };
+
+  const getFilePath = (item) => {
+    const media = getMediaData(item);
+    let path = media?.filePath || media?.path || '';
+    if (path.startsWith('server/')) path = path.replace('server/', '');
+    return path;
+  };
+
+  const getFileType = (item) => {
+    const media = getMediaData(item);
     if (media?.fileType) return media.fileType;
     if (media?.mimeType) {
       if (media.mimeType.startsWith('image/')) return 'image';
@@ -32,11 +58,11 @@ const FrameManager = ({ item, zone, onMediaEnd, onMediaError, mediaRef }) => {
     const currentId = displayItems.current?._id || displayItems.current?.id;
     const incomingId = item?._id || item?.id;
 
-    if (incomingId !== currentId) {
+    if (incomingId && incomingId !== currentId) {
       setTransitioning(true);
+      setLoadError(false);
       setDisplayItems(prev => ({ ...prev, next: item }));
 
-      // Duration must match CSS transitions (0.8s - 1s)
       const timer = setTimeout(() => {
         setDisplayItems({ current: item, next: null });
         setTransitioning(false);
@@ -54,34 +80,40 @@ const FrameManager = ({ item, zone, onMediaEnd, onMediaError, mediaRef }) => {
         if (textContents[id] || !path) return;
         try {
             const apiBase = (import.meta.env.VITE_API_URL || '').replace(/\/api\/?$/, '').replace(/\/$/, '');
-            const res = await fetch(`${apiBase}/${path}`);
+            const finalBase = (apiBase || (window.location.hostname === 'localhost' ? 'http://localhost:5006' : ''));
+            const res = await fetch(`${finalBase}/${path}`);
             const text = await res.text();
             setTextContents(prev => ({ ...prev, [id]: text }));
         } catch (e) {
             setTextContents(prev => ({ ...prev, [id]: 'Signal Error' }));
         }
     };
-    if (getFileType(item) === 'text') fetchText(item);
+    const mediaData = getMediaData(item);
+    if (getFileType(item) === 'text') fetchText(mediaData);
   }, [item]);
+
+  const handleMediaError = (e) => {
+    console.error('[FrameManager] Media failed to load:', e.target.src);
+    setLoadError(true);
+    if (onMediaError) onMediaError();
+  };
 
   const renderMedia = (mediaItem, layer) => {
     if (!mediaItem) return null;
 
     const filePath = getFilePath(mediaItem);
     const fileType = getFileType(mediaItem);
-    const src = getMediaUrl(filePath, zone?.i) || undefined;
+    const src = getMediaUrl(filePath, zone?.i);
     
-    // Only attach the external ref to the current active layer
     const isCurrent = layer === 'current';
     const attachRef = isCurrent ? mediaRef : null;
     
-    // Determine Transition Style
     let transitionClass = "absolute inset-0 w-full h-full ";
     if (layer === 'next') {
         const style = zone?.transition || 'fade';
         if (style === 'slide') transitionClass += "animate-slide-in";
         else if (style === 'zoom') transitionClass += "animate-zoom-in";
-        else transitionClass += "animate-fade-in"; // Default fade
+        else transitionClass += "animate-fade-in";
     } else if (layer === 'current' && transitioning) {
         const style = zone?.transition || 'fade';
         if (style === 'slide') transitionClass += "animate-slide-out";
@@ -98,7 +130,7 @@ const FrameManager = ({ item, zone, onMediaEnd, onMediaError, mediaRef }) => {
           muted 
           playsInline
           onEnded={() => onMediaEnd && onMediaEnd()}
-          onError={() => onMediaError && onMediaError()}
+          onError={handleMediaError}
           className={`${transitionClass} object-cover bg-black`}
         />
       );
@@ -130,7 +162,7 @@ const FrameManager = ({ item, zone, onMediaEnd, onMediaError, mediaRef }) => {
         key={`img-${mediaItem._id || mediaItem.id}`}
         src={src} 
         alt="Broadcast Asset"
-        onError={() => onMediaError && onMediaError()}
+        onError={handleMediaError}
         className={`${transitionClass} object-cover bg-black`}
       />
     );
@@ -140,6 +172,14 @@ const FrameManager = ({ item, zone, onMediaEnd, onMediaError, mediaRef }) => {
     <div className="w-full h-full relative overflow-hidden bg-black">
       {displayItems.current && renderMedia(displayItems.current, 'current')}
       {displayItems.next && renderMedia(displayItems.next, 'next')}
+      
+      {loadError && (
+        <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center bg-slate-950/80 backdrop-blur-md">
+            <AlertCircle className="text-rose-500 mb-4" size={48} />
+            <p className="text-white text-xs font-black uppercase tracking-[4px]">Signal Lost</p>
+            <p className="text-rose-400/40 text-[8px] font-bold uppercase tracking-widest mt-2">Asset Resolution Failure</p>
+        </div>
+      )}
     </div>
   );
 };

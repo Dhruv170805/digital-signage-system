@@ -17,9 +17,11 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 router.get('/', mediaController.getAll);
+router.get('/me', protect, mediaController.getMyMedia);
 router.get('/pending', protect, admin, mediaController.getPending);
 router.post('/upload', protect, upload.single('media'), mediaController.upload);
 router.post('/:id/approve', protect, admin, mediaController.approve);
 router.post('/:id/reject', protect, admin, mediaController.reject);
+router.post('/:id/resubmit', protect, mediaController.resubmit);
 
 module.exports = router;

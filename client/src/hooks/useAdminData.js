@@ -6,7 +6,8 @@ export const useScreens = () => useQuery({
   queryFn: async () => {
     const res = await api.get('/api/screens');
     return res.data;
-  }
+  },
+  refetchInterval: 10000 // Polling fallback for status updates
 });
 
 export const useMedia = () => useQuery({
@@ -21,6 +22,14 @@ export const usePendingMedia = () => useQuery({
   queryKey: ['pendingMedia'],
   queryFn: async () => {
     const res = await api.get('/api/media/pending');
+    return res.data;
+  }
+});
+
+export const useMyMedia = () => useQuery({
+  queryKey: ['myMedia'],
+  queryFn: async () => {
+    const res = await api.get('/api/media/me');
     return res.data;
   }
 });

@@ -10,6 +10,10 @@ class MediaService {
     return await Media.find({ status: 'pending' }).sort({ createdAt: -1 });
   }
 
+  async getByUser(userId) {
+    return await Media.find({ uploadedBy: userId }).sort({ createdAt: -1 });
+  }
+
   async createMedia(data) {
     const media = new Media(data);
     return await media.save();

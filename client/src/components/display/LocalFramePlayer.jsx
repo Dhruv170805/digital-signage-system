@@ -136,32 +136,24 @@ const LocalFramePlayer = ({ zone, frameItems, allMedia, tickers, screenInfo }) =
     const tickerData = tickers.find(t => t.id === currentItem.mediaId || t._id === currentItem.mediaId);
     return <TickerEngine ticker={tickerData} />;
   }
+return (
+  <div className="w-full h-full relative overflow-hidden bg-black">
+    <FrameManager 
+      item={currentAsset} 
+      zone={zone}
+      onMediaEnd={advance}
+      onMediaError={advance}
+      mediaRef={mediaRef}
+    />
 
-  return (
-    <div className="w-full h-full relative overflow-hidden bg-black">
-      <FrameManager 
-        item={currentAsset} 
-        zone={zone}
-        onMediaEnd={advance}
-        onMediaError={advance}
-        mediaRef={mediaRef}
+    {nextAsset && (
+      <PreloadLayer 
+          item={nextAsset} 
+          onReady={() => setNextIsReady(true)} 
       />
-
-      <FrameOverlay 
-        frame={zone} 
-        tickers={tickers} 
-        screenInfo={screenInfo} 
-        mediaRef={mediaRef} 
-      />
-
-      {nextAsset && (
-        <PreloadLayer 
-            item={nextAsset} 
-            onReady={() => setNextIsReady(true)} 
-        />
-      )}
-    </div>
-  );
+    )}
+  </div>
+);
 };
 
 export default LocalFramePlayer;

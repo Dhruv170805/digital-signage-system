@@ -37,6 +37,15 @@ class MediaController {
     }
   }
 
+  getMyMedia = async (req, res, next) => {
+    try {
+      const media = await mediaService.getByUser(req.user.id);
+      res.json(this._formatMedia(media));
+    } catch (error) {
+      next(error);
+    }
+  }
+
   upload = async (req, res, next) => {
     let mediaCreated = false;
     try {
@@ -157,6 +166,21 @@ class MediaController {
       });
       
       await loggerService.logAudit(req.user.id, 'REJECT', 'Media', media._id, { filename: media.originalName, reason: req.body.reason });
+
+      res.json(this._formatMedia(media));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  resubmit = async (req, res, next) => {
+    try {
+      const media = await mediaService.updateStatus(req.params.id, { 
+        status: 'pending', 
+        rejectionReason: null 
+      });
+      
+      await loggerService.logAudit(req.user.id, 'RESUBMIT', 'Media', media._id, { filename: media.originalName });
 
       res.json(this._formatMedia(media));
     } catch (error) {

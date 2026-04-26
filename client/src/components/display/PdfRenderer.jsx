@@ -124,7 +124,7 @@ const PdfRenderer = ({ url, zone }) => {
                     <Page 
                         key={index}
                         pageNumber={index + 1} 
-                        width={containerRef.current?.offsetWidth * 0.8}
+                        width={containerRef.current ? containerRef.current.offsetWidth * 0.8 : 800}
                         onRenderSuccess={handlePageRenderSuccess}
                         renderTextLayer={false}
                         renderAnnotationLayer={false}
@@ -137,7 +137,7 @@ const PdfRenderer = ({ url, zone }) => {
                 <div className="shadow-[0_40px_100px_rgba(0,0,0,0.8)] rounded-sm overflow-hidden border border-white/5">
                     <Page 
                         pageNumber={currentPage} 
-                        width={containerRef.current?.offsetWidth * (mode === 'fit' ? 0.85 : 0.75)}
+                        width={containerRef.current ? containerRef.current.offsetWidth * (mode === 'fit' ? 0.85 : 0.75) : 800}
                         onRenderSuccess={handlePageRenderSuccess}
                         renderTextLayer={false}
                         renderAnnotationLayer={false}
@@ -148,25 +148,8 @@ const PdfRenderer = ({ url, zone }) => {
         </Document>
       </div>
 
-      {/* 3. BROADCAST HUD */}
-      {numPages > 1 && mode !== 'scroll' && (
-        <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex items-center gap-6 bg-black/40 backdrop-blur-3xl px-8 py-3 rounded-full border border-white/5 shadow-2xl z-20">
-            <div className="flex gap-2">
-                {[...Array(numPages)].map((_, i) => (
-                    <div 
-                        key={i} 
-                        className={`h-1 rounded-full transition-all duration-700 \${i + 1 === currentPage ? 'w-10 bg-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.6)]' : 'w-1.5 bg-white/10'}`} 
-                    />
-                ))}
-            </div>
-            <div className="w-px h-3 bg-white/10" />
-            <span className="text-[10px] font-black text-white/40 tabular-nums uppercase tracking-widest">
-                {currentPage} / {numPages}
-            </span>
-        </div>
-      )}
-    </div>
-  );
-};
+      </div>
+      );
+      };
 
-export default PdfRenderer;
+      export default PdfRenderer;

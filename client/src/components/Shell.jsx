@@ -30,7 +30,7 @@ const Shell = ({ children, role, activeTab, setActiveTab }) => {
 
   const userMenu = [
     { id: 'upload', label: 'Upload', icon: Upload },
-    { id: 'myfiles', label: 'History', icon: History },
+    { id: 'history', label: 'History', icon: History },
     { id: 'live', label: 'Current Screen', icon: Tv },
   ];
 
