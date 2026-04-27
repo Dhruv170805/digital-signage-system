@@ -19,7 +19,7 @@ const LayoutArchitect = ({ fetchData }) => {
   const GRID_SIZE = 12; // 12x12 grid for TV broadcast quality alignment
   const snapToGrid = (val) => Math.round(val / (100 / GRID_SIZE)) * (100 / GRID_SIZE);
 
-  // 🧠 COVERAGE CALCULATION (Synchronized with Server 100x100 Grid)
+  // 🧠 COVERAGE CALCULATION (Saved with Server 100x100 Grid)
   const coverageReport = React.useMemo(() => {
     const GRID_RES = 100;
     const grid = Array(GRID_RES).fill(0).map(() => Array(GRID_RES).fill(false));

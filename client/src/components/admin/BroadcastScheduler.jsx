@@ -167,7 +167,7 @@ const HistoryDetailModal = ({ log, isOpen, onClose }) => {
                         </div>
                         <div>
                             <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tighter leading-none mb-1">{details.name || 'Schedule Details'}</h3>
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[4px]">Broadcast History • Record</p>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[4px]">File History • Record</p>
                         </div>
                     </div>
                     <button onClick={onClose} className="p-4 bg-white border border-slate-200 rounded-2xl hover:bg-rose-50 text-slate-400 hover:text-rose-500 transition-all shadow-sm">

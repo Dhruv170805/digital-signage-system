@@ -48,12 +48,12 @@ const Login = () => {
       useAuthStore.getState().setToken(response.data.accessToken);
       useAuthStore.getState().setUser(response.data.user);
       
-      toast.success(`Access Granted: Welcome ${response.data.user.name}`);
+      toast.success(`Welcome ${response.data.user.name}`);
       
       const role = response.data.user.role;
       navigate(role === 'admin' ? '/admin' : '/user');
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Authentication failed. Access Denied.');
+      toast.error(err.response?.data?.message || 'Login failed. Please check your details.');
       setShaking(true);
       setTimeout(() => setShaking(false), 500);
     } finally {
@@ -72,10 +72,10 @@ const Login = () => {
           <div className="inline-flex items-center gap-3 mb-8 px-6 py-2.5 bg-slate-100 border border-slate-200/60 rounded-full backdrop-blur-xl shadow-sm relative overflow-hidden group">
             <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-transparent to-blue-500/5 animate-drift" />
             <Activity className="w-4 h-4 text-accent relative z-10" />
-            <span className="text-[10px] uppercase tracking-[6px] font-black text-text-dim relative z-10">Nexus Operations</span>
+            <span className="text-[10px] uppercase tracking-[6px] font-black text-text-dim relative z-10">Digital Signage System</span>
           </div>
-          <h1 className="text-6xl font-black text-text tracking-tighter mb-4 uppercase">Identity</h1>
-          <p className="text-[10px] font-black text-text-dim uppercase tracking-[4px]">Secure Screen Access Required</p>
+          <h1 className="text-6xl font-black text-text tracking-tighter mb-4 uppercase">Login</h1>
+          <p className="text-[10px] font-black text-text-dim uppercase tracking-[4px]">Sign in to your account</p>
         </div>
 
         <div className="glass p-12 shadow-[0_32px_64px_-20px_rgba(15,23,42,0.15)] border-slate-200/60 relative group rounded-[40px] bg-white/70">
@@ -83,7 +83,7 @@ const Login = () => {
           
           <form onSubmit={handleLogin} className="space-y-8 relative z-10">
             <div className="space-y-3">
-              <label className="text-[10px] uppercase tracking-[3px] text-text-faint font-black ml-1">Authentication ID</label>
+              <label className="text-[10px] uppercase tracking-[3px] text-text-faint font-black ml-1">Email Address</label>
               <div className="relative group/input">
                 <Mail className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within/input:text-accent transition-colors" />
                 <input 
@@ -91,14 +91,14 @@ const Login = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="nexus-input pl-14 h-16 bg-slate-50 hover:bg-slate-100/80 transition-all border-slate-200 focus:border-accent/50 rounded-2xl text-text placeholder:text-slate-400" 
-                  placeholder=" user@nexus.sys"
+                  placeholder="user@email.com"
                   required
                 />
               </div>
             </div>
 
             <div className="space-y-3">
-              <label className="text-[10px] uppercase tracking-[3px] text-text-faint font-black ml-1">Security Key</label>
+              <label className="text-[10px] uppercase tracking-[3px] text-text-faint font-black ml-1">Password</label>
               <div className="relative group/input">
                 <Lock className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within/input:text-accent transition-colors" />
                 <input 
@@ -118,7 +118,7 @@ const Login = () => {
               className="nexus-btn-primary w-full h-16 flex items-center justify-center gap-4 group/btn relative overflow-hidden rounded-2xl"
             >
               <span className="tracking-[4px] font-black uppercase text-xs text-white">
-                {loading ? 'Verifying...' : 'Initialize Session'}
+                {loading ? 'Logging in...' : 'Sign In'}
               </span>
               {!loading && <ArrowRight className="w-5 h-5 group-hover/btn:translate-x-2 transition-transform text-white" />}
             </button>
@@ -129,7 +129,7 @@ const Login = () => {
               onClick={() => setShowResetModal(true)}
               className="text-[10px] uppercase tracking-[3px] text-text-faint font-black hover:text-text transition-colors"
             >
-              Request Access Reset
+              Forgot Password?
             </button>
           </div>
         </div>
@@ -145,14 +145,14 @@ const Login = () => {
             <div className="glass max-w-md w-full p-12 space-y-8 animate-fade-in relative rounded-[40px] border-slate-200/60 bg-white">
               <div className="flex justify-between items-center">
                 <div>
-                  <h3 className="text-2xl font-black text-text uppercase tracking-tighter leading-none">Access Recovery</h3>
-                  <p className="text-[10px] font-bold text-accent uppercase tracking-[4px] mt-2">Protocol Override</p>
+                  <h3 className="text-2xl font-black text-text uppercase tracking-tighter leading-none">Password Recovery</h3>
+                  <p className="text-[10px] font-bold text-accent uppercase tracking-[4px] mt-2">Request Reset</p>
                 </div>
                 <button onClick={() => setShowResetModal(false)} className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center hover:bg-rose-50 hover:text-white transition-all">
                   <XCircle size={20} />
                 </button>
               </div>
-              <p className="text-[10px] text-text-dim uppercase font-black tracking-widest leading-relaxed">Administrator verification is required for password recovery. Enter your registered email to transmit a clearance request.</p>
+              <p className="text-[10px] text-text-dim uppercase font-black tracking-widest leading-relaxed">Enter your registered email address to request a password reset from the administrator.</p>
               
               <form onSubmit={handleResetRequest} className="space-y-6">
                 <input 
@@ -160,11 +160,11 @@ const Login = () => {
                   value={resetEmail}
                   onChange={(e) => setResetEmail(e.target.value)}
                   className="nexus-input h-16 rounded-2xl border-slate-200" 
-                  placeholder="admin@corp.in"
+                  placeholder="your@email.com"
                   required
                 />
                 <button type="submit" disabled={resetLoading} className="nexus-btn-primary w-full h-16 uppercase font-black tracking-[4px] text-xs rounded-2xl">
-                  {resetLoading ? 'Transmitting...' : 'Send Request'}
+                  {resetLoading ? 'Sending...' : 'Send Request'}
                 </button>
               </form>
             </div>

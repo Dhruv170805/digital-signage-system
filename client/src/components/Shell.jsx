@@ -16,22 +16,22 @@ const Shell = ({ children, role, activeTab, setActiveTab }) => {
 
   const adminMenu = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutGrid },
-    { id: 'approve', label: 'Application', icon: CheckSquare },
-    { id: 'schedule', label: 'Broadcast', icon: Calendar },
-    { id: 'templates', label: 'Layout', icon: FileText },
-    { id: 'ticker', label: 'Ticker', icon: Type },
+    { id: 'approve', label: 'Approvals', icon: CheckSquare },
+    { id: 'schedule', label: 'Schedules', icon: Calendar },
+    { id: 'templates', label: 'Templates', icon: FileText },
+    { id: 'ticker', label: 'Tickers', icon: Type },
     { id: 'screens', label: 'Screens', icon: Tv },
     { id: 'history', label: 'History', icon: History },
-    { id: 'live', label: 'Current Screen', icon: Tv },
+    { id: 'live', label: 'Live View', icon: Tv },
     { id: 'users', label: 'Users', icon: Users },
-    { id: 'settings', label: 'Idle Screen', icon: MonitorPlay },
-    { id: 'system', label: 'System', icon: Settings },
+    { id: 'settings', label: 'Idle Mode', icon: MonitorPlay },
+    { id: 'system', label: 'Settings', icon: Settings },
   ];
 
   const userMenu = [
     { id: 'upload', label: 'Upload', icon: Upload },
     { id: 'history', label: 'History', icon: History },
-    { id: 'live', label: 'Current Screen', icon: Tv },
+    { id: 'live', label: 'Live View', icon: Tv },
   ];
 
   const menu = role === 'admin' ? adminMenu : userMenu;
@@ -64,14 +64,14 @@ const Shell = ({ children, role, activeTab, setActiveTab }) => {
             </div>
             <div>
               <h1 className="text-lg font-black tracking-tighter text-text uppercase leading-none">Nexus</h1>
-              <p className="text-[10px] font-bold text-accent tracking-[4px] uppercase mt-1">Operations</p>
+              <p className="text-[10px] font-bold text-accent tracking-[4px] uppercase mt-1">Control</p>
             </div>
           </div>
           
           <div className="p-4 rounded-2xl bg-slate-100/50 border border-slate-200/60 flex items-center gap-3">
             <div className={`w-2 h-2 rounded-full animate-live ${role === 'admin' ? 'bg-blue-500' : 'bg-emerald-500'}`} />
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-              {role === 'admin' ? 'Admin Screen' : 'User Screen'}
+              {role === 'admin' ? 'Administrator' : 'Operator'}
             </span>
           </div>
         </div>
@@ -110,7 +110,7 @@ const Shell = ({ children, role, activeTab, setActiveTab }) => {
               {role === 'admin' ? <Shield size={18} className="text-blue-500" /> : <User size={18} className="text-emerald-500" />}
             </div>
             <div className="flex-1 overflow-hidden">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[2px] mb-0.5">User</p>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[2px] mb-0.5">Account</p>
               <p className="text-xs font-black text-text truncate uppercase">{userName}</p>
             </div>
           </div>
