@@ -15,7 +15,7 @@ const assignmentRoutes = require('./routes/assignmentRoutes'); // Use assignment
 const tickerRoutes = require('./routes/tickerRoutes');
 const settingsRoutes = require('./routes/settingsRoutes');
 const templateRoutes = require('./routes/templateRoutes');
-const auditRoutes = require('./routes/historyRoutes');
+const auditRoutes = require('./routes/auditRoutes');
 const idleRoutes = require('./routes/idleRoutes');
 const groupRoutes = require('./routes/groupRoutes');
 
@@ -69,6 +69,10 @@ app.use(cookieParser());
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 app.use('/test_codes', express.static(path.join(__dirname, '../test_codes')));
 
+// Serve Frontend Build
+const buildPath = path.join(__dirname, '../../client/dist');
+app.use(express.static(buildPath));
+
 // API Routes
 app.use('/api/screens', screenRoutes);
 app.use('/api/auth', authRoutes);
@@ -82,8 +86,13 @@ app.use('/api/idle', idleRoutes);
 app.use('/api/groups', groupRoutes);
 
 // Base route
-app.get('/', (req, res) => {
+app.get('/api', (req, res) => {
   res.send('Nexus Digital Signage API (Mongoose Refactor)');
+});
+
+// React Fallback
+app.get('*', (req, res) => {
+  res.sendFile(path.join(buildPath, 'index.html'));
 });
 
 // Global Error Handler
