@@ -1,5 +1,5 @@
 {
-  "name": "digital-signage-system",
+  "name": "nexus",
   "version": "1.0.0",
   "private": true,
   "scripts": {
@@ -13,7 +13,9 @@
     "package:exe": "pkg . --targets node18-macos-x64,node18-linux-x64,node18-win-x64 --output dist/nexus-launcher",
     "package:win": "pkg . --targets node18-win-x64 --output dist/launcher-win.exe"
   },
-  "bin": "launcher.js",
+  "bin": {
+    "nexus": "launcher.js"
+  },
   "pkg": {
     "assets": [
       "server/**/*",
