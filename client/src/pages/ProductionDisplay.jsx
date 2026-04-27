@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import useSocketStore from '../store/useSocketStore';
-import '../App.css'; // Assume some base styles
+import '../App.css'; 
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5006/api';
+const API_URL = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : '';
 
 const ProductionDisplay = () => {
   const [playlist, setPlaylist] = useState([]);
@@ -11,17 +11,15 @@ const ProductionDisplay = () => {
   const [loading, setLoading] = useState(true);
   const connect = useSocketStore((state) => state.connect);
   
-  // In production, these would come from local storage or environment
-  const screenId = localStorage.getItem('screenId') || 1;
+  const screenId = localStorage.getItem('screenId');
   const deviceToken = localStorage.getItem('deviceToken');
 
   const fetchPlaylist = React.useCallback(async () => {
-    await Promise.resolve();
+    if (!API_URL || !screenId) return;
     try {
       const response = await axios.get(`${API_URL}/screens/${screenId}/playlist`);
       const data = response.data.data;
       
-      // Separate ticker from frames/media
       const activeTicker = data.find(s => s.tickerId)?.ticker;
       const content = data.filter(s => s.mediaId || s.templateId);
       
@@ -37,9 +35,8 @@ const ProductionDisplay = () => {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchPlaylist();
-    connect(deviceToken);
+    if (deviceToken) connect(deviceToken);
 
-    // Refresh playlist every minute as a fallback
     const interval = setInterval(fetchPlaylist, 60000);
     return () => clearInterval(interval);
   }, [fetchPlaylist, connect, deviceToken]);
@@ -50,7 +47,7 @@ const ProductionDisplay = () => {
     <div className="display-container fullscreen bg-bg text-text">
       {playlist.length === 0 && (
         <div className="fallback-content">
-          <img src="/logo-placeholder.png" alt="Fallback" />
+          <div className="w-20 h-20 bg-slate-100 rounded-full animate-pulse" />
         </div>
       )}
 
@@ -78,7 +75,6 @@ const ProductionDisplay = () => {
           );
         }
         
-        // Single media schedule (fullscreen default)
         if (item.media) {
           return (
             <div key={item.id} className="fullscreen-media">
@@ -115,7 +111,7 @@ const ContentRenderer = ({ schedule }) => {
 
 const MediaRenderer = ({ media }) => {
   if (!media || !media.filename) return null;
-  const uploadUrl = import.meta.env.VITE_UPLOAD_URL || 'http://localhost:5006/uploads';
+  const uploadUrl = import.meta.env.VITE_UPLOAD_URL || import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/uploads` : '';
   const url = `${uploadUrl}/${media.filename}`;
   
   if (media.mimeType.startsWith('image/')) {

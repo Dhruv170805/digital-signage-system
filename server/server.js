@@ -26,7 +26,17 @@ const PORT = process.env.PORT || 5000;
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
-    origin: process.env.CLIENT_URL || '*',
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (process.env.NODE_ENV !== 'production' && (origin.includes('localhost') || origin.includes('127.0.0.1'))) {
+        return callback(null, true);
+      }
+      const allowedOrigins = [process.env.CLIENT_URL].filter(Boolean);
+      if (allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.length === 0) {
+        return callback(null, true);
+      }
+      callback(new Error('Not allowed by CORS'));
+    },
     methods: ['GET', 'POST'],
     credentials: true
   },

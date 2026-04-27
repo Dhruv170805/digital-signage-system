@@ -16,8 +16,8 @@ const Login = () => {
     }
   }, [token, user, navigate]);
 
-  const [email, setEmail] = useState('admin@corp.in');
-  const [password, setPassword] = useState('admin123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [shaking, setShaking] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);

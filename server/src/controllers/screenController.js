@@ -1,11 +1,17 @@
 const screenService = require('../services/screenService');
 const loggerService = require('../services/loggerService');
+const QRCode = require('qrcode');
 
 class ScreenController {
   async getAll(req, res, next) {
     try {
       const screens = await screenService.getAllScreens();
-      res.json(screens);
+      const screensWithQr = await Promise.all(screens.map(async (s) => {
+        const screenObj = s.toObject();
+        screenObj.qrCode = await QRCode.toDataURL(s.registrationUrl);
+        return screenObj;
+      }));
+      res.json(screensWithQr);
     } catch (error) {
       next(error);
     }
@@ -15,7 +21,11 @@ class ScreenController {
     try {
       const screen = await screenService.getScreenById(req.params.id);
       if (!screen) return res.status(404).json({ message: 'Screen not found' });
-      res.json(screen);
+      
+      const screenObj = screen.toObject();
+      screenObj.qrCode = await QRCode.toDataURL(screen.registrationUrl);
+      
+      res.json(screenObj);
     } catch (error) {
       next(error);
     }
@@ -94,13 +104,16 @@ class ScreenController {
       const socketService = require('../services/socketService');
 
       let query = {};
-      if (targetType === 'screen' && targetId) {
+      const isValidId = targetId && targetId.toString().length > 0;
+
+      if (targetType === 'screen' && isValidId) {
         query = { screenId: targetId };
-      } else if (targetType === 'group' && targetId) {
+      } else if (targetType === 'group' && isValidId) {
         query = { groupId: targetId };
       } else if (targetType === 'all') {
         query = {}; // all assignments
       } else {
+        // If an ID was expected but is empty, don't perform a partial match query
         return res.status(400).json({ success: false, error: 'Invalid target type or missing target ID' });
       }
 

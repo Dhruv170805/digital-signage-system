@@ -94,7 +94,7 @@ class AuthService {
   }
 
   async getAllUsers() {
-    return await User.find({}, '-password');
+    return await User.find({}, '-password').limit(1000);
   }
 
   async getUserById(id) {

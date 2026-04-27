@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { Tv, Monitor, Trash2, Cpu, HardDrive, Zap, Copy, ExternalLink, RefreshCw, MapPin, Radio, ShieldCheck, Layers, Plus, Activity, ArrowUpRight, Power, ChevronRight, Globe, Lock } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Tv, Trash2, Cpu, Zap, Copy, MapPin, Layers, ArrowUpRight, Power, Globe, Lock } from 'lucide-react';
 import api from '../../services/api';
 import { useScreens } from '../../hooks/useAdminData';
 import toast from 'react-hot-toast';
 
-const ScreenManager = ({ fetchData }) => {
-  const { data: screens = [], refetch, isLoading } = useScreens();
+const ScreenManager = ({ fetchData: parentFetchData }) => {
+  const { data: screens = [], refetch } = useScreens();
   const [groups, setGroups] = useState([]);
   const [activeTab, setActiveTab] = useState('editor');
   const [newScreen, setNewScreen] = useState({ 
@@ -14,14 +14,14 @@ const ScreenManager = ({ fetchData }) => {
   });
   const [newGroup, setNewGroup] = useState({ name: '', description: '' });
 
-  const fetchGroups = async () => {
+  const fetchGroups = useCallback(async () => {
     try {
       const res = await api.get('/api/groups');
       setGroups(res.data);
     } catch (err) { console.error('Failed to load clusters'); }
-  };
+  }, []);
 
-  useEffect(() => { fetchGroups(); }, []);
+  useEffect(() => { fetchGroups(); }, [fetchGroups]);
 
   const registerScreen = async (e) => {
     e.preventDefault();
@@ -30,7 +30,7 @@ const ScreenManager = ({ fetchData }) => {
       toast.success('Node Authorized');
       setNewScreen({ name: '', location: '', resolution: '1920x1080', groupId: '', ipAddress: '', dns: '8.8.8.8', gateway: '', subnet: '255.255.255.0' });
       refetch();
-      if (fetchData) fetchData();
+      if (parentFetchData) parentFetchData();
       if (res.data.deviceToken) {
           navigator.clipboard.writeText(res.data.deviceToken);
           toast.success('Authorization Key copied!', { icon: '🔑' });
@@ -81,7 +81,7 @@ const ScreenManager = ({ fetchData }) => {
       await api.delete(`/api/screens/${id}`);
       toast.success('Node Purged');
       refetch();
-      if (fetchData) fetchData();
+      if (parentFetchData) parentFetchData();
     } catch (err) { toast.error('Termination failed'); }
   };
 
@@ -149,6 +149,17 @@ const ScreenManager = ({ fetchData }) => {
                                     <div className="space-y-2"><label className="text-[9px] font-black uppercase text-slate-500 ml-1">Protocol Res</label><select className="nexus-input bg-slate-50 border-slate-200" value={newScreen.resolution} onChange={(e) => setNewScreen({...newScreen, resolution: e.target.value})}><option value="1920x1080">1080p Standard</option><option value="3840x2160">4K Ultra</option><option value="1080x1920">1080p Vertical</option></select></div>
                                 </div>
                                 <div className="space-y-2"><label className="text-[9px] font-black uppercase text-slate-500 ml-1">Cluster Assignment</label><select className="nexus-input bg-slate-50 border-slate-200" value={newScreen.groupId} onChange={(e) => setNewScreen({...newScreen, groupId: e.target.value})}><option value="">Unassigned Root</option>{groups.map(g => <option key={g._id} value={g._id}>{g.name}</option>)}</select></div>
+                                
+                                <div className="pt-4 border-t border-slate-100">
+                                    <h5 className="text-[8px] font-black uppercase text-slate-400 tracking-[3px] mb-6">Advanced Network Stack</h5>
+                                    <div className="grid grid-cols-2 gap-6">
+                                        <div className="space-y-2"><label className="text-[9px] font-black uppercase text-slate-500 ml-1">Static IPv4</label><input type="text" className="nexus-input bg-slate-50 border-slate-200" placeholder="e.g. 192.168.1.50" value={newScreen.ipAddress} onChange={(e) => setNewScreen({...newScreen, ipAddress: e.target.value})}/></div>
+                                        <div className="space-y-2"><label className="text-[9px] font-black uppercase text-slate-500 ml-1">Subnet Mask</label><input type="text" className="nexus-input bg-slate-50 border-slate-200" placeholder="255.255.255.0" value={newScreen.subnet} onChange={(e) => setNewScreen({...newScreen, subnet: e.target.value})}/></div>
+                                        <div className="space-y-2"><label className="text-[9px] font-black uppercase text-slate-500 ml-1">Default Gateway</label><input type="text" className="nexus-input bg-slate-50 border-slate-200" placeholder="192.168.1.1" value={newScreen.gateway} onChange={(e) => setNewScreen({...newScreen, gateway: e.target.value})}/></div>
+                                        <div className="space-y-2"><label className="text-[9px] font-black uppercase text-slate-500 ml-1">Primary DNS</label><input type="text" className="nexus-input bg-slate-50 border-slate-200" placeholder="8.8.8.8" value={newScreen.dns} onChange={(e) => setNewScreen({...newScreen, dns: e.target.value})}/></div>
+                                    </div>
+                                </div>
+
                                 <button type="submit" className="nexus-btn-primary w-full py-5 text-[10px] tracking-[6px] uppercase shadow-2xl shadow-indigo-200">AUTHORIZE PROTOCOL</button>
                             </form>
                         </section>
@@ -204,6 +215,16 @@ const ScreenManager = ({ fetchData }) => {
                                     </div>
                                     <div className="p-4 bg-slate-50 border border-slate-100 rounded-[24px]"><p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Resolution</p><p className="text-[10px] font-black text-slate-700 tabular-nums">{s.resolution}</p></div>
                                 </div>
+
+                                {s.qrCode && (
+                                    <div className="mb-8 p-6 bg-slate-50 rounded-[32px] border border-slate-100 flex flex-col items-center gap-4">
+                                        <p className="text-[8px] font-black text-slate-400 uppercase tracking-[4px]">QR Pairing Bridge</p>
+                                        <div className="bg-white p-2 rounded-2xl shadow-inner border border-slate-100">
+                                            <img src={s.qrCode} alt="Registration QR" className="w-24 h-24" />
+                                        </div>
+                                        <p className="text-[7px] font-bold text-slate-400 uppercase tracking-widest text-center">Scan to link physical node</p>
+                                    </div>
+                                )}
                                 <div className="mt-auto pt-6 border-t border-slate-100 flex items-center justify-between">
                                     <div className="flex items-center gap-4">
                                         <div className="flex items-center gap-1.5"><Cpu size={12} className="text-slate-400" /><span className="text-[10px] font-black text-slate-600">{s.telemetry?.ramUsage || 0}%</span></div>

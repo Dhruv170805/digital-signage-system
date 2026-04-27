@@ -13,8 +13,16 @@ const assignmentSchema = new mongoose.Schema({
   mediaMapping: { type: Map, of: mongoose.Schema.Types.Mixed }, // { frameId: [items] or mediaId }
   
   // Targets
-  screenId: { type: mongoose.Schema.Types.ObjectId, ref: 'Screen' },
-  groupId: { type: mongoose.Schema.Types.ObjectId, ref: 'ScreenGroup' }, // Assuming ScreenGroup model exists or will be added
+  screenId: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'Screen',
+    set: v => v === '' ? null : v 
+  },
+  groupId: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'ScreenGroup',
+    set: v => v === '' ? null : v
+  },
   isGlobal: { type: Boolean, default: false },
 
   // Timing

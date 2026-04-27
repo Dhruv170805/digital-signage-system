@@ -48,21 +48,36 @@ class AssignmentController {
       if (baseData.startTime) baseData.startTime = baseData.startTime.padStart(5, '0');
       if (baseData.endTime) baseData.endTime = baseData.endTime.padStart(5, '0');
       
+      if (baseData.endDate) {
+        const end = new Date(baseData.endDate);
+        end.setHours(23, 59, 59, 999);
+        baseData.endDate = end;
+      }
+
       // Approval Logic
       baseData.status = req.user.role === 'admin' ? 'approved' : 'pending';
       
       const createdAssignments = [];
       const screenService = require('../services/screenService');
 
-      if (targetType === 'all' || !targetIds || targetIds.length === 0) {
+      const validTargetIds = (targetIds || []).filter(id => id && id.length > 0);
+
+      if (targetType === 'all' || validTargetIds.length === 0) {
         const assignment = await assignmentService.createAssignment({ ...baseData, isGlobal: true });
         createdAssignments.push(assignment);
         if (assignment.status === 'approved') await screenService.broadcastManifestUpdate();
       } else {
-        for (const tid of targetIds) {
+        for (const tid of validTargetIds) {
           const targetedData = { ...baseData };
-          if (targetType === 'screen') targetedData.screenId = tid;
-          else targetedData.groupId = tid;
+          if (targetType === 'screen') {
+              targetedData.screenId = tid || null;
+              targetedData.groupId = null;
+          } else if (targetType === 'group') {
+              targetedData.groupId = tid || null;
+              targetedData.screenId = null;
+          } else {
+              targetedData.isGlobal = true;
+          }
           
           const assignment = await assignmentService.createAssignment(targetedData);
           createdAssignments.push(assignment);
@@ -71,9 +86,8 @@ class AssignmentController {
             if (targetType === 'screen') await screenService.pushManifestToScreen(tid);
             else {
               // Group update: find all screens in group
-              const screens = await screenService.getAllScreens();
-              const groupScreens = screens.filter(s => s.groupId?._id.toString() === tid || s.groupId?.toString() === tid);
-              for (const gs of groupScreens) await screenService.pushManifestToScreen(gs._id);
+              const screens = await screenService.getScreensByGroup(tid);
+              for (const gs of screens) await screenService.pushManifestToScreen(gs._id);
             }
           }
         }
@@ -98,19 +112,24 @@ class AssignmentController {
   async delete(req, res, next) {
     try {
       const assignment = await assignmentService.getAssignmentById(req.params.id);
+      if (!assignment) return res.status(404).json({ message: 'Assignment not found' });
+
       await assignmentService.deleteAssignment(req.params.id);
       
       await loggerService.logAudit(req.user.id, 'TERMINATE', 'Assignment', req.params.id, { 
-        target: assignment ? (assignment.isGlobal ? 'Global' : (assignment.screenId || assignment.groupId)) : 'Unknown'
+        target: assignment.isGlobal ? 'Global' : (assignment.screenId || assignment.groupId)
       });
 
       // Targeted Manifest Push
       const screenService = require('../services/screenService');
-      if (assignment) {
-        if (assignment.isGlobal) {
-          await screenService.broadcastManifestUpdate();
-        } else if (assignment.screenId) {
-          await screenService.pushManifestToScreen(assignment.screenId);
+      if (assignment.isGlobal) {
+        await screenService.broadcastManifestUpdate();
+      } else if (assignment.screenId) {
+        await screenService.pushManifestToScreen(assignment.screenId);
+      } else if (assignment.groupId) {
+        const screens = await screenService.getScreensByGroup(assignment.groupId);
+        for (const s of screens) {
+          await screenService.pushManifestToScreen(s._id);
         }
       }
 
@@ -130,7 +149,11 @@ class AssignmentController {
       if (startTime) updateData.startTime = startTime;
       if (endTime) updateData.endTime = endTime;
       if (startDate) updateData.startDate = startDate;
-      if (endDate) updateData.endDate = endDate;
+      if (endDate) {
+          const end = new Date(endDate);
+          end.setHours(23, 59, 59, 999);
+          updateData.endDate = end;
+      }
 
       // Handle targeting overrides
       if (targetType) {
@@ -140,12 +163,12 @@ class AssignmentController {
             updateData.groupId = null;
         } else if (targetType === 'screen') {
             updateData.isGlobal = false;
-            updateData.screenId = targetId;
+            updateData.screenId = (targetId && targetId.length > 0) ? targetId : null;
             updateData.groupId = null;
         } else if (targetType === 'group') {
             updateData.isGlobal = false;
             updateData.screenId = null;
-            updateData.groupId = targetId;
+            updateData.groupId = (targetId && targetId.length > 0) ? targetId : null;
         }
       }
 
@@ -159,8 +182,18 @@ class AssignmentController {
       });
       
       const screenService = require('../services/screenService');
-      if (assignment.isGlobal) await screenService.broadcastManifestUpdate();
-      else if (assignment.screenId) await screenService.pushManifestToScreen(assignment.screenId);
+      if (assignment.status === 'approved') {
+        if (assignment.isGlobal) {
+          await screenService.broadcastManifestUpdate();
+        } else if (assignment.screenId) {
+          await screenService.pushManifestToScreen(assignment.screenId);
+        } else if (assignment.groupId) {
+          const screens = await screenService.getScreensByGroup(assignment.groupId);
+          for (const s of screens) {
+            await screenService.pushManifestToScreen(s._id);
+          }
+        }
+      }
       
       res.json(assignment);
     } catch (error) {
@@ -187,7 +220,8 @@ class AssignmentController {
   async getActive(req, res, next) {
     try {
       const { screenId, groupId } = req.query;
-      const assignments = await assignmentService.getActiveAssignmentsForScreen(screenId, groupId);
+      const normalizedGroupId = (groupId && groupId.length > 0) ? groupId : null;
+      const assignments = await assignmentService.getActiveAssignmentsForScreen(screenId, normalizedGroupId);
       res.json(assignments);
     } catch (error) {
       next(error);

@@ -2,18 +2,17 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import FrameManager from './FrameManager';
 import TickerEngine from './TickerEngine';
 import PreloadLayer from './PreloadLayer';
-import FrameOverlay from './FrameOverlay';
 import useInterruptStore from '../../store/useInterruptStore';
 import { Radio } from 'lucide-react';
 
-const LocalFramePlayer = ({ zone, frameItems, allMedia, tickers, screenInfo }) => {
+const LocalFramePlayer = ({ zone, frameItems, allMedia, tickers }) => {
   const [currentIndex, setCurrentIdx] = useState(0);
   const [nextIsReady, setNextIsReady] = useState(false);
   const [minuteTick, setMinuteTick] = useState(0);
   const { activeInterrupt, clearInterrupt } = useInterruptStore();
   const mediaRef = useRef(null);
 
-  // 🧠 CLOCK-ALIGNED MINUTE TICKER: Fixes "Lazy Tick" drift (Issue 5)
+  // 🧠 CLOCK-ALIGNED MINUTE TICKER
   useEffect(() => {
     const alignTick = () => {
         const now = new Date();
@@ -37,7 +36,7 @@ const LocalFramePlayer = ({ zone, frameItems, allMedia, tickers, screenInfo }) =
       : (frameItems ? [{ mediaId: frameItems, duration: 10, priority: 1 }] : []);
   }, [frameItems]);
 
-  // 🧠 SCHEDULER: Resolve valid items for this frame (Now reactive to time)
+  // 🧠 SCHEDULER
   const validPlaylist = useMemo(() => {
     const now = new Date();
     const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
@@ -61,36 +60,33 @@ const LocalFramePlayer = ({ zone, frameItems, allMedia, tickers, screenInfo }) =
     return valid.filter(i => (i.priority || 1) === maxPriority);
   }, [items, minuteTick]);
 
-  const currentItem = validPlaylist[currentIndex];
   const nextIndex = (currentIndex + 1) % validPlaylist.length;
-  const nextItem = validPlaylist.length > 1 ? validPlaylist[nextIndex] : null;
 
   // 🧠 ASSET RESOLVER
-  const resolveAsset = (plItem) => {
+  const resolveAsset = useCallback((plItem) => {
     if (!plItem) return null;
     return allMedia.find(m => (m.id === plItem.mediaId || m._id === plItem.mediaId)) || plItem;
-  };
+  }, [allMedia]);
 
-  const currentAsset = useMemo(() => resolveAsset(currentItem), [currentItem, allMedia]);
-  const nextAsset = useMemo(() => resolveAsset(nextItem), [nextItem, allMedia]);
+  const currentAsset = useMemo(() => resolveAsset(validPlaylist[currentIndex]), [currentIndex, validPlaylist, resolveAsset]);
+  const nextAsset = useMemo(() => resolveAsset(validPlaylist.length > 1 ? validPlaylist[nextIndex] : null), [validPlaylist, nextIndex, resolveAsset]);
 
-  // 🧠 ADVANCE LOGIC: Only move if next is ready
+  // 🧠 ADVANCE LOGIC
   const advance = useCallback(() => {
     if (validPlaylist.length > 1 && nextIsReady) {
       setCurrentIdx(nextIndex);
-      setNextIsReady(false);
+      setNextIsReady(false); // Reset for next item
     } else if (validPlaylist.length === 1) {
       setCurrentIdx(0);
     }
   }, [validPlaylist.length, nextIndex, nextIsReady]);
 
-  // 🛡️ PRELOAD CIRCUIT BREAKER: Fixes "Infinite Black Hole" (Issue 4)
+  // 🛡️ PRELOAD CIRCUIT BREAKER
   useEffect(() => {
     if (nextAsset && !nextIsReady) {
       const timeout = setTimeout(() => {
-        console.warn(`[Scheduler] Preload timeout for ${nextAsset.fileName || 'Asset'}. Forcing ready.`);
         setNextIsReady(true); 
-      }, 8000); // 8s grace period
+      }, 8000);
       return () => clearTimeout(timeout);
     }
   }, [nextAsset, nextIsReady]);
@@ -102,7 +98,7 @@ const LocalFramePlayer = ({ zone, frameItems, allMedia, tickers, screenInfo }) =
     const isVideo = currentAsset.fileType === 'video' || (currentAsset.mimeType && currentAsset.mimeType.startsWith('video/'));
 
     if (!isVideo) {
-        const duration = (currentItem.duration || 10) * 1000;
+        const duration = (validPlaylist[currentIndex]?.duration || 10) * 1000;
         const timer = setTimeout(advance, duration);
         return () => clearTimeout(timer);
     }
@@ -133,27 +129,28 @@ const LocalFramePlayer = ({ zone, frameItems, allMedia, tickers, screenInfo }) =
   }
 
   if (zone.type === 'ticker') {
-    const tickerData = tickers.find(t => t.id === currentItem.mediaId || t._id === currentItem.mediaId);
+    const tickerData = tickers.find(t => t.id === validPlaylist[currentIndex].mediaId || t._id === validPlaylist[currentIndex].mediaId);
     return <TickerEngine ticker={tickerData} />;
   }
-return (
-  <div className="w-full h-full relative overflow-hidden bg-black">
-    <FrameManager 
-      item={currentAsset} 
-      zone={zone}
-      onMediaEnd={advance}
-      onMediaError={advance}
-      mediaRef={mediaRef}
-    />
 
-    {nextAsset && (
-      <PreloadLayer 
-          item={nextAsset} 
-          onReady={() => setNextIsReady(true)} 
-      />
-    )}
-  </div>
-);
+  return (
+    <div className="w-full h-full relative overflow-hidden bg-black">
+        <FrameManager 
+        item={currentAsset} 
+        zone={zone}
+        onMediaEnd={advance}
+        onMediaError={advance}
+        mediaRef={mediaRef}
+        />
+
+        {nextAsset && (
+        <PreloadLayer 
+            item={nextAsset} 
+            onReady={() => setNextIsReady(true)} 
+        />
+        )}
+    </div>
+  );
 };
 
 export default LocalFramePlayer;

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { AlertCircle } from 'lucide-react';
 import PdfRenderer from './PdfRenderer';
 
@@ -6,13 +6,6 @@ const getMediaUrl = (filePath, zoneId) => {
   if (!filePath) return null;
   let apiBase = (import.meta.env.VITE_API_URL || '').replace(/\/api\/?$/, '').replace(/\/$/, '');
   
-  // 🛡️ Dynamic Port Recovery
-  if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-    if (!apiBase || apiBase.includes(':5000')) {
-       apiBase = 'http://localhost:5006';
-    }
-  }
-
   const cleanPath = filePath.startsWith('/') ? filePath : `/${filePath}`;
   const url = `${apiBase}${cleanPath}`.replace(/([^:]\/)\/+/g, "$1");
   return zoneId ? `${url}?z=${zoneId}` : url;
@@ -24,27 +17,25 @@ const FrameManager = ({ item, zone, onMediaEnd, onMediaError, mediaRef }) => {
   const [textContents, setTextContents] = useState({});
   const [loadError, setLoadError] = useState(false);
 
-  const getMediaData = (mediaOrAssignment) => {
+  const getMediaData = useCallback((mediaOrAssignment) => {
     if (!mediaOrAssignment) return null;
-    // Assignment check: populated mediaId is the media object
     if (mediaOrAssignment.mediaId && typeof mediaOrAssignment.mediaId === 'object') {
       return mediaOrAssignment.mediaId;
     }
-    // If it's already a media object (e.g. from a direct mapping)
     if (mediaOrAssignment.filePath || mediaOrAssignment.path) {
       return mediaOrAssignment;
     }
     return mediaOrAssignment;
-  };
+  }, []);
 
-  const getFilePath = (item) => {
+  const getFilePath = useCallback((item) => {
     const media = getMediaData(item);
     let path = media?.filePath || media?.path || '';
     if (path.startsWith('server/')) path = path.replace('server/', '');
     return path;
-  };
+  }, [getMediaData]);
 
-  const getFileType = (item) => {
+  const getFileType = useCallback((item) => {
     const media = getMediaData(item);
     if (media?.fileType) return media.fileType;
     if (media?.mimeType) {
@@ -54,9 +45,9 @@ const FrameManager = ({ item, zone, onMediaEnd, onMediaError, mediaRef }) => {
       if (media.mimeType.startsWith('text/')) return 'text';
     }
     return 'unknown';
-  };
+  }, [getMediaData]);
 
-  // 🧠 TRANSITION ENGINE: Handle dual-layer swaps
+  // 🧠 TRANSITION ENGINE
   useEffect(() => {
     const currentId = displayItems.current?._id || displayItems.current?.id || displayItems.current?.uid;
     const incomingId = item?._id || item?.id || item?.uid;
@@ -73,7 +64,7 @@ const FrameManager = ({ item, zone, onMediaEnd, onMediaError, mediaRef }) => {
 
       return () => clearTimeout(timer);
     }
-  }, [item]);
+  }, [item, displayItems.current]);
 
   // 🧠 TEXT LOADER
   useEffect(() => {
@@ -83,8 +74,7 @@ const FrameManager = ({ item, zone, onMediaEnd, onMediaError, mediaRef }) => {
         if (textContents[id] || !path) return;
         try {
             const apiBase = (import.meta.env.VITE_API_URL || '').replace(/\/api\/?$/, '').replace(/\/$/, '');
-            const finalBase = (apiBase || (window.location.hostname === 'localhost' ? 'http://localhost:5006' : ''));
-            const res = await fetch(`${finalBase}/${path}`);
+            const res = await fetch(`${apiBase}/${path}`);
             const text = await res.text();
             setTextContents(prev => ({ ...prev, [id]: text }));
         } catch (e) {
@@ -93,13 +83,13 @@ const FrameManager = ({ item, zone, onMediaEnd, onMediaError, mediaRef }) => {
     };
     const mediaData = getMediaData(item);
     if (getFileType(item) === 'text' && mediaData) fetchText(mediaData);
-  }, [item]);
+  }, [item, getFilePath, getFileType, getMediaData, textContents]);
 
-  const handleMediaError = (e) => {
-    console.error('[FrameManager] Media failed to load:', e.target.src);
+  const handleMediaError = useCallback((e) => {
+    console.error('[FrameManager] Media failed to load:', e.target?.src);
     setLoadError(true);
     if (onMediaError) onMediaError();
-  };
+  }, [onMediaError]);
 
   const renderMedia = (mediaItem, layer) => {
     if (!mediaItem) return null;
@@ -108,7 +98,6 @@ const FrameManager = ({ item, zone, onMediaEnd, onMediaError, mediaRef }) => {
     const fileType = getFileType(mediaItem);
     const src = getMediaUrl(filePath, zone?.i);
     
-    // Safety check: if src is null, don't render media tags that expect it
     if (!src && fileType !== 'text') return null;
 
     const isCurrent = layer === 'current';

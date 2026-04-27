@@ -8,7 +8,6 @@ const IdleScreenManager = () => {
     const { data: screens = [] } = useScreens();
     const [groups, setGroups] = useState([]);
     const [configs, setConfigs] = useState([]);
-    const [loading, setLoading] = useState(true);
     const [media, setMedia] = useState([]);
     const [activeTab, setActiveTab] = useState('editor');
     const fileInputRef = useRef(null);
@@ -27,8 +26,7 @@ const IdleScreenManager = () => {
             setConfigs(Array.isArray(configsRes.data) ? configsRes.data : []);
             setMedia(Array.isArray(mediaRes.data) ? mediaRes.data : []);
             setGroups(Array.isArray(groupsRes.data) ? groupsRes.data : []);
-        } catch (err) { console.error('Sync failure:', err); }
-        finally { setLoading(false); }
+        } catch { console.error('Sync failure'); }
     };
 
     useEffect(() => { fetchConfigs(); }, []);
@@ -105,8 +103,18 @@ const IdleScreenManager = () => {
                                     <div className="space-y-2"><label className="text-[9px] font-black uppercase text-slate-500 ml-1">Protocol Identifier</label><input type="text" required className="nexus-input bg-slate-50 border-slate-200" placeholder="e.g. LOBBY-DEFAULT-IDLE" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} /></div>
                                     <div className="grid grid-cols-2 gap-6">
                                         <div className="space-y-2"><label className="text-[9px] font-black uppercase text-slate-500 ml-1">Cluster Logic</label><select className="nexus-input bg-slate-50 border-slate-200" value={draft.targetType} onChange={(e) => setDraft({ ...draft, targetType: e.target.value, targetIds: [], priority: e.target.value === 'screen' ? 100 : e.target.value === 'group' ? 50 : 10 })}><option value="all">Global System</option><option value="group">Cluster Group</option><option value="screen">Specific Node</option></select></div>
-                                        <div className="space-y-2"><label className="text-[9px] font-black uppercase text-slate-500 ml-1">Priority</label><input type="number" className="nexus-input bg-slate-50 border-slate-200" value={draft.priority} onChange={(e) => setDraft({ ...draft, priority: Number(e.target.value) })} /></div>
-                                    </div>
+                                        <div className="space-y-2">
+                                           <label className="text-[9px] font-black uppercase text-slate-500 ml-1">Priority</label>
+                                           <select 
+                                               className="nexus-input bg-slate-50 border-slate-200 text-[10px] font-black uppercase"
+                                               value={draft.priority} 
+                                               onChange={(e) => setDraft({ ...draft, priority: Number(e.target.value) })}
+                                           >
+                                               <option value="10">Low</option>
+                                               <option value="50">Medium</option>
+                                               <option value="100">High</option>
+                                           </select>
+                                        </div>                                    </div>
                                     {draft.targetType !== 'all' && (
                                         <div className="space-y-2 animate-fade-in"><label className="text-[9px] font-black uppercase text-slate-500 ml-1">Identity Selection</label><select multiple className="nexus-input h-32 custom-scrollbar text-xs font-bold bg-slate-50 border-slate-200" value={draft.targetIds} onChange={(e) => { const opts = Array.from(e.target.options); setDraft({ ...draft, targetIds: opts.filter(o => o.selected).map(o => o.value) }); }}>{draft.targetType === 'screen' ? screens.map(s => <option key={s._id} value={s._id}>{s.name}</option>) : groups.map(g => <option key={g._id} value={g._id}>{g.name}</option>)}</select></div>
                                     )}

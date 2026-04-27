@@ -21,6 +21,6 @@ self.addEventListener('activate', (event) => {
 });
 
 // Immediately bypass all fetches
-self.addEventListener('fetch', (event) => {
+self.addEventListener('fetch', () => {
   return; 
 });

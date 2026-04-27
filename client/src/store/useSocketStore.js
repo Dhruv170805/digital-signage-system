@@ -3,70 +3,79 @@ import { io } from 'socket.io-client';
 import useAuthStore from './useAuthStore';
 import useInterruptStore from './useInterruptStore';
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL || 'http://localhost:5006';
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL;
+
+if (!SOCKET_URL) {
+  console.error('📡 SYSTEM CRITICAL: VITE_SOCKET_URL or VITE_API_URL is missing. Real-time synchronization is disabled.');
+}
+
+let instance = null; // Module-level singleton instance
 
 const useSocketStore = create((set, get) => ({
   socket: null,
   connected: false,
 
   connect: (deviceToken = null) => {
-    const currentSocket = get().socket;
-    if (currentSocket) return;
+    // 1. Singleton Check: If we already have a live or connecting instance, stop.
+    // This is the "God-Level" fix for React DEV mode double-invocation.
+    if (instance && (instance.connected || instance.io?.readyState === 'opening')) {
+      if (!get().socket) set({ socket: instance });
+      return;
+    }
 
     const token = useAuthStore.getState().token;
-    // deviceToken can be passed or retrieved from localStorage if it's a screen
     const effectiveDeviceToken = deviceToken || localStorage.getItem('deviceToken');
 
-    console.log('🔗 Attempting connection to Signal Server:', SOCKET_URL);
+    // 2. Clean up ONLY if we are starting a fresh connection
+    if (instance) {
+      instance.removeAllListeners();
+      instance.close();
+    }
 
-    const socket = io(SOCKET_URL, {
+    console.log('🔗 Connecting to Signal Server:', SOCKET_URL);
+
+    instance = io(SOCKET_URL, {
       auth: {
         token,
         deviceToken: effectiveDeviceToken
       },
       transports: ['websocket', 'polling'],
       reconnection: true,
-      reconnectionDelay: 1000
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 10
     });
 
-    socket.on('connect', () => {
-      set({ connected: true });
-      if (effectiveDeviceToken) {
-        socket.emit('heartbeat', { 
-          telemetry: {
-            uptime: window.performance ? window.performance.now() : 0,
-            memory: navigator.deviceMemory || 0,
-            connection: navigator.connection ? navigator.connection.effectiveType : 'unknown'
-          }
-        });
+    instance.on('connect', () => {
+      console.log('🌐 Connected to Signal Server! Socket ID:', instance.id);
+      set({ connected: true, socket: instance });
+    });
+
+    instance.on('connect_error', (err) => {
+      if (err.message !== 'xhr poll error' && err.message !== 'websocket error') {
+        console.error('❌ Signal Server connection error:', err.message);
       }
-    });
-
-    socket.on('disconnect', () => {
       set({ connected: false });
     });
 
-    socket.on('sync_config', (data) => {
-      console.log('Config sync event received:', data);
-    });
-
-    socket.on('manifestUpdate', (data) => {
+    instance.on('manifestUpdate', (data) => {
         console.log('Manifest update received:', data);
     });
 
-    socket.on('emergency_override', (data) => {
-      console.log('Emergency override received:', data);
+    instance.on('emergency_override', (data) => {
       const { triggerInterrupt } = useInterruptStore.getState();
       triggerInterrupt(data);
     });
 
-    set({ socket });
+    set({ socket: instance });
   },
 
   disconnect: () => {
-    const { socket } = get();
-    if (socket) {
-      socket.disconnect();
+    if (instance) {
+      instance.removeAllListeners();
+      if (instance.connected) {
+        instance.disconnect();
+      }
+      instance = null;
       set({ socket: null, connected: false });
     }
   }

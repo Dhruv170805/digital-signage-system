@@ -10,14 +10,14 @@ class IdleService {
         { targetType: "screen", targetIds: { $in: [screenId] } },
         { targetType: "group", targetIds: { $in: [groupId] } }
       ]
-    }).sort({ priority: -1, createdAt: -1 });
+    }).sort({ priority: -1, createdAt: -1 }).limit(50);
 
     // Return the highest priority one
     return configs.length > 0 ? configs[0] : null;
   }
 
   async getAll() {
-    return await IdleConfig.find().sort({ targetType: 1, priority: -1 });
+    return await IdleConfig.find().sort({ targetType: 1, priority: -1 }).limit(500);
   }
 
   async create(data) {

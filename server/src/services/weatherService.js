@@ -18,7 +18,7 @@ class WeatherService {
     try {
       // Get all unique locations from active screens
       const Screen = require('../models/Screen');
-      const screens = await Screen.find({ isActive: true });
+      const screens = await Screen.find({ isActive: true }).limit(2000);
       const locations = [...new Set(screens.map(s => s.location).filter(Boolean))];
       
       if (locations.length === 0) {

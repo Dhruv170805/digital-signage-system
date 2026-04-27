@@ -10,12 +10,22 @@ pdfjs.GlobalWorkerOptions.workerSrc = '/workers/pdf.worker.min.mjs';
 const PdfRenderer = ({ url, zone }) => {
   const [numPages, setNumPages] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [containerWidth, setContainerWidth] = useState(800);
   const { setBlockedZones, resetLayout } = useLayoutStore();
   const containerRef = useRef(null);
   const scrollRef = useRef(null);
 
-  // 🧠 TEXT AVOIDANCE ENGINE: Detect text regions to avoid covering them with HUD
-  // FIX: Optimized with clustering to prevent DOM flooding / re-render storm
+  // 🧠 RESIZE OBSERVER: Safe width detection
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const observer = new ResizeObserver((entries) => {
+      if (entries[0]) setContainerWidth(entries[0].contentRect.width);
+    });
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  // 🧠 TEXT AVOIDANCE ENGINE
   const handlePageRenderSuccess = useCallback(async (page) => {
     try {
       const textContent = await page.getTextContent();
@@ -29,12 +39,10 @@ const PdfRenderer = ({ url, zone }) => {
           w: (w / viewport.width) * 100,
           h: (h / viewport.height) * 100
         };
-      }).filter(z => z.h > 2.0); // Ignore tiny text
+      }).filter(z => z.h > 2.0);
 
-      // Simple Clustering: Merge overlapping or near zones to reduce object count
       const clusteredZones = [];
       if (rawZones.length > 0) {
-          // Identify top and bottom text density broad zones (simplified for performance)
           const topText = rawZones.some(z => z.y < 15);
           const bottomText = rawZones.some(z => z.y > 85);
           if (topText) clusteredZones.push({ x: 0, y: 0, w: 100, h: 15 });
@@ -51,7 +59,6 @@ const PdfRenderer = ({ url, zone }) => {
     return () => resetLayout(); 
   }, [resetLayout]);
 
-  // 🧠 MODE LOGIC
   const mode = useMemo(() => {
     if (!zone) return 'fit';
     const { w, h } = zone;
@@ -64,7 +71,6 @@ const PdfRenderer = ({ url, zone }) => {
     setNumPages(numPages);
   };
 
-  // 🚀 SLIDE MODE
   useEffect(() => {
     if (mode !== 'slide' || !numPages || numPages <= 1) return;
     const interval = setInterval(() => {
@@ -73,7 +79,6 @@ const PdfRenderer = ({ url, zone }) => {
     return () => clearInterval(interval);
   }, [mode, numPages]);
 
-  // 🚀 SCROLL MODE
   useEffect(() => {
     if (mode !== 'scroll') return;
     let animationFrame;
@@ -95,7 +100,6 @@ const PdfRenderer = ({ url, zone }) => {
       ref={containerRef}
       className="w-full h-full bg-black overflow-hidden relative flex items-center justify-center"
     >
-      {/* 2. MAIN DOCUMENT STAGE */}
       <div 
         ref={scrollRef}
         className={`w-full h-full relative z-10 flex justify-center hide-scrollbar ${mode === 'scroll' ? 'overflow-y-auto' : 'overflow-hidden items-center'}`}
@@ -116,7 +120,7 @@ const PdfRenderer = ({ url, zone }) => {
                     <Page 
                         key={index}
                         pageNumber={index + 1} 
-                        width={containerRef.current ? containerRef.current.offsetWidth : 800}
+                        width={containerWidth}
                         onRenderSuccess={handlePageRenderSuccess}
                         renderTextLayer={false}
                         renderAnnotationLayer={false}
@@ -129,7 +133,7 @@ const PdfRenderer = ({ url, zone }) => {
                 <div className="w-full h-full flex items-center justify-center">
                     <Page 
                         pageNumber={currentPage} 
-                        width={containerRef.current ? containerRef.current.offsetWidth : 800}
+                        width={containerWidth}
                         onRenderSuccess={handlePageRenderSuccess}
                         renderTextLayer={false}
                         renderAnnotationLayer={false}

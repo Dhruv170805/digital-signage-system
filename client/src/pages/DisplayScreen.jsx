@@ -18,6 +18,7 @@ const DisplayScreen = () => {
   const { tickerPosition } = useLayoutStore();
   
   const [playlist, setPlaylist] = useState([]);
+  const [allMedia, setAllMedia] = useState([]);
   const [currentIdx, setCurrentIdx] = useState(0);
   
   const [tickers, setTickers] = useState([]);
@@ -25,6 +26,7 @@ const DisplayScreen = () => {
 
   const [idleConfig, setIdleConfig] = useState(null);
   const [time, setTime] = useState(new Date());
+  const [screenInfo, setScreenInfo] = useState(null);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
 
@@ -79,17 +81,25 @@ const DisplayScreen = () => {
     const authConfig = { headers: token ? { Authorization: `Bearer ${token}` } : {} };
 
     let apiBase = (import.meta.env.VITE_API_URL || '').replace(/\/api\/?$/, '').replace(/\/$/, '');
-    if (!apiBase && typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-        apiBase = 'http://localhost:5006';
+    
+    if (!apiBase) {
+        console.error('📡 SIGNAL FAILURE: VITE_API_URL environment variable is missing.');
     }
 
     try {
       const endpoint = token ? '/api/screens/manifest' : '/api/screens/public-manifest';
       const res = await axios.get(`${apiBase}${endpoint}`, authConfig);
       
-      const { playlist: newPlaylist = [], tickers: newTickers = [], idleConfig: newIdle = null } = res.data;
+      const { 
+        playlist: newPlaylist = [], 
+        tickers: newTickers = [], 
+        idleConfig: newIdle = null, 
+        media: newMedia = [],
+        screen: newScreen = null
+      } = res.data;
       
       setIsOffline(false);
+      if (newScreen) setScreenInfo(newScreen);
 
       const currentIds = playlistRef.current.map(p => p._id || p.id).join(',');
       const newIds = newPlaylist.map(p => p._id || p.id).join(',');
@@ -101,6 +111,7 @@ const DisplayScreen = () => {
       }
 
       setTickers(newTickers);
+      setAllMedia(newMedia);
       setIdleConfig(newIdle);
     } catch (err) {
       if (err.response && (err.response.status === 401 || err.response.status === 403) && token) {
@@ -112,7 +123,7 @@ const DisplayScreen = () => {
     } finally {
       setTimeout(() => { setIsInitialLoading(false); }, 1000);
     }
-  }, [screenToken]);
+  }, [screenToken, screenInfo?.location]); // Added screenToken dependency check
 
   useEffect(() => {
     const handleResize = () => {
@@ -141,22 +152,30 @@ const DisplayScreen = () => {
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
+useEffect(() => {
+  const rawToken = screenToken;
+  const persistentDeviceToken = localStorage.getItem('deviceToken');
 
-  useEffect(() => {
-    const token = screenToken;
-    const deviceToken = localStorage.getItem('deviceToken');
-    
-    let apiBase = (import.meta.env.VITE_API_URL || '');
-    if (!apiBase && typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-        apiBase = 'http://localhost:5006';
-    }
+  // 🧠 Intelligence: Distinguish between JWT and Device Token
+  // Device tokens are 64-character hex strings. JWTs have dots.
+  const isDeviceToken = rawToken && rawToken.length === 64 && !rawToken.includes('.');
 
-    const socket = io(apiBase, {
-      auth: { token, deviceToken },
-      transports: ['websocket', 'polling'],
-      reconnection: true,
-      reconnectionDelay: 1000
-    });
+  const auth = {
+    token: isDeviceToken ? null : rawToken,
+    deviceToken: isDeviceToken ? rawToken : persistentDeviceToken
+  };
+
+  // 🛡️ Resolve API Base for socket
+  let apiBase = (import.meta.env.VITE_API_URL || '');
+  if (!apiBase) {
+      console.error('🌐 CONNECTION FAILURE: VITE_API_URL is required for WebSocket synchronization.');
+  }
+
+  const socket = io(apiBase, {    auth,
+    transports: ['websocket', 'polling'],
+    reconnection: true,
+    reconnectionDelay: 1000
+  });
     
     socketRef.current = socket;
     
@@ -164,13 +183,13 @@ const DisplayScreen = () => {
     const t = setInterval(() => setTime(new Date()), 1000);
     const hb = setInterval(() => {
         const telemetry = getTelemetry();
-        if (token && socket.connected) socket.emit('screenPing', { token, telemetry });
+        if (rawToken && socket.connected) socket.emit('screenPing', { token: rawToken, telemetry });
     }, 10000);
 
     socket.on('connect', () => {
       setIsOffline(false);
       const telemetry = getTelemetry();
-      if (token) socket.emit('screenPing', { token, telemetry });
+      if (rawToken) socket.emit('screenPing', { token: rawToken, telemetry });
     });
 
     socket.on('manifestUpdate', () => fetchData());
@@ -181,7 +200,11 @@ const DisplayScreen = () => {
         socket.off('connect');
         socket.off('manifestUpdate');
         socket.off('forceReset');
-        setTimeout(() => socket.disconnect(), 10);
+        
+        // Only disconnect if established to prevent DEV mode handshake errors
+        if (socket.connected) {
+            socket.disconnect();
+        }
       }
       clearInterval(t);
       clearInterval(hb);
@@ -270,7 +293,7 @@ const DisplayScreen = () => {
               <LocalFramePlayer 
                 zone={frame}
                 frameItems={currentItem.mediaMapping ? currentItem.mediaMapping[frame.i] : []}
-                allMedia={[]} 
+                allMedia={allMedia} 
                 tickers={tickers}
               />
             </div>
@@ -280,9 +303,11 @@ const DisplayScreen = () => {
     }
 
     // SIMPLE MEDIA RENDERER
+    const resolvedAsset = allMedia.find(m => (m._id === currentItem.mediaId || m.id === currentItem.mediaId)) || currentItem;
+
     return (
       <div className="flex-1 relative w-full h-full">
-          <FrameManager item={currentItem} />
+          <FrameManager item={resolvedAsset} />
           
           {/* HUD OVERLAY */}
           <div className="absolute bottom-40 right-12 z-40 max-w-xl text-right animate-fade-in-up" key={currentIdx}>
@@ -332,7 +357,7 @@ const DisplayScreen = () => {
 
       <div className="absolute top-12 right-12 z-50 flex items-center gap-6">
         <div className="bg-white/5 backdrop-blur-3xl border border-white/10 px-8 py-4 rounded-[32px] flex items-center shadow-2xl">
-          <WeatherWidget />
+          <WeatherWidget location={screenInfo?.location} />
         </div>
         <div className="bg-white/5 backdrop-blur-3xl border border-white/10 p-4 rounded-[32px] group hover:bg-white/10 transition-all shadow-2xl">
             <MapPin className="text-white/40 group-hover:text-white transition-colors" size={20} />

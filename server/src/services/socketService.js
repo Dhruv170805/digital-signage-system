@@ -16,10 +16,13 @@ class SocketService {
         const token = socket.handshake.auth.token || socket.handshake.query.token;
         const deviceToken = socket.handshake.auth.deviceToken || socket.handshake.query.deviceToken;
 
+        console.log(`🔌 Incoming socket connection attempt... Auth types: ${token ? '[JWT]' : ''} ${deviceToken ? '[DeviceToken]' : ''}`);
+
         if (token) {
           const jwt = require('jsonwebtoken');
-          const decoded = jwt.verify(token, process.env.JWT_SECRET); // ❌ Removed hardcoded 'secret' fallback
+          const decoded = jwt.verify(token, process.env.JWT_SECRET); 
           socket.user = decoded;
+          console.log(`👤 Socket Auth Success: User ${decoded.id} (${decoded.role})`);
           return next();
         } 
 
@@ -27,28 +30,36 @@ class SocketService {
           const screen = await screenService.getScreenByToken(deviceToken);
           if (screen) {
             socket.screen = screen;
+            console.log(`🖥️ Socket Auth Success: Screen ${screen.screenId} (${screen._id})`);
             return next();
+          } else {
+             console.warn(`⚠️ Socket Auth Failed: Invalid DeviceToken "${deviceToken.substring(0,8)}..."`);
           }
         }
 
-        // ❌ REJECT unauthenticated connections
+        console.warn('❌ Socket Auth Denied: No valid credentials provided');
         return next(new Error('Authentication failed: Valid User or Device token required'));
       } catch (err) {
-        console.warn('Socket auth handshake failure:', err.message);
+        console.warn('❌ Socket Handshake Failure:', err.message);
         return next(new Error('Authentication failed: Invalid credentials'));
       }
     });
 
     this.io.on('connection', (socket) => {
-      console.log('New socket connection:', socket.id, socket.user ? `User: ${socket.user.id}` : socket.screen ? `Screen: ${socket.screen.screenId}` : 'Unknown');
+      const identity = socket.user ? `User: ${socket.user.id}` : socket.screen ? `Screen: ${socket.screen.screenId}` : 'Unknown';
+      console.log(`✅ Socket connected: ${socket.id} (${identity})`);
 
       // Join admin room if user is admin
       if (socket.user && socket.user.role === 'admin') {
+        console.log(`🛡️ Admin ${socket.user.id} joined monitor room`);
         socket.join('admin:monitor');
       }
 
-      // Send cached weather immediately upon connection
-      socket.emit('weatherUpdate', Object.fromEntries(weatherService.weatherCache));
+      if (socket.screen) {
+        socket.join(`screen:${socket.screen._id}`);
+        if (socket.screen.groupId) socket.join(`group:${socket.screen.groupId}`);
+        console.log(`📺 Screen ${socket.screen.screenId} joined rooms [screen:${socket.screen._id}, group:${socket.screen.groupId}]`);
+      }
 
       socket.on('heartbeat', async (data) => {
         // Only allow screens to send heartbeats

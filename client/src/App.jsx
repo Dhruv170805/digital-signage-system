@@ -12,10 +12,14 @@ const ProtectedRoute = ({ children, allowedRole }) => {
   const token = useAuthStore((state) => state.token);
   const user = useAuthStore((state) => state.user);
   
-  if (!token) return <Navigate to="/login" />;
-  if (allowedRole && user?.role !== allowedRole) {
-    return <Navigate to={user?.role === 'admin' ? '/admin' : '/user'} />;
+  if (!token || !user) {
+    return <Navigate to="/login" replace />;
   }
+  
+  if (allowedRole && user.role !== allowedRole) {
+    return <Navigate to={user.role === 'admin' ? '/admin' : '/user'} replace />;
+  }
+  
   return children;
 };
 
@@ -36,6 +40,7 @@ function App() {
         });
         setUser(userRes.data);
       } catch (err) {
+        console.error("Auth initialization failed:", err);
         logout();
       } finally {
         setIsInitializing(false);

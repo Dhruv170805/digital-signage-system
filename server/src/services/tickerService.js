@@ -7,7 +7,7 @@ class TickerService {
   }
 
   async getAll() {
-    return await Ticker.find().sort({ priority: -1 });
+    return await Ticker.find().sort({ priority: -1 }).limit(500);
   }
 
   async getById(id) {
@@ -46,7 +46,7 @@ class TickerService {
       query.$or.push({ targetType: 'group', targetIds: { $in: [groupId.toString()] } });
     }
 
-    const tickers = await Ticker.find(query).sort({ priority: -1 });
+    const tickers = await Ticker.find(query).sort({ priority: -1 }).limit(100);
 
     const validTickers = tickers.filter(t => {
       if (t.startTime && t.endTime) {

@@ -3,15 +3,15 @@ const fs = require('fs');
 
 class MediaService {
   async getAllApproved() {
-    return await Media.find({ status: 'approved' }).sort({ createdAt: -1 });
+    return await Media.find({ status: 'approved' }).sort({ createdAt: -1 }).limit(2000);
   }
 
   async getPending() {
-    return await Media.find({ status: 'pending' }).sort({ createdAt: -1 });
+    return await Media.find({ status: 'pending' }).sort({ createdAt: -1 }).limit(500);
   }
 
   async getByUser(userId) {
-    return await Media.find({ uploadedBy: userId }).sort({ createdAt: -1 });
+    return await Media.find({ uploadedBy: userId }).sort({ createdAt: -1 }).limit(500);
   }
 
   async createMedia(data) {

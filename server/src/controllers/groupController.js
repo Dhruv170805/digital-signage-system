@@ -3,7 +3,7 @@ const ScreenGroup = require('../models/ScreenGroup');
 class GroupController {
   async getAll(req, res, next) {
     try {
-      const groups = await ScreenGroup.find().populate('screens');
+      const groups = await ScreenGroup.find().populate('screens').limit(500);
       res.json(groups);
     } catch (error) {
       next(error);
@@ -22,8 +22,16 @@ class GroupController {
 
   async delete(req, res, next) {
     try {
-      await ScreenGroup.findByIdAndDelete(req.params.id);
-      res.json({ message: 'Group deleted' });
+      const Screen = require('../models/Screen');
+      const groupId = req.params.id;
+
+      // 1. Atomically unassign all screens in this group
+      await Screen.updateMany({ groupId }, { $set: { groupId: null } });
+
+      // 2. Delete the group
+      await ScreenGroup.findByIdAndDelete(groupId);
+      
+      res.json({ message: 'Group dissolved and screens unassigned safely' });
     } catch (error) {
       next(error);
     }

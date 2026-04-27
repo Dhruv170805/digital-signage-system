@@ -105,7 +105,13 @@ class MediaController {
       if (endDate && endTime) {
           updateData.requestedEndTime = new Date(`${endDate}T${endTime}`);
       } else if (endDate) {
-          updateData.requestedEndTime = new Date(endDate);
+          const end = new Date(endDate);
+          end.setHours(23, 59, 59, 999);
+          updateData.requestedEndTime = end;
+      } else if (media.requestedEndTime) {
+          const end = new Date(media.requestedEndTime);
+          end.setHours(23, 59, 59, 999);
+          updateData.requestedEndTime = end;
       }
 
       if (priority) updateData.requestedPriority = Number(priority);
@@ -136,21 +142,33 @@ class MediaController {
           status: 'approved'
       };
 
-      const type = targetType || media.requestedTargetType || 'all';
-      const tid = targetId || media.requestedTargetId;
+      const tid = (targetId || media.requestedTargetId || "").toString().trim();
 
-      if (type === 'all') {
+      if (type === 'all' || tid === "") {
           assignmentData.isGlobal = true;
-      } else if (type === 'screen' && tid) {
+          assignmentData.screenId = null;
+          assignmentData.groupId = null;
+      } else if (type === 'screen') {
           assignmentData.screenId = tid;
-      } else if (type === 'group' && tid) {
+          assignmentData.groupId = null;
+      } else if (type === 'group') {
           assignmentData.groupId = tid;
+          assignmentData.screenId = null;
       }
 
       await assignmentService.createAssignment(assignmentData);
 
       const screenService = require('../services/screenService');
-      await screenService.broadcastManifestUpdate();
+      if (assignmentData.isGlobal) {
+        await screenService.broadcastManifestUpdate();
+      } else if (assignmentData.screenId) {
+        await screenService.pushManifestToScreen(assignmentData.screenId);
+      } else if (assignmentData.groupId) {
+        const screens = await screenService.getScreensByGroup(assignmentData.groupId);
+        for (const s of screens) {
+          await screenService.pushManifestToScreen(s._id);
+        }
+      }
       
       res.json(this._formatMedia(media));
     } catch (error) {

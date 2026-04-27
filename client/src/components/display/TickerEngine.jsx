@@ -26,7 +26,7 @@ const TickerEngine = ({ ticker }) => {
     const split = ticker.text.split('\n').filter(m => m.trim() !== '');
     // If text is too short, we repeat the array internally to ensure it fills the width
     return split.length < 5 ? [...split, ...split, ...split] : split;
-  }, [ticker?.text]);
+  }, [ticker.text]);
 
   if (messages.length === 0) return null;
 

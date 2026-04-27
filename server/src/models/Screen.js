@@ -13,7 +13,11 @@ const screenSchema = new mongoose.Schema({
   deviceToken: { type: String, required: true, unique: true },
   isActive: { type: Boolean, default: true },
   resolution: { type: String, default: '1920x1080' },
-  groupId: { type: mongoose.Schema.Types.ObjectId, ref: 'ScreenGroup' },
+  groupId: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'ScreenGroup',
+    set: v => v === '' ? null : v
+  },
   lastSeen: { type: Date },
   telemetry: {
     cpuTemp: Number,
@@ -21,6 +25,16 @@ const screenSchema = new mongoose.Schema({
     uptime: Number,
     diskSpace: Number
   },
-}, { timestamps: true });
+}, { 
+  timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
+});
+
+// Virtual for registration URL
+screenSchema.virtual('registrationUrl').get(function() {
+  const baseUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+  return `${baseUrl}/display?token=${this.deviceToken}`;
+});
 
 module.exports = mongoose.model('Screen', screenSchema);

@@ -66,11 +66,32 @@ const TickerManager = () => {
                         </div>
                     </div>
 
-                    <div className="relative group p-1 bg-slate-900 rounded-[32px] overflow-hidden shadow-2xl">
-                        <div className="relative h-20 bg-black rounded-[28px] overflow-hidden flex items-center shadow-inner border border-white/5">
-                            {draftTicker.text || draftTicker.linkUrl ? <TickerEngine ticker={draftTicker} /> : <div className="w-full text-center text-[10px] font-black uppercase text-slate-700 tracking-[12px] animate-pulse">Awaiting Signal</div>}
+                    <div className="relative group p-1 bg-slate-900 rounded-[32px] overflow-hidden shadow-2xl transition-all duration-500">
+                        {/* Dynamic Height Preview Container */}
+                        <div 
+                            className="relative bg-black rounded-[28px] overflow-hidden flex items-center shadow-inner border border-white/5 transition-all duration-500"
+                            style={{ 
+                                height: draftTicker.fontSize === 'text-6xl' ? '160px' : 
+                                        draftTicker.fontSize === 'text-4xl' ? '120px' : 
+                                        draftTicker.fontSize === 'text-2xl' ? '90px' : '80px'
+                            }}
+                        >
+                            <div className="absolute top-2 left-6 z-20">
+                                <span className="text-[8px] font-black text-indigo-400 uppercase tracking-[3px]">Real-time Visualization</span>
+                            </div>
+                            
+                            {draftTicker.text || draftTicker.linkUrl ? (
+                                <TickerEngine ticker={draftTicker} />
+                            ) : (
+                                <div className="w-full text-center text-[10px] font-black uppercase text-slate-700 tracking-[12px] animate-pulse">Awaiting Signal</div>
+                            )}
+                            
+                            {/* Cinematic Overlays */}
                             <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-black to-transparent pointer-events-none z-10" />
                             <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-black to-transparent pointer-events-none z-10" />
+                            
+                            {/* Scale Reference Line */}
+                            <div className="absolute bottom-0 left-0 right-0 h-px bg-white/5" />
                         </div>
                     </div>
                 </div>
@@ -99,8 +120,18 @@ const TickerManager = () => {
                                     <h4 className="text-[10px] font-black uppercase text-emerald-600 mb-6 flex items-center gap-3"><div className="w-6 h-px bg-emerald-600/30" /> Targeting Logic</h4>
                                     <div className="grid grid-cols-2 gap-6">
                                         <div className="space-y-2"><label className="text-[9px] font-black uppercase text-slate-500 ml-1">Cluster</label><select className="nexus-input bg-slate-50 border-slate-200" value={draftTicker.targetType} onChange={(e) => setDraftTicker({ ...draftTicker, targetType: e.target.value, targetIds: [] })}><option value="all">Global Broadcast</option><option value="group">Cluster Group</option><option value="screen">Specific Node</option></select></div>
-                                        <div className="space-y-2"><label className="text-[9px] font-black uppercase text-slate-500 ml-1">Priority</label><input type="number" value={draftTicker.priority} onChange={(e) => setDraftTicker({ ...draftTicker, priority: Number(e.target.value) })} className="nexus-input bg-slate-50 border-slate-200"/></div>
-                                    </div>
+                                        <div className="space-y-2">
+                                           <label className="text-[9px] font-black uppercase text-slate-500 ml-1">Priority</label>
+                                           <select 
+                                               className="nexus-input bg-slate-50 border-slate-200 text-[10px] font-black uppercase"
+                                               value={draftTicker.priority} 
+                                               onChange={(e) => setDraftTicker({ ...draftTicker, priority: Number(e.target.value) })}
+                                           >
+                                               <option value="1">Low</option>
+                                               <option value="5">Medium</option>
+                                               <option value="10">High</option>
+                                           </select>
+                                        </div>                                    </div>
                                     {draftTicker.targetType !== 'all' && (
                                         <div className="mt-6 space-y-2"><label className="text-[9px] font-black uppercase text-slate-500 ml-1">Identity Selection</label><select multiple className="nexus-input h-32 custom-scrollbar text-xs font-bold bg-slate-50 border-slate-200" value={draftTicker.targetIds} onChange={(e) => { const options = Array.from(e.target.options); setDraftTicker({ ...draftTicker, targetIds: options.filter(o => o.selected).map(o => o.value) }); }}>{draftTicker.targetType === 'screen' ? screens.map(s => <option key={s._id} value={s._id}>{s.name}</option>) : groups.map(g => <option key={g._id} value={g._id}>{g.name}</option>)}</select></div>
                                     )}

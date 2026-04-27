@@ -38,15 +38,19 @@ class AssignmentService {
       ]
     };
 
-    if (groupId) {
+    if (groupId && groupId !== "") {
       query.$or.push({ groupId: groupId });
+    } else {
+      // If screen has no group, it can receive assignments specifically targeted to 'null' (ungrouped)
+      query.$or.push({ groupId: null });
     }
 
     const assignments = await Assignment.find(query)
       .populate('mediaId')
       .populate('templateId')
       .populate('tickerId')
-      .sort({ priority: -1, updatedAt: -1 });
+      .sort({ priority: -1, updatedAt: -1 })
+      .limit(1000); // Safety limit added by MATS-StaticAnalyst
 
     const validAssignments = assignments.filter(a => {
       // Days of week check

@@ -3,7 +3,7 @@ const { generateDeviceToken } = require('../utils/generateToken');
 
 class ScreenService {
   async getAllScreens() {
-    return await Screen.find().populate('groupId');
+    return await Screen.find().populate('groupId').limit(1000);
   }
 
   async getScreenById(id) {
@@ -27,7 +27,9 @@ class ScreenService {
   }
 
   async updateScreen(id, data) {
-    return await Screen.findByIdAndUpdate(id, data, { new: true });
+    const updateData = { ...data };
+    if (updateData.groupId === '') updateData.groupId = null;
+    return await Screen.findByIdAndUpdate(id, updateData, { new: true });
   }
 
   async deleteScreen(id) {
@@ -61,7 +63,7 @@ class ScreenService {
 
   async getManifest(screenId, groupId) {
     const { redisClient } = require('../config/redis');
-    const cacheKey = `manifest:${screenId || 'public'}`;
+    const cacheKey = `manifest:${screenId ? screenId.toString() : 'public'}`;
 
     // Try to get from cache first
     try {
@@ -93,9 +95,39 @@ class ScreenService {
       idleConfig
     };
 
+    // 🧠 Intelligent Cache TTL Calculation
+    // Default 1 hour, but if we have future assignments, expire exactly when the next one starts.
+    let ttl = 3600;
+    try {
+      const Assignment = require('../models/Assignment');
+      const now = new Date();
+      // Find the next assignment that WILL start soon
+      const nextFuture = await Assignment.findOne({
+        isActive: true,
+        status: 'approved',
+        startDate: { $lte: now },
+        endDate: { $gte: now },
+        startTime: { $gt: `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}` },
+        $or: [{ screenId: screenId }, { isGlobal: true }, { groupId: groupId }]
+      }).sort({ startTime: 1 });
+
+      if (nextFuture && nextFuture.startTime) {
+        const [h, m] = nextFuture.startTime.split(':').map(Number);
+        const nextStart = new Date();
+        nextStart.setHours(h, m, 0, 0);
+        const secondsUntilNext = Math.floor((nextStart.getTime() - Date.now()) / 1000);
+        if (secondsUntilNext > 0 && secondsUntilNext < ttl) {
+          ttl = secondsUntilNext;
+          console.log(`⏱️ Reducing manifest cache TTL to ${ttl}s due to future assignment: ${nextFuture.name}`);
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to calculate intelligent TTL:', err.message);
+    }
+
     // Cache the result
     try {
-      await redisClient.setex(cacheKey, 3600, JSON.stringify(manifest));
+      await redisClient.setex(cacheKey, ttl, JSON.stringify(manifest));
     } catch (err) {
       console.warn('Redis cache write failed for manifest:', err.message);
     }
@@ -107,10 +139,27 @@ class ScreenService {
     return await this.getManifest(null, null);
   }
 
+  async getScreensByGroup(groupId) {
+    return await Screen.find({ groupId });
+  }
+
+  async invalidateScreenCache(screenId) {
+    const { redisClient } = require('../config/redis');
+    const cacheKey = `manifest:${screenId ? screenId.toString() : 'public'}`;
+    try {
+      await redisClient.del(cacheKey);
+    } catch (err) {
+      console.warn('Failed to clear manifest cache for screen:', screenId, err.message);
+    }
+  }
+
   async pushManifestToScreen(screenId) {
     const socketService = require('./socketService');
     const screen = await this.getScreenById(screenId);
     if (!screen) return;
+
+    // Invalidate cache before pushing to ensure fresh data
+    await this.invalidateScreenCache(screen._id);
 
     const manifest = await this.getManifest(screen._id, screen.groupId);
     socketService.notifyScreen(screen._id, 'manifestUpdate', {

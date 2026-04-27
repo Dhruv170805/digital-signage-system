@@ -4,9 +4,10 @@
 All admin routes require a `Bearer <token>` in the `Authorization` header.
 
 ## Screens
-* **GET** `/api/screens`: List all screens.
-* **GET** `/api/screens/:id`: Get screen details.
-* **GET** `/api/screens/:id/playlist`: Get the current active playlist for a screen (Evaluated by PlaylistEngine).
+* **GET** `/api/screens`: List all screens (Includes `qrCode` as Base64 data URI).
+* **GET** `/api/screens/:id`: Get screen details (Includes `qrCode`).
+* **GET** `/api/screens/me`: Get current screen identity.
+* **GET** `/api/screens/manifest`: Get the full evaluated manifest for a screen.
 * **PUT** `/api/screens/:id`: Update screen configuration/status.
 
 ## Configuration
@@ -24,8 +25,8 @@ All admin routes require a `Bearer <token>` in the `Authorization` header.
 * **PUT** `/api/templates/:id`: Update a template and its frames (Absolute Coordinates).
 
 ## Schedules
-* **POST** `/api/schedules`: Create a new schedule (Links media/template to screen).
-* **GET** `/api/schedules/active`: Get currently active schedules.
+* **POST** `/api/schedule`: Create a new schedule (Links media/template to screen).
+* **GET** `/api/schedule/active`: Get currently active schedules.
 
 ## Tickers
 * **GET** `/api/tickers`: List all ticker configs.

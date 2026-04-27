@@ -8,40 +8,38 @@ const ModerationModal = ({ isOpen, onClose, item, type, onConfirm, screens, grou
   const [action, setAction] = useState('approve');
   const [reason, setReason] = useState('');
   
-  const [editData, setEditData] = useState({
-    startTime: '', endTime: '', startDate: '', endDate: '',
-    priority: 1, duration: 10, targetType: 'all', targetId: ''
-  });
+  const [editData, setEditData] = useState(() => {
+    if (!item) return {
+      startTime: '', endTime: '', startDate: '', endDate: '',
+      priority: 1, duration: 10, targetType: 'all', targetId: ''
+    };
 
-  useEffect(() => {
-    if (item) {
-      if (type === 'media') {
-        const start = item.requestedStartTime ? new Date(item.requestedStartTime) : new Date();
-        const end = item.requestedEndTime ? new Date(item.requestedEndTime) : new Date(Date.now() + 86400000);
-        setEditData({
-            startTime: start.toTimeString().slice(0, 5),
-            endTime: end.toTimeString().slice(0, 5),
-            startDate: start.toISOString().slice(0, 10),
-            endDate: end.toISOString().slice(0, 10),
-            priority: item.requestedPriority || 1,
-            duration: item.requestedDuration || 10,
-            targetType: item.requestedTargetType || 'all',
-            targetId: item.requestedTargetId || ''
-        });
-      } else {
-        setEditData({
-            startTime: item.startTime || '00:00',
-            endTime: item.endTime || '23:59',
-            startDate: item.startDate ? new Date(item.startDate).toISOString().slice(0, 10) : '',
-            endDate: item.endDate ? new Date(item.endDate).toISOString().slice(0, 10) : '',
-            priority: item.priority || 1,
-            duration: item.duration || 10,
-            targetType: item.isGlobal ? 'all' : (item.screenId ? 'screen' : 'group'),
-            targetId: item.screenId?._id || item.screenId || item.groupId?._id || item.groupId || ''
-        });
-      }
+    if (type === 'media') {
+      const start = item.requestedStartTime ? new Date(item.requestedStartTime) : new Date();
+      const end = item.requestedEndTime ? new Date(item.requestedEndTime) : new Date(Date.now() + 86400000);
+      return {
+          startTime: start.toTimeString().slice(0, 5),
+          endTime: end.toTimeString().slice(0, 5),
+          startDate: start.toISOString().slice(0, 10),
+          endDate: end.toISOString().slice(0, 10),
+          priority: item.requestedPriority || 1,
+          duration: item.requestedDuration || 10,
+          targetType: item.requestedTargetType || 'all',
+          targetId: item.requestedTargetId || ''
+      };
+    } else {
+      return {
+          startTime: item.startTime || '00:00',
+          endTime: item.endTime || '23:59',
+          startDate: item.startDate ? new Date(item.startDate).toISOString().slice(0, 10) : '',
+          endDate: item.endDate ? new Date(item.endDate).toISOString().slice(0, 10) : '',
+          priority: item.priority || 1,
+          duration: item.duration || 10,
+          targetType: item.isGlobal ? 'all' : (item.screenId ? 'screen' : 'group'),
+          targetId: item.screenId?._id || item.screenId || item.groupId?._id || item.groupId || ''
+      };
     }
-  }, [item, type]);
+  });
 
   if (!isOpen || !item) return null;
 
@@ -145,11 +143,12 @@ const ModerationQueue = ({ fetchData, setPreviewFile, setShowPreview }) => {
   const { data: screens = [] } = useScreens();
   const [groups, setGroups] = useState([]);
   const [activeTab, setActiveTab] = useState('media');
+  const [priorityFilter, setPriorityFilter] = useState('all'); // 'all', 1, 5, 10
   const [modItem, setModItem] = useState(null);
   const [showModModal, setShowModModal] = useState(false);
 
   useEffect(() => {
-    const fetchGroups = async () => { try { const res = await api.get('/api/groups'); setGroups(res.data); } catch (e) {} };
+    const fetchGroups = async () => { try { const res = await api.get('/api/groups'); setGroups(res.data); } catch { } };
     fetchGroups();
   }, []);
 
@@ -161,14 +160,43 @@ const ModerationQueue = ({ fetchData, setPreviewFile, setShowPreview }) => {
       toast.success('Protocol Processed');
       refetchMedia(); refetchSchedules();
       if (fetchData) fetchData();
-    } catch (err) { toast.error('Processing failed'); }
+    } catch { toast.error('Processing failed'); }
   };
+
+  const getPriorityLabel = (p) => {
+    if (p >= 10) return 'High';
+    if (p >= 5) return 'Medium';
+    return 'Low';
+  };
+
+  const filterAndSort = (items, isMedia) => {
+    let filtered = [...items];
+    
+    // 1. Filter by Priority
+    if (priorityFilter !== 'all') {
+      const targetP = Number(priorityFilter);
+      filtered = filtered.filter(item => {
+        const p = isMedia ? (item.requestedPriority || 1) : (item.priority || 1);
+        return p === targetP;
+      });
+    }
+
+    // 2. Sort by Priority (High to Low)
+    return filtered.sort((a, b) => {
+      const pa = isMedia ? (a.requestedPriority || 1) : (a.priority || 1);
+      const pb = isMedia ? (b.requestedPriority || 1) : (b.priority || 1);
+      return pb - pa;
+    });
+  };
+
+  const displayMedia = filterAndSort(pendingMedia, true);
+  const displaySchedules = filterAndSort(pendingSchedules, false);
 
   return (
     <div className="animate-fade-in h-full flex flex-col">
        <div className="flex flex-col h-full overflow-hidden">
           <div className="bg-white p-8 border-b border-slate-200 shrink-0">
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8">
                 <div>
                     <div className="flex items-center gap-3 mb-2"><CheckSquare className="text-indigo-600" size={16} /><span className="text-[10px] font-black uppercase tracking-[4px] text-indigo-600">Compliance Hub</span></div>
                     <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter">Moderation Studio</h2>
@@ -178,16 +206,36 @@ const ModerationQueue = ({ fetchData, setPreviewFile, setShowPreview }) => {
                     <button onClick={() => setActiveTab('schedule')} className={`px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'schedule' ? 'bg-white text-black shadow-xl' : 'text-slate-500 hover:text-slate-900'}`}>Schedules ({pendingSchedules.length})</button>
                 </div>
             </div>
+
+            {/* PRIORITY FILTER BAR */}
+            <div className="flex items-center gap-4 bg-slate-50 p-2 rounded-2xl border border-slate-200 w-fit">
+                <span className="text-[8px] font-black uppercase text-slate-400 ml-4 mr-2 tracking-widest">Filter by priority:</span>
+                {[
+                    { label: 'All', value: 'all', color: 'text-slate-500' },
+                    { label: 'High', value: '10', color: 'text-rose-600' },
+                    { label: 'Medium', value: '5', color: 'text-amber-600' },
+                    { label: 'Low', value: '1', color: 'text-emerald-600' }
+                ].map(f => (
+                    <button 
+                        key={f.value}
+                        onClick={() => setPriorityFilter(f.value)}
+                        className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${priorityFilter === f.value ? 'bg-white shadow-md ' + f.color : 'text-slate-400 hover:text-slate-600'}`}
+                    >
+                        {f.label}
+                    </button>
+                ))}
+            </div>
           </div>
 
           <div className="flex-1 overflow-y-auto custom-scrollbar p-10 bg-slate-50/30">
             {activeTab === 'media' ? (
-                (!pendingMedia || pendingMedia.length === 0) ? (
+                (!displayMedia || displayMedia.length === 0) ? (
                     <div className="text-center py-40 border-2 border-dashed border-slate-200 rounded-[60px] bg-white"><div className="w-20 h-20 bg-emerald-50 rounded-3xl flex items-center justify-center mx-auto mb-6"><CheckCircle className="text-emerald-500" size={32} /></div><p className="text-slate-400 uppercase font-black tracking-[8px] text-[10px]">Compliance Buffer Clear</p></div>
                 ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
-                    {pendingMedia.map(m => (
-                        <div key={m._id || m.id} className="p-8 bg-white border border-slate-200 rounded-[48px] transition-all hover:border-indigo-400 hover:shadow-2xl group flex flex-col">
+                    {displayMedia.map(m => (
+                        <div key={m._id || m.id} className="p-8 bg-white border border-slate-200 rounded-[48px] transition-all hover:border-indigo-400 hover:shadow-2xl group flex flex-col relative">
+                            <div className="absolute top-10 right-10 z-10"><span className={`px-4 py-1.5 rounded-full text-[8px] font-black uppercase tracking-widest border shadow-sm ${m.requestedPriority >= 10 ? 'bg-rose-50 text-rose-600 border-rose-100' : m.requestedPriority >= 5 ? 'bg-amber-50 text-amber-600 border-amber-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>{getPriorityLabel(m.requestedPriority)}</span></div>
                             <div className="aspect-video bg-slate-950 rounded-[32px] overflow-hidden mb-8 border-4 border-slate-900 relative shadow-inner">
                                 {m.fileType === 'video' ? <video src={m.filePath ? `${import.meta.env.VITE_API_URL}/${m.filePath}`.replace(/([^:]\/)\/+/g, "$1") : undefined} className="w-full h-full object-cover opacity-60 grayscale group-hover:grayscale-0 transition-all duration-700" /> :
                                  m.fileType === 'pdf' ? <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900"><File className="text-indigo-500/40 mb-3" size={40} /><span className="text-[10px] font-black text-indigo-500/40 uppercase">PDF</span></div> :
@@ -201,13 +249,13 @@ const ModerationQueue = ({ fetchData, setPreviewFile, setShowPreview }) => {
                 </div>
                 )
             ) : (
-                (!pendingSchedules || pendingSchedules.length === 0) ? (
+                (!displaySchedules || displaySchedules.length === 0) ? (
                     <div className="text-center py-40 border-2 border-dashed border-slate-200 rounded-[60px] bg-white"><div className="w-20 h-20 bg-indigo-50 rounded-3xl flex items-center justify-center mx-auto mb-6"><Calendar className="text-indigo-600" size={32} /></div><p className="text-slate-400 uppercase font-black tracking-[8px] text-[10px]">Manifest Clearance Clear</p></div>
                 ) : (
                     <div className="space-y-6">
-                        {pendingSchedules.map(s => (
+                        {displaySchedules.map(s => (
                             <div key={s._id || s.id} className="p-8 bg-white border border-slate-200 rounded-[40px] flex items-center justify-between group hover:border-indigo-400 hover:shadow-2xl transition-all">
-                                <div className="flex items-center gap-8"><div className="w-16 h-16 rounded-[24px] bg-indigo-50 flex items-center justify-center border border-indigo-100 text-indigo-600">{s.templateId ? <Layers size={28}/> : <Play size={28}/>}</div><div><p className="text-[10px] font-black text-slate-400 uppercase mb-1">{s.templateId ? 'Protocol' : 'Broadcast'}</p><h4 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">{s.name}</h4><div className="flex items-center gap-4 mt-3"><span className="text-[10px] font-bold text-slate-500 uppercase bg-slate-50 px-3 py-1 rounded-lg border border-slate-100 flex items-center gap-1.5"><Monitor size={12}/> {s.isGlobal ? 'Global' : 'Targeted'}</span><span className="text-[10px] font-bold text-amber-600 uppercase bg-amber-50 px-3 py-1 rounded-lg border border-amber-100 flex items-center gap-1.5"><AlertTriangle size={12}/> Priority {s.priority}</span></div></div></div>
+                                <div className="flex items-center gap-8"><div className="w-16 h-16 rounded-[24px] bg-indigo-50 flex items-center justify-center border border-indigo-100 text-indigo-600">{s.templateId ? <Layers size={28}/> : <Play size={28}/>}</div><div><p className="text-[10px] font-black text-slate-400 uppercase mb-1">{s.templateId ? 'Protocol' : 'Broadcast'}</p><h4 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">{s.name}</h4><div className="flex items-center gap-4 mt-3"><span className="text-[10px] font-bold text-slate-500 uppercase bg-slate-50 px-3 py-1 rounded-lg border border-slate-100 flex items-center gap-1.5"><Monitor size={12}/> {s.isGlobal ? 'Global' : 'Targeted'}</span><span className={`text-[10px] font-bold uppercase bg-opacity-10 px-3 py-1 rounded-lg border flex items-center gap-1.5 ${s.priority >= 10 ? 'text-rose-600 bg-rose-50 border-rose-100' : s.priority >= 5 ? 'text-amber-600 bg-amber-50 border-amber-100' : 'text-emerald-600 bg-emerald-50 border-emerald-100'}`}><AlertTriangle size={12}/> {getPriorityLabel(s.priority)} Priority</span></div></div></div>
                                 <div className="flex items-center gap-8"><div className="text-right pr-8 border-r border-slate-100"><p className="text-[9px] font-black text-slate-400 uppercase mb-2 flex justify-end items-center gap-1"><Clock size={10}/> Deployment</p><p className="text-[10px] font-black text-indigo-600 tabular-nums bg-indigo-50 px-3 py-1 rounded-lg border border-indigo-100">{s.startTime} — {s.endTime}</p></div><button onClick={() => { setModItem(s); setShowModModal(true); }} className="px-10 py-5 bg-indigo-600 text-white rounded-[24px] font-black uppercase text-[10px] tracking-[4px] hover:bg-indigo-700 shadow-xl transition-all">Evaluate Request</button></div>
                             </div>
                         ))}

@@ -12,23 +12,20 @@ const LayoutArchitect = ({ fetchData }) => {
   const [activeTab, setActiveTab] = useState('editor'); 
   const architectRef = useRef(null);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
-  const [collisions, setCollisions] = useState([]);
 
   const [isDragging, setIsDragging] = useState(false);
 
-  const checkCollisions = (currentFrames) => {
+  const collisions = React.useMemo(() => {
     const overlapping = new Set();
-    for (let i = 0; i < currentFrames.length; i++) {
-      for (let j = i + 1; j < currentFrames.length; j++) {
-        const a = currentFrames[i];
-        const b = currentFrames[j];
+    for (let i = 0; i < frames.length; i++) {
+      for (let j = i + 1; j < frames.length; j++) {
+        const a = frames[i];
+        const b = frames[j];
         if (a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y) { overlapping.add(a.i); overlapping.add(b.i); }
       }
     }
-    setCollisions(Array.from(overlapping));
-  };
-
-  useEffect(() => { checkCollisions(frames); }, [frames]);
+    return Array.from(overlapping);
+  }, [frames]);
 
   useEffect(() => {
     if (!architectRef.current) return;
@@ -50,7 +47,7 @@ const LayoutArchitect = ({ fetchData }) => {
       refetch();
       if (fetchData) fetchData();
       setActiveTab('inventory');
-    } catch (err) { toast.error('Sync failure'); }
+    } catch { toast.error('Sync failure'); }
   };
 
   const loadTemplate = (t) => {
@@ -62,7 +59,7 @@ const LayoutArchitect = ({ fetchData }) => {
 
   const deleteTemplate = async (id) => {
     if (!window.confirm('Wipe layout?')) return;
-    try { await api.delete(`/api/templates/${id}`); toast.success('Layout Purged'); refetch(); if (fetchData) fetchData(); } catch (err) { toast.error('Purge failed'); }
+    try { await api.delete(`/api/templates/${id}`); toast.success('Layout Purged'); refetch(); if (fetchData) fetchData(); } catch { toast.error('Purge failed'); }
   };
 
   const pctToPx = (pct, total) => (pct / 100) * total;

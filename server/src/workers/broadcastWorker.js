@@ -25,7 +25,7 @@ const broadcastWorker = new Worker('broadcastQueue', async (job) => {
   ]);
 
   // 2. Fetch all active screens
-  const screens = await Screen.find({ isActive: true }).populate('groupId');
+  const screens = await Screen.find({ isActive: true }).populate('groupId').limit(5000);
 
   // 3. Process screens in optimized batches
   const batchSize = 100;

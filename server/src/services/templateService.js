@@ -2,7 +2,7 @@ const Template = require('../models/Template');
 
 class TemplateService {
   async getAll() {
-    return await Template.find();
+    return await Template.find().limit(500);
   }
 
   async getById(id) {

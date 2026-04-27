@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { CloudSun, MapPin } from 'lucide-react';
-import io from 'socket.io-client';
 
 const WeatherWidget = ({ location }) => {
   const [temp, setTemp] = useState('--');
@@ -59,28 +58,23 @@ const WeatherWidget = ({ location }) => {
         }
       }
 
-      // 2. High-Accuracy Browser Geolocation
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          (pos) => fetchWeather(pos.coords.latitude, pos.coords.longitude),
-          async () => {
-            // 3. Ultra-Reliable IP-based Fallback (No user prompt needed)
-            try {
-              const ipRes = await fetch('https://ipapi.co/json/');
-              const ipData = await ipRes.json();
-              if (mounted && ipData.latitude) {
-                fetchWeather(ipData.latitude, ipData.longitude, ipData.city || "Vadodara");
-              }
-            } catch (ipErr) {
-              fetchWeather(22.3072, 73.1812, "Vadodara");
-            }
-          },
-          { enableHighAccuracy: true, timeout: 5000 }
-        );
-      } else {
-        // 4. Global Fallback
-        fetchWeather(22.3072, 73.1812, "Vadodara");
+      // 2. Ultra-Reliable IP-based Geolocation (Silent, no user prompt)
+      // Best for unattended signage/kiosks to avoid "localhost wants your location" prompts
+      try {
+        const ipRes = await fetch('https://ipapi.co/json/');
+        if (ipRes.ok) {
+          const ipData = await ipRes.json();
+          if (mounted && ipData.latitude) {
+            fetchWeather(ipData.latitude, ipData.longitude, ipData.city || "Global Node");
+            return; // Success, stop here
+          }
+        }
+      } catch (e) {
+        console.warn('IP-based geolocation failed:', e);
       }
+
+      // 3. Static Fallback (No prompts possible)
+      if (mounted) setArea("Secure Hub");
     };
 
     initWeather();
