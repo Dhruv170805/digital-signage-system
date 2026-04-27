@@ -1,8 +1,18 @@
 const jwt = require('jsonwebtoken');
 const { redisClient } = require('../config/redis');
+const loggerService = require('../services/loggerService');
 
 const authenticate = async (req, res, next) => {
   const authHeader = req.headers.authorization;
+
+  // Threat detection: log attempts to override role
+  if (req.headers['x-user-role'] || req.headers['x-role']) {
+    loggerService.logAudit(null, 'THREAT_DETECTED', 'Security', null, {
+      ip: req.ip,
+      message: 'Client attempted to override role via headers',
+      headers: req.headers
+    });
+  }
 
   if (authHeader && authHeader.startsWith('Bearer')) {
     try {
@@ -24,6 +34,11 @@ const authenticate = async (req, res, next) => {
       const tokenVersion = decoded.tokenVersion !== undefined ? decoded.tokenVersion : 0;
 
       if (!user || user.tokenVersion !== tokenVersion) {
+        loggerService.logAudit(null, 'THREAT_DETECTED', 'Security', null, {
+          ip: req.ip,
+          message: 'Client used revoked token',
+          userId: decoded.id
+        });
         return res.status(401).json({ success: false, message: 'Token has been revoked' });
       }
 
@@ -35,6 +50,11 @@ const authenticate = async (req, res, next) => {
       next();
     } catch (error) {
       console.error('Auth error:', error.message);
+      loggerService.logAudit(null, 'THREAT_DETECTED', 'Security', null, {
+        ip: req.ip,
+        message: 'Invalid or expired token',
+        error: error.message
+      });
       res.status(401).json({ success: false, message: 'Not authorized, token failed or expired' });
     }
   } else {
@@ -47,6 +67,12 @@ const authorize = (...roles) => {
     if (req.user && roles.includes(req.user.role)) {
       next();
     } else {
+      loggerService.logAudit(req.user ? req.user.id : null, 'AUTHORIZATION_FAILURE', 'Security', null, {
+        ip: req.ip,
+        message: `User attempted to access restricted route requiring ${roles.join(' or ')}`,
+        route: req.originalUrl,
+        userRole: req.user ? req.user.role : 'none'
+      });
       res.status(403).json({ success: false, message: `Not authorized as ${roles.join(' or ')}` });
     }
   };

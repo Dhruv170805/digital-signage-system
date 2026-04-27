@@ -93,6 +93,17 @@ class MediaController {
   approve = async (req, res, next) => {
     try {
       const { startTime, endTime, startDate, endDate, priority, duration, targetType, targetId, ...rest } = req.body;
+      
+      // 🛡️ IDEMPOTENCY CHECK: Ensure media isn't already approved
+      const Media = require('../models/Media');
+      const existingMedia = await Media.findById(req.params.id);
+      
+      if (!existingMedia) return res.status(404).json({ success: false, message: 'Media not found' });
+      if (existingMedia.status === 'approved') {
+        console.warn(`[MATS] Duplicate approval attempt blocked for Media: ${req.params.id}`);
+        return res.json(this._formatMedia(existingMedia));
+      }
+
       const updateData = { status: 'approved', ...rest };
       
       // Combine date and time strings into full Date objects for Media model
@@ -108,8 +119,8 @@ class MediaController {
           const end = new Date(endDate);
           end.setHours(23, 59, 59, 999);
           updateData.requestedEndTime = end;
-      } else if (media.requestedEndTime) {
-          const end = new Date(media.requestedEndTime);
+      } else if (existingMedia.requestedEndTime) {
+          const end = new Date(existingMedia.requestedEndTime);
           end.setHours(23, 59, 59, 999);
           updateData.requestedEndTime = end;
       }
@@ -143,6 +154,7 @@ class MediaController {
       };
 
       const tid = (targetId || media.requestedTargetId || "").toString().trim();
+      const type = targetType || media.requestedTargetType || 'all';
 
       if (type === 'all' || tid === "") {
           assignmentData.isGlobal = true;

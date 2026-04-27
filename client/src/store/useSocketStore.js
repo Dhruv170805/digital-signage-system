@@ -18,7 +18,8 @@ const useSocketStore = create((set, get) => ({
   connect: (deviceToken = null) => {
     // 1. Singleton Check: If we already have a live or connecting instance, stop.
     // This is the "God-Level" fix for React DEV mode double-invocation.
-    if (instance && (instance.connected || instance.io?.readyState === 'opening')) {
+    const currentReadyState = instance?.io?.engine?.readyState || instance?.io?.readyState;
+    if (instance && (instance.connected || currentReadyState === 'opening' || currentReadyState === 'open')) {
       if (!get().socket) set({ socket: instance });
       return;
     }
@@ -26,10 +27,11 @@ const useSocketStore = create((set, get) => ({
     const token = useAuthStore.getState().token;
     const effectiveDeviceToken = deviceToken || localStorage.getItem('deviceToken');
 
-    // 2. Clean up ONLY if we are starting a fresh connection
+    // 2. Clean up ONLY if we are starting a fresh connection and the old one is truly dead
     if (instance) {
       instance.removeAllListeners();
-      instance.close();
+      instance.disconnect();
+      instance = null;
     }
 
     console.log('🔗 Connecting to Signal Server:', SOCKET_URL);
@@ -39,10 +41,11 @@ const useSocketStore = create((set, get) => ({
         token,
         deviceToken: effectiveDeviceToken
       },
-      transports: ['websocket', 'polling'],
+      transports: ['polling', 'websocket'],
       reconnection: true,
       reconnectionDelay: 1000,
-      reconnectionAttempts: 10
+      reconnectionAttempts: 10,
+      timeout: 20000
     });
 
     instance.on('connect', () => {
