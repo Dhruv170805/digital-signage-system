@@ -93,13 +93,22 @@ class AssignmentController {
         }
       }
 
-      // Log first one for audit
+      // Log first one for audit with full metadata for history
       if (createdAssignments.length > 0) {
         await loggerService.logAudit(req.user.id, 'SCHEDULE', 'Assignment', createdAssignments[0]._id, { 
-          bulk: createdAssignments.length > 1,
-          count: createdAssignments.length,
+          name: baseData.name,
           targetType,
-          status: createdAssignments[0].status
+          targetIds,
+          startDate: baseData.startDate,
+          endDate: baseData.endDate,
+          startTime: baseData.startTime,
+          endTime: baseData.endTime,
+          mediaMapping: baseData.mediaMapping,
+          templateId: baseData.templateId,
+          mediaId: baseData.mediaId,
+          tickerId: baseData.tickerId,
+          priority: baseData.priority,
+          duration: baseData.duration
         });
       }
 

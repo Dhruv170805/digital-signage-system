@@ -48,7 +48,14 @@ const ModerationModal = ({ isOpen, onClose, item, type, onConfirm, screens, grou
     onConfirm(item._id || item.id, action, action === 'approve' ? editData : { reason });
   };
 
-  const src = item.filePath ? `${import.meta.env.VITE_API_URL}/${item.filePath}`.replace(/([^:]\/)\/+/g, "$1") : null;
+  const getMediaUrl = (filePath) => {
+    if (!filePath) return '';
+    const apiBase = (import.meta.env.VITE_API_URL || '').replace(/\/api\/?$/, '').replace(/\/$/, '');
+    const cleanPath = filePath.startsWith('/') ? filePath : `/${filePath}`;
+    return `${apiBase}${cleanPath}`.replace(/([^:]\/)\/+/g, "$1");
+  };
+
+  const src = item.filePath ? getMediaUrl(item.filePath) : null;
 
   return (
     <div className="fixed inset-0 bg-slate-900/90 backdrop-blur-xl z-[200] flex items-center justify-center p-8">
@@ -75,7 +82,7 @@ const ModerationModal = ({ isOpen, onClose, item, type, onConfirm, screens, grou
                             item.fileType === 'pdf' ? <iframe src={src ? `${src}#toolbar=0` : undefined} className="w-full h-full border-none bg-white" title="pdf" /> :
                             <img src={src || undefined} className="w-full h-full object-contain" alt="preview" />
                         ) : (
-                            <div className="w-full h-full flex flex-col items-center justify-center space-y-4 bg-slate-900"><Layers className="text-white/10" size={64} /><p className="text-[10px] font-black text-white/20 uppercase tracking-[6px]">Logic Manifest</p></div>
+                            <div className="w-full h-full flex flex-col items-center justify-center space-y-4 bg-slate-900"><Layers className="text-white/10" size={64} /><p className="text-[10px] font-black text-white/20 uppercase tracking-[6px]">Logic Schedule</p></div>
                         )}
                     </div>
                     <div className="grid grid-cols-2 gap-6">
@@ -105,9 +112,9 @@ const ModerationModal = ({ isOpen, onClose, item, type, onConfirm, screens, grou
                 {action === 'approve' ? (
                     <div className="space-y-12 animate-fade-in">
                         <section>
-                            <h4 className="text-[10px] font-black uppercase text-emerald-600 mb-8 flex items-center gap-3"><div className="w-6 h-px bg-emerald-600/30" /> Node Targeting</h4>
+                            <h4 className="text-[10px] font-black uppercase text-emerald-600 mb-8 flex items-center gap-3"><div className="w-6 h-px bg-emerald-600/30" /> Screen Selection</h4>
                             <div className="grid grid-cols-2 gap-8">
-                                <div className="space-y-3"><label className="text-[9px] font-black uppercase text-slate-400 ml-1">Logic</label><select className="nexus-input bg-slate-50 border-slate-200" value={editData.targetType} onChange={(e) => setEditData({...editData, targetType: e.target.value, targetId: ''})}><option value="all">Global Broadcast</option><option value="group">Cluster Group</option><option value="screen">Specific Node</option></select></div>
+                                <div className="space-y-3"><label className="text-[9px] font-black uppercase text-slate-400 ml-1">Logic</label><select className="nexus-input bg-slate-50 border-slate-200" value={editData.targetType} onChange={(e) => setEditData({...editData, targetType: e.target.value, targetId: ''})}><option value="all">Global Broadcast</option><option value="group">Screen Group</option><option value="screen">Specific Screen</option></select></div>
                                 <div className="space-y-3"><label className="text-[9px] font-black uppercase text-slate-400 ml-1">Identity Lock</label><select disabled={editData.targetType === 'all'} className="nexus-input bg-slate-50 border-slate-200 text-sky-600 font-black disabled:opacity-20" value={editData.targetId} onChange={(e) => setEditData({...editData, targetId: e.target.value})}><option value="">Select Identity...</option>{editData.targetType === 'screen' ? screens.map(s => <option key={s._id} value={s._id}>{s.name}</option>) : groups.map(g => <option key={g._id} value={g._id}>{g.name}</option>)}</select></div>
                             </div>
                         </section>
@@ -237,9 +244,9 @@ const ModerationQueue = ({ fetchData, setPreviewFile, setShowPreview }) => {
                         <div key={m._id || m.id} className="p-8 bg-white border border-slate-200 rounded-[48px] transition-all hover:border-indigo-400 hover:shadow-2xl group flex flex-col relative">
                             <div className="absolute top-10 right-10 z-10"><span className={`px-4 py-1.5 rounded-full text-[8px] font-black uppercase tracking-widest border shadow-sm ${m.requestedPriority >= 10 ? 'bg-rose-50 text-rose-600 border-rose-100' : m.requestedPriority >= 5 ? 'bg-amber-50 text-amber-600 border-amber-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>{getPriorityLabel(m.requestedPriority)}</span></div>
                             <div className="aspect-video bg-slate-950 rounded-[32px] overflow-hidden mb-8 border-4 border-slate-900 relative shadow-inner">
-                                {m.fileType === 'video' ? <video src={m.filePath ? `${import.meta.env.VITE_API_URL}/${m.filePath}`.replace(/([^:]\/)\/+/g, "$1") : undefined} className="w-full h-full object-cover opacity-60 grayscale group-hover:grayscale-0 transition-all duration-700" /> :
+                                {m.fileType === 'video' ? <video src={m.filePath ? getMediaUrl(m.filePath) : undefined} className="w-full h-full object-cover opacity-60 grayscale group-hover:grayscale-0 transition-all duration-700" /> :
                                  m.fileType === 'pdf' ? <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900"><File className="text-indigo-500/40 mb-3" size={40} /><span className="text-[10px] font-black text-indigo-500/40 uppercase">PDF</span></div> :
-                                <img src={m.filePath ? `${import.meta.env.VITE_API_URL}/${m.filePath}`.replace(/([^:]\/)\/+/g, "$1") : undefined} className="w-full h-full object-cover opacity-60 grayscale group-hover:grayscale-0 transition-all duration-700" alt="p" />}
+                                <img src={m.filePath ? getMediaUrl(m.filePath) : undefined} className="w-full h-full object-cover opacity-60 grayscale group-hover:grayscale-0 transition-all duration-700" alt="p" />}
                                 <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all translate-y-4 group-hover:translate-y-0"><button onClick={() => { setPreviewFile(m); setShowPreview(true); }} className="w-16 h-16 bg-white text-black rounded-3xl shadow-2xl flex items-center justify-center hover:scale-110 active:scale-90 transition-all"><Eye size={24}/></button></div>
                             </div>
                             <div className="space-y-1 mb-8 flex-1"><p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest bg-indigo-50 px-3 py-1 rounded-lg inline-block mb-3">{m.fileType} • {m.uploaderId?.name || 'User'}</p><h4 className="text-xl font-black truncate text-slate-900 uppercase tracking-tighter">{m.fileName}</h4></div>

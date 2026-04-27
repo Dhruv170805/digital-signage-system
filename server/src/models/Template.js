@@ -11,7 +11,7 @@ const frameSchema = new mongoose.Schema({
 });
 
 const templateSchema = new mongoose.Schema({
-  name: { type: String, required: true },
+  name: { type: String, required: true, unique: true },
   description: { type: String },
   layout: { 
     type: String,

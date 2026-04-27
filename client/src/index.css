@@ -257,3 +257,25 @@ body::before {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* 📺 GAPLESS SIGNAGE SYSTEM */
+.signage-frame-container {
+  background: #000 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden;
+}
+
+.signage-frame {
+  border: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: #000 !important;
+}
+
+.signage-asset {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}

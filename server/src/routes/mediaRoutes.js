@@ -40,5 +40,6 @@ router.post('/upload', protect, upload.single('media'), mediaController.upload);
 router.post('/:id/approve', protect, admin, mediaController.approve);
 router.post('/:id/reject', protect, admin, mediaController.reject);
 router.post('/:id/resubmit', protect, mediaController.resubmit);
+router.delete('/:id', protect, admin, mediaController.delete);
 
 module.exports = router;

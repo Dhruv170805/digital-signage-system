@@ -15,13 +15,51 @@ const LayoutArchitect = ({ fetchData }) => {
 
   const [isDragging, setIsDragging] = useState(false);
 
+  // 🎯 GRID CONSTANTS
+  const GRID_SIZE = 12; // 12x12 grid for TV broadcast quality alignment
+  const snapToGrid = (val) => Math.round(val / (100 / GRID_SIZE)) * (100 / GRID_SIZE);
+
+  // 🧠 COVERAGE CALCULATION (Synchronized with Server 100x100 Grid)
+  const coverageReport = React.useMemo(() => {
+    const GRID_RES = 100;
+    const grid = Array(GRID_RES).fill(0).map(() => Array(GRID_RES).fill(false));
+    let totalCellsFilled = 0;
+
+    frames.forEach(f => {
+        const startX = Math.max(0, Math.floor(f.x));
+        const startY = Math.max(0, Math.floor(f.y));
+        const endX = Math.min(GRID_RES, Math.ceil(f.x + f.w));
+        const endY = Math.min(GRID_RES, Math.ceil(f.y + f.h));
+
+        for (let x = startX; x < endX; x++) {
+            for (let y = startY; y < endY; y++) {
+                if (!grid[x][y]) {
+                    grid[x][y] = true;
+                    totalCellsFilled++;
+                }
+            }
+        }
+    });
+
+    const coveragePct = (totalCellsFilled / (GRID_RES * GRID_RES)) * 100;
+    return {
+        isComplete: coveragePct >= 99.9,
+        percentage: Math.round(coveragePct),
+        missingCells: (GRID_RES * GRID_RES) - totalCellsFilled
+    };
+  }, [frames]);
+
   const collisions = React.useMemo(() => {
     const overlapping = new Set();
     for (let i = 0; i < frames.length; i++) {
       for (let j = i + 1; j < frames.length; j++) {
         const a = frames[i];
         const b = frames[j];
-        if (a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y) { overlapping.add(a.i); overlapping.add(b.i); }
+        // Standard AABB collision check
+        if (a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y) { 
+            overlapping.add(a.i); 
+            overlapping.add(b.i); 
+        }
       }
     }
     return Array.from(overlapping);
@@ -36,34 +74,196 @@ const LayoutArchitect = ({ fetchData }) => {
     return () => observer.disconnect();
   }, [activeTab]);
 
+  const loadTemplate = (template) => {
+    const parsedLayout = typeof template.layout === 'string' ? JSON.parse(template.layout) : template.layout;
+    setTemplateName(template.name);
+    setFrames(parsedLayout);
+    setActiveTab('editor');
+    toast.success(`Protocol ${template.name} Loaded`);
+  };
+
+  const deleteTemplate = async (id) => {
+    if (!window.confirm('Terminate this protocol permanently?')) return;
+    try {
+      await api.delete(`/api/templates/${id}`);
+      toast.success('Protocol Terminated');
+      refetch();
+    } catch { toast.error('Termination failure'); }
+  };
+
+  const getCoveredLayout = (currentFrames) => {
+    if (currentFrames.length === 0) return currentFrames;
+    let layout = [...currentFrames].map(f => ({ ...f }));
+    
+    // 1. Horizontal Expansion (Right)
+    layout.forEach(f => {
+      let rightEdge = f.x + f.w;
+      let nearestX = 100;
+      layout.forEach(other => {
+        if (other.i === f.i) return;
+        const verticalOverlap = !(other.y >= f.y + f.h || other.y + other.h <= f.y);
+        if (other.x >= rightEdge - 0.1 && verticalOverlap) {
+          if (other.x < nearestX) nearestX = other.x;
+        }
+      });
+      f.w = Math.max(f.w, nearestX - f.x);
+    });
+
+    // 2. Vertical Expansion (Down)
+    layout.forEach(f => {
+      let bottomEdge = f.y + f.h;
+      let nearestY = 100;
+      layout.forEach(other => {
+        if (other.i === f.i) return;
+        const horizontalOverlap = !(other.x >= f.x + f.w || other.x + other.w <= f.x);
+        if (other.y >= bottomEdge - 0.1 && horizontalOverlap) {
+          if (other.y < nearestY) nearestY = other.y;
+        }
+      });
+      f.h = Math.max(f.h, nearestY - f.y);
+    });
+
+    // 3. Horizontal Expansion (Left)
+    layout.forEach(f => {
+      let leftEdge = f.x;
+      let nearestX = 0;
+      layout.forEach(other => {
+        if (other.i === f.i) return;
+        const verticalOverlap = !(other.y >= f.y + f.h || other.y + other.h <= f.y);
+        if (other.x + other.w <= leftEdge + 0.1 && verticalOverlap) {
+          if (other.x + other.w > nearestX) nearestX = other.x + other.w;
+        }
+      });
+      const diff = f.x - nearestX;
+      if (diff > 0) {
+          f.x = nearestX;
+          f.w += diff;
+      }
+    });
+
+    // 4. Vertical Expansion (Up)
+    layout.forEach(f => {
+      let topEdge = f.y;
+      let nearestY = 0;
+      layout.forEach(other => {
+        if (other.i === f.i) return;
+        const horizontalOverlap = !(other.x >= f.x + f.w || other.x + other.w <= f.x);
+        if (other.y + other.h <= topEdge + 0.1 && horizontalOverlap) {
+          if (other.y + other.h > nearestY) nearestY = other.y + other.h;
+        }
+      });
+      const diff = f.y - nearestY;
+      if (diff > 0) {
+          f.y = nearestY;
+          f.h += diff;
+      }
+    });
+
+    // 5. Final fallback check
+    const GRID_RES = 100;
+    const grid = Array(GRID_RES).fill(0).map(() => Array(GRID_RES).fill(false));
+    let totalCellsFilled = 0;
+    layout.forEach(f => {
+        const startX = Math.max(0, Math.floor(f.x));
+        const startY = Math.max(0, Math.floor(f.y));
+        const endX = Math.min(GRID_RES, Math.ceil(f.x + f.w));
+        const endY = Math.min(GRID_RES, Math.ceil(f.y + f.h));
+        for (let x = startX; x < endX; x++) {
+            for (let y = startY; y < endY; y++) {
+                if (!grid[x][y]) { grid[x][y] = true; totalCellsFilled++; }
+            }
+        }
+    });
+
+    // If gaps still exist (e.g. L-shapes or disconnected areas), force the largest frame to cover everything
+    // and push it to the background so it doesn't hide other frames.
+    if (totalCellsFilled < GRID_RES * GRID_RES) {
+        let largest = layout[0];
+        let maxArea = 0;
+        layout.forEach(f => {
+            const area = f.w * f.h;
+            if (area > maxArea) { maxArea = area; largest = f; }
+        });
+        largest.x = 0;
+        largest.y = 0;
+        largest.w = 100;
+        largest.h = 100;
+        largest.zIndex = -1; // Force to background
+    }
+
+    return layout;
+  };
+
   const saveTemplate = async () => {
     if (!templateName) return toast.error('Protocol ID missing');
     if (frames.length === 0) return toast.error('Canvas empty');
     if (collisions.length > 0) return toast.error('Resolve spatial collisions');
+    
+    // 🧠 AUTOMATION: Silent Auto-Fill
+    let finalFrames = frames;
+    if (!coverageReport.isComplete) {
+        toast('Optimizing layout for 100% coverage...', { icon: '⚡' });
+        finalFrames = getCoveredLayout(frames);
+    }
+
     try {
-      await api.post(`/api/templates`, { name: templateName.trim(), layout: JSON.stringify(frames) });
+      await api.post(`/api/templates`, { 
+        name: templateName.trim(), 
+        layout: JSON.stringify(finalFrames) 
+      });
       toast.success('Protocol Synchronized');
       resetBuilder();
       refetch();
       if (fetchData) fetchData();
       setActiveTab('inventory');
-    } catch { toast.error('Sync failure'); }
+    } catch (err) { 
+      const msg = err.response?.data?.message || 'Sync failure';
+      toast.error(msg); 
+    }
   };
 
-  const loadTemplate = (t) => {
-    setTemplateName(t.name);
-    setFrames(typeof t.layout === 'string' ? JSON.parse(t.layout) : t.layout);
-    setActiveTab('editor');
-    toast.success(`Protocol ${t.name} Loaded`);
+  const autoFillGaps = () => {
+    // 🧠 ADVANCED GRID SNAP & ALIGNMENT
+    const newFrames = frames.map(f => {
+        let nx = snapToGrid(f.x);
+        let ny = snapToGrid(f.y);
+        let nw = snapToGrid(f.w);
+        let nh = snapToGrid(f.h);
+
+        // Snap to edges if within threshold
+        if (nx < 2) nx = 0;
+        if (ny < 2) ny = 0;
+        if (nx + nw > 98) nw = 100 - nx;
+        if (ny + nh > 98) nh = 100 - ny;
+
+        return { ...f, x: nx, y: ny, w: nw, h: nh };
+    });
+    
+    setFrames(newFrames);
+    toast.success('Broadcast Alignment Applied');
   };
 
-  const deleteTemplate = async (id) => {
-    if (!window.confirm('Wipe layout?')) return;
-    try { await api.delete(`/api/templates/${id}`); toast.success('Layout Purged'); refetch(); if (fetchData) fetchData(); } catch { toast.error('Purge failed'); }
+  const fillRemainingSpace = () => {
+    const newFrames = getCoveredLayout(frames);
+    if (newFrames.length > frames.length) {
+        setFrames(newFrames);
+        toast.success(`Generated ${newFrames.length - frames.length} filler zones.`);
+    } else {
+        toast.success('Perfect Coverage Detected');
+    }
   };
 
   const pctToPx = (pct, total) => (pct / 100) * total;
-  const pxToPct = (px, total) => Math.round((px / total) * 100);
+  const pxToPct = (px, total) => {
+      let rawPct = (px / total) * 100;
+      let snapped = snapToGrid(rawPct);
+      
+      // 🧲 STICKY EDGES
+      if (snapped < 1) snapped = 0;
+      if (snapped > 99) snapped = 100;
+      
+      return snapped;
+  };
 
   return (
     <div className="animate-fade-in h-full flex flex-col">
@@ -71,12 +271,12 @@ const LayoutArchitect = ({ fetchData }) => {
           <div className="bg-white p-8 border-b border-slate-200 shrink-0">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8">
                 <div>
-                    <div className="flex items-center gap-3 mb-2"><Grid3X3 className="text-indigo-600" size={16} /><span className="text-[10px] font-black uppercase tracking-[4px] text-indigo-600">Spatial Engine</span></div>
-                    <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter">Architect Studio</h2>
+                    <div className="flex items-center gap-3 mb-2"><Grid3X3 className="text-indigo-600" size={16} /><span className="text-[10px] font-black uppercase tracking-[4px] text-indigo-600">Templates</span></div>
+                    <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter">BROADCAST EDITOR</h2>
                 </div>
                 <div className="flex gap-2 p-1.5 bg-slate-100 rounded-2xl border border-slate-200">
                     <button onClick={() => setActiveTab('editor')} className={`px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'editor' ? 'bg-white text-black shadow-xl' : 'text-slate-500 hover:text-slate-900'}`}>Visual Editor</button>
-                    <button onClick={() => setActiveTab('inventory')} className={`px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'inventory' ? 'bg-white text-black shadow-xl' : 'text-slate-500 hover:text-slate-900'}`}>Protocols ({templates.length})</button>
+                    <button onClick={() => setActiveTab('inventory')} className={`px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'inventory' ? 'bg-white text-black shadow-xl' : 'text-slate-500 hover:text-slate-900'}`}>Saved ({templates.length})</button>
                 </div>
             </div>
 
@@ -87,8 +287,22 @@ const LayoutArchitect = ({ fetchData }) => {
                         <div className="w-px h-8 bg-slate-300 mx-2" />
                         <button onClick={() => setFrames([{ i: 'Main', x: 0, y: 0, w: 100, h: 100, type: 'media', zIndex: 1 }])} className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase hover:bg-slate-100 transition-all text-slate-600 shadow-sm">Standard</button>
                         <button onClick={() => setFrames([{ i: 'Left', x: 0, y: 0, w: 50, h: 100, type: 'media', zIndex: 1 }, { i: 'Right', x: 50, y: 0, w: 50, h: 100, type: 'media', zIndex: 1 }])} className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase hover:bg-slate-100 transition-all text-slate-600 shadow-sm">Vertical Split</button>
+                        <button onClick={autoFillGaps} className="px-4 py-2 bg-amber-50 text-amber-700 border border-amber-200 rounded-xl text-[10px] font-black uppercase hover:bg-amber-100 transition-all shadow-sm">Grid Alignment</button>
+                        <button onClick={fillRemainingSpace} className="px-4 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-[10px] font-black uppercase hover:bg-emerald-100 transition-all shadow-sm flex items-center gap-2"><Maximize size={12}/> Fill Gaps</button>
                     </div>
-                    <button onClick={resetBuilder} className="px-6 py-2.5 bg-rose-50 text-rose-600 border border-rose-100 rounded-xl text-[10px] font-black uppercase hover:bg-rose-600 hover:text-white transition-all shadow-sm">Reset Architect</button>
+                    
+                    <div className="flex items-center gap-6">
+                        <div className="flex flex-col items-end">
+                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Broadcast Coverage</p>
+                            <div className="flex items-center gap-2">
+                                <div className="w-24 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                                    <div className={`h-full transition-all duration-500 ${coverageReport.isComplete ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-rose-500'}`} style={{ width: `${coverageReport.percentage}%` }} />
+                                </div>
+                                <span className={`text-[10px] font-black ${coverageReport.isComplete ? 'text-emerald-600' : 'text-rose-600'}`}>{coverageReport.percentage}%</span>
+                            </div>
+                        </div>
+                        <button onClick={resetBuilder} className="px-6 py-2.5 bg-rose-50 text-rose-600 border border-rose-100 rounded-xl text-[10px] font-black uppercase hover:bg-rose-600 hover:text-white transition-all shadow-sm">Reset Architect</button>
+                    </div>
                 </div>
             )}
           </div>
@@ -152,11 +366,11 @@ const LayoutArchitect = ({ fetchData }) => {
                             )) : <div className="h-full min-h-[200px] flex items-center justify-center opacity-30 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200"><p className="text-[10px] font-black uppercase tracking-[4px]">Select Frame</p></div>}
                         </div>
                         <div className="flex-1 overflow-y-auto custom-scrollbar p-8 space-y-8 bg-slate-50/50">
-                            <h4 className="text-[10px] font-black uppercase text-emerald-600 flex items-center gap-3"><div className="w-6 h-px bg-emerald-600/30" /> Sync Manifest</h4>
+                            <h4 className="text-[10px] font-black uppercase text-emerald-600 flex items-center gap-3"><div className="w-6 h-px bg-emerald-600/30" /> SAVE LAYOUT</h4>
                             <div className="space-y-6">
-                                <div className="space-y-2"><label className="text-[9px] font-black uppercase text-slate-400 ml-1">Identifier</label><input type="text" className="nexus-input bg-white border-slate-200 font-black text-lg" placeholder="MANIFEST-ALPHA" value={templateName} onChange={(e) => setTemplateName(e.target.value)}/></div>
+                                <div className="space-y-2"><label className="text-[9px] font-black uppercase text-slate-400 ml-1">Identifier</label><input type="text" className="nexus-input bg-white border-slate-200 font-black text-lg" placeholder="SCHEDULE-ALPHA" value={templateName} onChange={(e) => setTemplateName(e.target.value)}/></div>
                                 {collisions.length > 0 && <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-start gap-3"><AlertTriangle className="text-rose-500 shrink-0" size={16} /><p className="text-[9px] font-bold text-rose-600 uppercase tracking-widest leading-relaxed">Spatial Collision: {collisions.join(', ')}</p></div>}
-                                <button onClick={saveTemplate} className="nexus-btn-primary w-full py-4 text-[10px] tracking-[6px] shadow-xl uppercase">SYNCHRONIZE PROTOCOL</button>
+                                <button onClick={saveTemplate} className="nexus-btn-primary w-full py-4 text-[10px] tracking-[6px] shadow-xl uppercase">SAVE LAYOUT</button>
                             </div>
                         </div>
                     </div>

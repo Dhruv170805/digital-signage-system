@@ -66,6 +66,15 @@ export const useSchedules = () => useQuery({
   }
 });
 
+export const useActiveSchedules = () => useQuery({
+  queryKey: ['activeSchedules'],
+  queryFn: async () => {
+    const res = await api.get('/api/schedule/active');
+    return res.data;
+  },
+  refetchInterval: 60000 // Refresh active list every minute
+});
+
 export const useUsers = () => useQuery({
   queryKey: ['users'],
   queryFn: async () => {
@@ -82,6 +91,14 @@ export const useSettings = () => useQuery({
   }
 });
 
+export const useGroups = () => useQuery({
+  queryKey: ['groups'],
+  queryFn: async () => {
+    const res = await api.get('/api/groups');
+    return res.data;
+  }
+});
+
 export const useHistoryLogs = () => useQuery({
   queryKey: ['historyLogs'],
   queryFn: async () => {
@@ -89,4 +106,13 @@ export const useHistoryLogs = () => useQuery({
     return res.data;
   },
   refetchInterval: 30000 // Refresh logs every 30s
+});
+
+export const useLiveStatus = () => useQuery({
+  queryKey: ['liveStatus'],
+  queryFn: async () => {
+    const res = await api.get('/api/screens/live-status');
+    return res.data;
+  },
+  refetchInterval: 5000 // High frequency polling for monitoring
 });

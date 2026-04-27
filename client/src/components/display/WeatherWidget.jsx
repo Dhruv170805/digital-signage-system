@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CloudSun, MapPin } from 'lucide-react';
 
-const WeatherWidget = ({ location }) => {
+const WeatherWidget = ({ location, isSolar }) => {
   const [temp, setTemp] = useState('--');
   const [area, setArea] = useState(location || 'Locating...');
 
@@ -10,7 +10,6 @@ const WeatherWidget = ({ location }) => {
 
     const fetchWeather = async (lat, lon, name = null) => {
       try {
-        // High-Precision Reverse Geocoding
         if (!name) {
           try {
               const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=14`, {
@@ -18,13 +17,12 @@ const WeatherWidget = ({ location }) => {
               });
               const geoData = await geoRes.json();
               if (mounted && geoData?.address) {
-                  // Prioritize Suburb/Neighborhood for "High Accuracy" feel
                   name = geoData.address.suburb || 
                          geoData.address.neighbourhood || 
                          geoData.address.district || 
                          geoData.address.city_district || 
                          geoData.address.city || 
-                         geoData.address.town || 'Secure Hub';
+                         geoData.address.town || 'Screen';
               }
           } catch (geoErr) {
               console.warn('Reverse geocoding failed:', geoErr);
@@ -44,7 +42,6 @@ const WeatherWidget = ({ location }) => {
     };
 
     const initWeather = async () => {
-      // 1. Check for manual location override from Admin
       if (location) {
         try {
           const searchRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}&limit=1`);
@@ -58,27 +55,24 @@ const WeatherWidget = ({ location }) => {
         }
       }
 
-      // 2. Ultra-Reliable IP-based Geolocation (Silent, no user prompt)
-      // Best for unattended signage/kiosks to avoid "localhost wants your location" prompts
       try {
         const ipRes = await fetch('https://ipapi.co/json/');
         if (ipRes.ok) {
           const ipData = await ipRes.json();
           if (mounted && ipData.latitude) {
-            fetchWeather(ipData.latitude, ipData.longitude, ipData.city || "Global Node");
-            return; // Success, stop here
+            fetchWeather(ipData.latitude, ipData.longitude, ipData.city || "Screen");
+            return;
           }
         }
       } catch (e) {
         console.warn('IP-based geolocation failed:', e);
       }
 
-      // 3. Static Fallback (No prompts possible)
-      if (mounted) setArea("Secure Hub");
+      if (mounted) setArea("Screen");
     };
 
     initWeather();
-    const interval = setInterval(initWeather, 900000); // 15 mins sync
+    const interval = setInterval(initWeather, 900000);
 
     return () => {
       mounted = false;
@@ -91,19 +85,19 @@ const WeatherWidget = ({ location }) => {
   return (
     <div className="flex items-center gap-6">
         <div className="flex flex-col">
-            <p className="text-[9px] font-black text-indigo-400/60 uppercase tracking-[3px] leading-none mb-1">Local Node</p>
-            <p className="text-sm font-black text-white uppercase tracking-wider">{area}</p>
+            <p className={`text-[9px] font-black uppercase tracking-[3px] leading-none mb-1 ${isSolar ? 'text-indigo-600/60' : 'text-indigo-400/60'}`}>Location</p>
+            <p className={`text-sm font-black uppercase tracking-wider ${isSolar ? 'text-slate-900' : 'text-white'}`}>{area}</p>
         </div>
-        <div className="w-px h-8 bg-white/10" />
+        <div className={`w-px h-8 ${isSolar ? 'bg-black/10' : 'bg-white/10'}`} />
         <div className="flex items-center gap-4">
-            <div className="w-10 h-10 bg-amber-500/10 rounded-xl flex items-center justify-center">
-                <CloudSun size={20} className="text-amber-400" />
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isSolar ? 'bg-amber-600/10' : 'bg-amber-500/10'}`}>
+                <CloudSun size={20} className={isSolar ? 'text-amber-600' : 'text-amber-400'} />
             </div>
             <div>
-                <p className="text-[9px] font-black text-amber-400/60 uppercase tracking-[3px] leading-none mb-1">Ambient</p>
+                <p className={`text-[9px] font-black uppercase tracking-[3px] leading-none mb-1 ${isSolar ? 'text-amber-600/60' : 'text-amber-400/60'}`}>Weather</p>
                 <div className="flex items-baseline gap-2">
-                    <span className="text-xl font-black text-white uppercase tabular-nums">{temp}°C</span>
-                    <span className="text-[10px] font-bold text-white/30 tabular-nums uppercase">/ {tempF}°F</span>
+                    <span className={`text-xl font-black uppercase tabular-nums ${isSolar ? 'text-slate-900' : 'text-white'}`}>{temp}°C</span>
+                    <span className={`text-[10px] font-bold tabular-nums uppercase ${isSolar ? 'text-slate-900/30' : 'text-white/30'}`}>/ {tempF}°F</span>
                 </div>
             </div>
         </div>

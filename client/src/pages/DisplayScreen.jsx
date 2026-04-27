@@ -12,6 +12,27 @@ import TickerEngine from '../components/display/TickerEngine';
 import LocalFramePlayer from '../components/display/LocalFramePlayer';
 import useLayoutStore from '../store/useLayoutStore';
 
+// --- Adaptive Segment Component ---
+const AdaptiveSegment = ({ children, isSolar, className = "" }) => {
+  return (
+    <div className={`
+      relative backdrop-blur-3xl transition-all duration-1000 ease-in-out
+      px-8 py-4 rounded-[32px] flex items-center gap-4 shadow-2xl border
+      ${isSolar 
+        ? 'bg-white/60 border-black/5 text-slate-900' 
+        : 'bg-black/40 border-white/10 text-white'}
+      ${className}
+    `}>
+      {/* Glossy Reflection Layer */}
+      <div className={`absolute inset-0 rounded-[32px] ${isSolar ? 'bg-gradient-to-tr from-white/20 to-transparent' : 'bg-gradient-to-tr from-white/5 to-transparent'} pointer-events-none`} />
+      
+      <div className="relative z-10 flex items-center gap-4" style={{ textShadow: isSolar ? 'none' : '0 2px 8px rgba(0,0,0,0.8)' }}>
+        {children}
+      </div>
+    </div>
+  );
+};
+
 // --- Main Display Screen ---
 const DisplayScreen = () => {
   const [searchParams] = useSearchParams();
@@ -43,6 +64,11 @@ const DisplayScreen = () => {
   const playlistRef = useRef([]);
 
   const [screenToken, setScreenToken] = useState(localStorage.getItem('screenToken'));
+
+  // Logic to determine if we are over a "Light" background (like a PDF)
+  const isSolarMode = playlist[currentIdx]?.templateId || playlist[currentIdx]?.mediaId?.fileType === 'pdf' || playlist[currentIdx]?.fileType === 'pdf';
+
+  // ... (rest of effects and fetching logic remains the same)
 
   // Capture token from URL and persist
   useEffect(() => {
@@ -277,7 +303,7 @@ useEffect(() => {
     // TEMPLATE RENDERER
     if (currentItem.templateId && currentItem.templateId.frames) {
       return (
-        <div className="flex-1 relative w-full h-full overflow-hidden">
+        <div className="flex-1 relative w-full h-full overflow-hidden signage-frame-container">
           {currentItem.templateId.frames.map((frame) => (
             <div 
               key={frame._id || frame.i}
@@ -311,7 +337,7 @@ useEffect(() => {
           
           {/* HUD OVERLAY */}
           <div className="absolute bottom-40 right-12 z-40 max-w-xl text-right animate-fade-in-up" key={currentIdx}>
-              <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[8px] mb-4">Live Manifest</p>
+              <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[8px] mb-4">Active Schedule</p>
               <h1 className="text-6xl font-black text-white uppercase tracking-tighter leading-none mb-6 drop-shadow-2xl">
                   {currentItem?.name || currentItem?.mediaId?.fileName || currentItem?.mediaId?.originalName || 'Broadcast Stream'}
               </h1>
@@ -333,34 +359,49 @@ useEffect(() => {
           <div className="absolute inset-0 backdrop-blur-[150px]" />
       </div>
 
-      {/* ⚡ STATUS OVERLAYS */}
-      <div className="absolute top-12 left-12 z-50 flex items-center gap-6">
-        <div className="bg-white/5 backdrop-blur-3xl border border-white/10 px-8 py-4 rounded-[32px] flex items-center gap-4 shadow-2xl">
-          <div className="w-12 h-12 bg-indigo-500/10 rounded-2xl flex items-center justify-center">
-            <ClockIcon className="text-indigo-500" size={24} />
+      {/* ⚡ SEGMENTED ADAPTIVE TOP BAR */}
+      <div className="absolute top-12 left-12 right-12 z-50 flex items-center justify-between pointer-events-none">
+        
+        {/* LEFT: Chrono Segment */}
+        <AdaptiveSegment isSolar={isSolarMode} className="pointer-events-auto">
+          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${isSolarMode ? 'bg-indigo-600/10' : 'bg-indigo-500/10'}`}>
+            <ClockIcon className={isSolarMode ? 'text-indigo-600' : 'text-indigo-500'} size={24} />
           </div>
           <div>
-            <p className="text-[11px] font-black text-indigo-400 uppercase tracking-widest leading-none mb-1">System Time</p>
-            <p className="text-2xl font-black text-white uppercase tabular-nums tracking-tighter">
+            <p className={`text-[11px] font-black uppercase tracking-widest leading-none mb-1 ${isSolarMode ? 'text-indigo-600/60' : 'text-indigo-400'}`}>System Time</p>
+            <p className="text-2xl font-black uppercase tabular-nums tracking-tighter">
               {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
             </p>
           </div>
-        </div>
-        
-        {isOffline && (
+        </AdaptiveSegment>
+
+        {/* CENTER: Environment Segment (Location / Weather) */}
+        <AdaptiveSegment isSolar={isSolarMode} className="pointer-events-auto">
+          <WeatherWidget location={screenInfo?.location} isSolar={isSolarMode} />
+          <div className={`w-px h-8 mx-2 ${isSolarMode ? 'bg-black/10' : 'bg-white/10'}`} />
+          <div className={`p-2 rounded-2xl group transition-all ${isSolarMode ? 'hover:bg-black/5' : 'hover:bg-white/10'}`}>
+            <MapPin className={isSolarMode ? 'text-slate-400' : 'text-white/40'} size={20} />
+          </div>
+        </AdaptiveSegment>
+
+        {/* RIGHT: Telemetry & Identity Segment */}
+        <div className="flex items-center gap-6 pointer-events-auto">
+          {isOffline && (
             <div className="bg-rose-500/10 backdrop-blur-3xl border border-rose-500/20 px-8 py-4 rounded-[32px] flex items-center gap-4 animate-pulse">
                 <ShieldAlert className="text-rose-500" size={24} />
                 <p className="text-[10px] font-black text-rose-500 uppercase tracking-[4px]">Signal Offline</p>
             </div>
-        )}
-      </div>
-
-      <div className="absolute top-12 right-12 z-50 flex items-center gap-6">
-        <div className="bg-white/5 backdrop-blur-3xl border border-white/10 px-8 py-4 rounded-[32px] flex items-center shadow-2xl">
-          <WeatherWidget location={screenInfo?.location} />
-        </div>
-        <div className="bg-white/5 backdrop-blur-3xl border border-white/10 p-4 rounded-[32px] group hover:bg-white/10 transition-all shadow-2xl">
-            <MapPin className="text-white/40 group-hover:text-white transition-colors" size={20} />
+          )}
+          
+          <AdaptiveSegment isSolar={isSolarMode}>
+            <div className="text-right">
+              <p className={`text-[11px] font-black uppercase tracking-widest leading-none mb-1 ${isSolarMode ? 'text-slate-400' : 'text-white/40'}`}>Screen Info</p>
+              <p className="text-sm font-black uppercase tracking-widest">{screenInfo?.name || "Initializing..."}</p>
+            </div>
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isSolarMode ? 'bg-indigo-600' : 'bg-indigo-500'} shadow-lg`}>
+              <Activity size={18} className="text-white" />
+            </div>
+          </AdaptiveSegment>
         </div>
       </div>
 
@@ -372,7 +413,7 @@ useEffect(() => {
             gap: 0
         }}
       >
-        <div className="relative overflow-hidden w-full h-full">
+        <div className="relative overflow-hidden w-full h-full" style={{ height: 'calc(100% + 1px)' }}>
           {renderContent()}
         </div>
 

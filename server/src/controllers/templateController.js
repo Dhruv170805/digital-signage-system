@@ -27,6 +27,9 @@ class TemplateController {
       await loggerService.logAudit(req.user.id, 'CREATE_LAYOUT', 'Template', template._id, { name: template.name });
       res.status(201).json(template);
     } catch (error) {
+      if (error.code === 11000) {
+        return res.status(400).json({ message: 'A layout with this name already exists. Please choose a unique identifier.' });
+      }
       next(error);
     }
   }
@@ -37,6 +40,9 @@ class TemplateController {
       await loggerService.logAudit(req.user.id, 'UPDATE_LAYOUT', 'Template', template._id, { name: template.name });
       res.json(template);
     } catch (error) {
+      if (error.code === 11000) {
+        return res.status(400).json({ message: 'A layout with this name already exists. Please choose a unique identifier.' });
+      }
       next(error);
     }
   }

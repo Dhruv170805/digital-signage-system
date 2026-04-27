@@ -8,36 +8,36 @@ const DashboardOverview = ({ screens, schedules, pendingMedia, media, setActiveT
   return (
     <div className="animate-fade-in h-full flex flex-col">
           
-          {/* STUDIO HEADER */}
+          {/* DASHBOARD HEADER */}
           <div className="bg-white p-10 border-b border-slate-200 shrink-0">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-10">
                 <div>
                     <div className="flex items-center gap-3 mb-2">
                         <Activity className={`${connected ? 'text-indigo-600 animate-pulse' : 'text-slate-300'}`} size={16} />
                         <span className={`text-[10px] font-black uppercase tracking-[4px] ${connected ? 'text-indigo-600' : 'text-slate-400'}`}>
-                            {connected ? 'Omni-System Pulse' : 'System Handshake Idle'}
+                            {connected ? 'System Status' : 'System Offline'}
                         </span>
                     </div>
-                    <h2 className="text-4xl font-black text-slate-900 uppercase tracking-tighter text-text">Command Center</h2>
+                    <h2 className="text-4xl font-black text-slate-900 uppercase tracking-tighter text-text">Dashboard</h2>
                 </div>
 
                 <div className="flex gap-4">
                     <div className={`flex items-center gap-3 px-6 py-3 ${connected ? 'bg-emerald-50 border-emerald-100' : 'bg-slate-50 border-slate-200'} border rounded-2xl transition-all`}>
                         <div className={`w-2 h-2 rounded-full ${connected ? 'bg-emerald-500 animate-ping' : 'bg-slate-300'}`} />
                         <span className={`text-[10px] font-black uppercase tracking-widest font-black ${connected ? 'text-emerald-700' : 'text-slate-400'}`}>
-                            {connected ? 'Network Synchronized' : 'Re-establishing Uplink'}
+                            {connected ? 'System Online' : 'Connecting...'}
                         </span>
                     </div>
                 </div>
             </div>
 
-            {/* INTEGRATED TELEMETRY */}
+            {/* QUICK STATS */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
                 {[
-                    { label: 'Nodes Online', value: screens.filter(s => s.status === 'online').length, total: screens.length, icon: Tv, color: 'text-sky-600', bg: 'bg-sky-50', border: 'border-sky-100', tab: 'screens' },
-                    { label: 'Live Streams', value: schedules.length, icon: Zap, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100', tab: 'schedule' },
-                    { label: 'Policy Queue', value: pendingMedia.length, icon: ShieldCheck, color: 'text-rose-600', bg: 'bg-rose-50', border: 'border-rose-100', tab: 'approve' },
-                    { label: 'Asset Library', value: media.length, icon: Layers, color: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-100', tab: 'schedule' }
+                    { label: 'Screens Online', value: screens.filter(s => s.status === 'online').length, total: screens.length, icon: Tv, color: 'text-sky-600', bg: 'bg-sky-50', border: 'border-sky-100', tab: 'screens' },
+                    { label: 'Active Broadcasts', value: schedules.length, icon: Zap, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100', tab: 'schedule' },
+                    { label: 'Needs Approval', value: pendingMedia.length, icon: ShieldCheck, color: 'text-rose-600', bg: 'bg-rose-50', border: 'border-rose-100', tab: 'approve' },
+                    { label: 'Media Library', value: media.length, icon: Layers, color: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-100', tab: 'schedule' }
                 ].map((stat, idx) => (
                     <div 
                         key={idx} 
@@ -59,21 +59,20 @@ const DashboardOverview = ({ screens, schedules, pendingMedia, media, setActiveT
             </div>
           </div>
 
-          {/* STUDIO CONTENT - Centered single-row focus */}
+          {/* QUICK LINKS */}
           <div className="flex-1 overflow-hidden p-10 bg-slate-50/30 flex flex-col justify-center">
                 
-                {/* HORIZONTAL RAPID OPERATIONS (Static Focus) */}
                 <section className="max-w-7xl mx-auto w-full">
                     <div className="flex items-center gap-3 mb-8 px-2">
                         <Zap className="text-indigo-600" size={16} />
-                        <span className="text-[10px] font-black uppercase tracking-[4px] text-slate-400">Rapid Operations Engine</span>
+                        <span className="text-[10px] font-black uppercase tracking-[4px] text-slate-400">Quick Links</span>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                         {[
-                            { label: 'Personnel Hub', desc: 'Manage user access', tab: 'users', icon: Users, color: 'text-indigo-600', bg: 'bg-indigo-100/50' },
-                            { label: 'Audit Protocol', desc: 'Trace system signals', tab: 'history', icon: History, color: 'text-emerald-600', bg: 'bg-emerald-100/50' },
-                            { label: 'Spatial Studio', desc: 'Create layout protocols', tab: 'templates', icon: FileText, color: 'text-sky-600', bg: 'bg-sky-100/50' },
-                            { label: 'Ticker Engine', desc: 'Configure live messages', tab: 'ticker', icon: TypeIcon, color: 'text-amber-600', bg: 'bg-amber-100/50' }
+                            { label: 'Users', desc: 'Manage user access', tab: 'users', icon: Users, color: 'text-indigo-600', bg: 'bg-indigo-100/50' },
+                            { label: 'History', desc: 'Trace system signals', tab: 'history', icon: History, color: 'text-emerald-600', bg: 'bg-emerald-100/50' },
+                            { label: 'Templates', desc: 'Create layout protocols', tab: 'templates', icon: FileText, color: 'text-sky-600', bg: 'bg-sky-100/50' },
+                            { label: 'Tickers', desc: 'Configure live messages', tab: 'ticker', icon: TypeIcon, color: 'text-amber-600', bg: 'bg-amber-100/50' }
                         ].map(btn => (
                             <button 
                                 key={btn.tab}

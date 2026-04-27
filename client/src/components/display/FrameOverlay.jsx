@@ -24,7 +24,7 @@ const MiniTopBar = ({ screenInfo }) => {
             <WeatherWidget location={screenInfo?.location} />
         </div>
         <div className="flex items-center gap-4 text-white">
-            <span className="text-[10px] font-black text-indigo-300 uppercase tracking-widest">{screenInfo?.name || 'NODE-01'}</span>
+            <span className="text-[10px] font-black text-indigo-300 uppercase tracking-widest">{screenInfo?.name || 'SCREEN-01'}</span>
             <div className="text-right ml-auto">
                 <div className="text-xl font-black tracking-tighter tabular-nums leading-none">
                     {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}

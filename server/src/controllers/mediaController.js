@@ -205,6 +205,22 @@ class MediaController {
       next(error);
     }
   }
+
+  delete = async (req, res, next) => {
+    try {
+      const media = await mediaService.deleteMedia(req.params.id);
+      if (!media) return res.status(404).json({ success: false, message: 'Media not found' });
+
+      await loggerService.logAudit(req.user.id, 'DELETE', 'Media', media._id, { 
+        filename: media.originalName,
+        deleter: req.user.name || 'Admin'
+      });
+
+      res.json({ success: true, message: 'Media deleted successfully' });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 module.exports = new MediaController();

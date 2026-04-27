@@ -47,11 +47,11 @@ const UserDirectory = ({ users = [], fetchData }) => {
                         <Users className="text-indigo-600" size={16} />
                         <span className="text-[10px] font-black uppercase tracking-[4px] text-indigo-600">Human Resources</span>
                     </div>
-                    <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter">Personnel Directory</h2>
+                    <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter">User Directory</h2>
                 </div>
                 <div className="flex gap-2 p-1.5 bg-slate-100 rounded-2xl border border-slate-200">
-                    <button onClick={() => setActiveTab('editor')} className={`px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'editor' ? 'bg-white text-black shadow-xl' : 'text-slate-500 hover:text-slate-900'}`}>Onboarding</button>
-                    <button onClick={() => setActiveTab('inventory')} className={`px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'inventory' ? 'bg-white text-black shadow-xl' : 'text-slate-500 hover:text-slate-900'}`}>Registry ({users.length})</button>
+                    <button onClick={() => setActiveTab('editor')} className={`px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'editor' ? 'bg-white text-black shadow-xl' : 'text-slate-500 hover:text-slate-900'}`}>Add User</button>
+                    <button onClick={() => setActiveTab('inventory')} className={`px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'inventory' ? 'bg-white text-black shadow-xl' : 'text-slate-500 hover:text-slate-900'}`}>User List ({users.length})</button>
                 </div>
             </div>
           </div>
@@ -61,20 +61,20 @@ const UserDirectory = ({ users = [], fetchData }) => {
                 <form onSubmit={registerUser} className="h-full flex flex-col lg:flex-row divide-x divide-slate-200">
                     <div className="lg:w-1/2 overflow-y-auto custom-scrollbar p-10 space-y-10 bg-white">
                         <section>
-                            <h4 className="text-[10px] font-black uppercase text-indigo-600 mb-8 flex items-center gap-3"><div className="w-6 h-px bg-indigo-600/30" /> Identity Protocol</h4>
+                            <h4 className="text-[10px] font-black uppercase text-indigo-600 mb-8 flex items-center gap-3"><div className="w-6 h-px bg-indigo-600/30" /> User Info</h4>
                             <div className="space-y-8">
-                                <div className="space-y-2"><label className="text-[9px] font-black uppercase text-slate-500 ml-1">Full Name</label><input type="text" required className="nexus-input bg-slate-50 border-slate-200" placeholder="Operator Name" value={newUser.name} onChange={(e) => setNewUser({...newUser, name: e.target.value})}/></div>
-                                <div className="space-y-2"><label className="text-[9px] font-black uppercase text-slate-500 ml-1">Secure Email</label><div className="relative"><Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={14} /><input type="email" required className="nexus-input bg-slate-50 pl-11 border-slate-200" placeholder="identity@nexus.engine" value={newUser.email} onChange={(e) => setNewUser({...newUser, email: e.target.value})}/></div></div>
+                                <div className="space-y-2"><label className="text-[9px] font-black uppercase text-slate-500 ml-1">Full Name</label><input type="text" required className="nexus-input bg-slate-50 border-slate-200" placeholder="User Name" value={newUser.name} onChange={(e) => setNewUser({...newUser, name: e.target.value})}/></div>
+                                <div className="space-y-2"><label className="text-[9px] font-black uppercase text-slate-500 ml-1">User Email</label><div className="relative"><Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={14} /><input type="email" required className="nexus-input bg-slate-50 pl-11 border-slate-200" placeholder="user@email.com" value={newUser.email} onChange={(e) => setNewUser({...newUser, email: e.target.value})}/></div></div>
                             </div>
                         </section>
                     </div>
                     <div className="lg:w-1/2 overflow-y-auto custom-scrollbar p-10 space-y-10 bg-slate-50/50">
                         <section>
-                            <h4 className="text-[10px] font-black uppercase text-emerald-600 mb-8 flex items-center gap-3"><div className="w-6 h-px bg-emerald-600/30" /> Security Clearance</h4>
+                            <h4 className="text-[10px] font-black uppercase text-emerald-600 mb-8 flex items-center gap-3"><div className="w-6 h-px bg-emerald-600/30" /> User Role</h4>
                             <div className="space-y-8">
-                                <div className="space-y-2"><label className="text-[9px] font-black uppercase text-slate-500 ml-1">Access Tier</label><select className="nexus-input bg-white border-slate-200" value={newUser.role} onChange={(e) => setNewUser({...newUser, role: e.target.value})}><option value="user">Standard Operator</option><option value="admin">System Admin</option></select></div>
+                                <div className="space-y-2"><label className="text-[9px] font-black uppercase text-slate-500 ml-1">Role</label><select className="nexus-input bg-white border-slate-200" value={newUser.role} onChange={(e) => setNewUser({...newUser, role: e.target.value})}><option value="user">User</option><option value="admin">System Admin</option></select></div>
                                 <div className="space-y-2"><label className="text-[9px] font-black uppercase text-slate-500 ml-1">Password</label><div className="relative"><Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={14} /><input type="password" required className="nexus-input bg-white pl-11 border-slate-200" placeholder="••••••••" value={newUser.password} onChange={(e) => setNewUser({...newUser, password: e.target.value})}/></div></div>
-                                <button type="submit" className="nexus-btn-primary w-full py-6 text-[10px] tracking-[6px] uppercase shadow-2xl shadow-indigo-200 mt-4">AUTHORIZE PERSONNEL</button>
+                                <button type="submit" className="nexus-btn-primary w-full py-6 text-[10px] tracking-[6px] uppercase shadow-2xl shadow-indigo-200 mt-4">Create User</button>
                             </div>
                         </section>
                     </div>
@@ -83,7 +83,7 @@ const UserDirectory = ({ users = [], fetchData }) => {
                 <div className="h-full overflow-y-auto custom-scrollbar p-10 bg-slate-50/30">
                     <div className="bg-white border border-slate-200 rounded-[40px] overflow-hidden shadow-sm">
                         <table className="w-full text-left">
-                            <thead className="bg-slate-50 border-b border-slate-200"><tr className="text-[9px] font-black uppercase text-slate-400 tracking-widest"><th className="py-6 px-8">Identity</th><th className="py-6 px-8">Tier</th><th className="py-6 px-8">Status</th><th className="py-6 px-8 text-right">Actions</th></tr></thead>
+                            <thead className="bg-slate-50 border-b border-slate-200"><tr className="text-[9px] font-black uppercase text-slate-400 tracking-widest"><th className="py-6 px-8">User Name</th><th className="py-6 px-8">Role</th><th className="py-6 px-8">Status</th><th className="py-6 px-8 text-right">Actions</th></tr></thead>
                             <tbody className="divide-y divide-slate-100">
                                 {users.map(u => (
                                     <tr key={u._id} className="hover:bg-slate-50/50 transition-colors group">

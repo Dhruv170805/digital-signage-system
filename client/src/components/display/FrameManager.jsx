@@ -126,7 +126,7 @@ const FrameManager = ({ item, zone, onMediaEnd, onMediaError, mediaRef }) => {
           playsInline
           onEnded={() => onMediaEnd && onMediaEnd()}
           onError={handleMediaError}
-          className={`${transitionClass} object-cover bg-black`}
+          className={`${transitionClass} signage-asset bg-black`}
         />
       );
     }
@@ -159,13 +159,13 @@ const FrameManager = ({ item, zone, onMediaEnd, onMediaError, mediaRef }) => {
         src={src} 
         alt="Broadcast Asset"
         onError={handleMediaError}
-        className={`${transitionClass} object-cover bg-black`}
+        className={`${transitionClass} signage-asset bg-black`}
       />
     );
   };
 
   return (
-    <div className="w-full h-full relative overflow-hidden bg-black">
+    <div className="w-full h-full relative overflow-hidden bg-black signage-frame">
       {displayItems.current && renderMedia(displayItems.current, 'current')}
       {displayItems.next && renderMedia(displayItems.next, 'next')}
       

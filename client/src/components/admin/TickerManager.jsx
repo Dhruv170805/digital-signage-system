@@ -30,15 +30,15 @@ const TickerManager = () => {
     const handleSave = async (e) => {
         e.preventDefault();
         try {
-            if (isEditing) { await api.put(`/api/ticker/${editId}`, draftTicker); toast.success('Protocol Sync Complete'); }
-            else { await api.post(`/api/ticker`, draftTicker); toast.success('Transmission Online'); }
+            if (isEditing) { await api.put(`/api/ticker/${editId}`, draftTicker); toast.success('Save Complete'); }
+            else { await api.post(`/api/ticker`, draftTicker); toast.success('Ticker Live'); }
             refetchTickers(); handleCancel(); setActiveTab('inventory');
-        } catch (err) { toast.error('Sync failure'); }
+        } catch (err) { toast.error('Save failed'); }
     };
 
     const handleDelete = async (id) => {
-        if (!window.confirm('Terminate stream?')) return;
-        try { await api.delete(`/api/ticker/${id}`); toast.success('Ticker Purged'); refetchTickers(); } catch (e) { toast.error('Purge failed'); }
+        if (!window.confirm('Stop Ticker?')) return;
+        try { await api.delete(`/api/ticker/${id}`); toast.success('Ticker Deleted'); refetchTickers(); } catch (e) { toast.error('Delete failed'); }
     };
 
     const handleToggle = async (id, isActive) => {
@@ -51,18 +51,24 @@ const TickerManager = () => {
         setDraftTicker({ text: '', type: 'text', linkUrl: '', fontFamily: 'sans-serif', fontSize: 'text-2xl', fontWeight: 'bold', fontStyle: 'normal', color: '#ffffff', backgroundColor: 'rgba(0,0,0,0.8)', padding: '12px 40px', direction: 'right-left', speed: 60, loopControl: 'infinite', targetType: 'all', targetIds: [], priority: 10, startTime: '00:00', endTime: '23:59', isActive: true });
     };
 
+    const getPriorityLabel = (p) => {
+        if (p >= 10) return 'High';
+        if (p >= 5) return 'Medium';
+        return 'Low';
+    };
+
     return (
         <div className="animate-fade-in h-full flex flex-col">
 
                 <div className="bg-white p-8 border-b border-slate-200 shrink-0">
                     <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8">
                         <div>
-                            <div className="flex items-center gap-3 mb-2"><Type className="text-indigo-600" size={16} /><span className="text-[10px] font-black uppercase tracking-[4px] text-indigo-600">Dynamic Signal</span></div>
-                            <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter">Ticker Workspace</h2>
+                            <div className="flex items-center gap-3 mb-2"><Type className="text-indigo-600" size={16} /><span className="text-[10px] font-black uppercase tracking-[4px] text-indigo-600">Live Ticker</span></div>
+                            <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter">Ticker Center</h2>
                         </div>
                         <div className="flex gap-2 p-1.5 bg-slate-100 rounded-2xl border border-slate-200">
-                            <button onClick={() => setActiveTab('editor')} className={`px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'editor' ? 'bg-white text-black shadow-xl' : 'text-slate-500 hover:text-slate-900'}`}>Design Studio</button>
-                            <button onClick={() => setActiveTab('inventory')} className={`px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'inventory' ? 'bg-white text-black shadow-xl' : 'text-slate-500 hover:text-slate-900'}`}>Managed Streams ({tickers.length})</button>
+                            <button onClick={() => setActiveTab('editor')} className={`px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'editor' ? 'bg-white text-black shadow-xl' : 'text-slate-500 hover:text-slate-900'}`}>Editor</button>
+                            <button onClick={() => setActiveTab('inventory')} className={`px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'inventory' ? 'bg-white text-black shadow-xl' : 'text-slate-500 hover:text-slate-900'}`}>Tickers ({tickers.length})</button>
                         </div>
                     </div>
 
@@ -77,13 +83,13 @@ const TickerManager = () => {
                             }}
                         >
                             <div className="absolute top-2 left-6 z-20">
-                                <span className="text-[8px] font-black text-indigo-400 uppercase tracking-[3px]">Real-time Visualization</span>
+                                <span className="text-[8px] font-black text-indigo-400 uppercase tracking-[3px]">Preview</span>
                             </div>
                             
                             {draftTicker.text || draftTicker.linkUrl ? (
                                 <TickerEngine ticker={draftTicker} />
                             ) : (
-                                <div className="w-full text-center text-[10px] font-black uppercase text-slate-700 tracking-[12px] animate-pulse">Awaiting Signal</div>
+                                <div className="w-full text-center text-[10px] font-black uppercase text-slate-700 tracking-[12px] animate-pulse">Waiting for text</div>
                             )}
                             
                             {/* Cinematic Overlays */}
@@ -101,25 +107,25 @@ const TickerManager = () => {
                         <form onSubmit={handleSave} className="h-full flex flex-col lg:flex-row divide-x divide-slate-200">
                             <div className="lg:w-1/2 overflow-y-auto custom-scrollbar p-10 space-y-10 bg-white">
                                 <section>
-                                    <h4 className="text-[10px] font-black uppercase text-indigo-600 mb-6 flex items-center gap-3"><div className="w-6 h-px bg-indigo-600/30" /> Content Protocol</h4>
+                                    <h4 className="text-[10px] font-black uppercase text-indigo-600 mb-6 flex items-center gap-3"><div className="w-6 h-px bg-indigo-600/30" /> Content Settings</h4>
                                     <div className="space-y-6">
                                         <div className="flex gap-2 p-1 bg-slate-100 rounded-2xl border border-slate-200">
                                             {['text', 'api'].map(t => (
                                                 <button type="button" key={t} onClick={() => setDraftTicker({ ...draftTicker, type: t })} className={`flex-1 py-3 rounded-xl font-black text-[10px] uppercase transition-all ${draftTicker.type === t ? 'bg-white text-indigo-600 shadow-md' : 'text-slate-400'}`}>
-                                                    {t === 'text' ? 'Manual Payload' : 'External Feed'}
+                                                    {t === 'text' ? 'Type Text' : 'API Feed'}
                                                 </button>
                                             ))}
                                         </div>
                                         <div className="space-y-2">
-                                            <label className="text-[9px] font-black uppercase text-slate-500 ml-1">Ingestion Source</label>
-                                            {draftTicker.type === 'api' ? <input required type="url" value={draftTicker.linkUrl} onChange={(e) => setDraftTicker({ ...draftTicker, linkUrl: e.target.value })} className="nexus-input bg-slate-50 border-slate-200" placeholder="https://api.stream.io/v1/live"/> : <textarea required value={draftTicker.text} onChange={(e) => setDraftTicker({ ...draftTicker, text: e.target.value })} className="nexus-input min-h-[140px] resize-none text-lg font-black bg-slate-50 border-slate-200" placeholder="Enter transmission message..."/>}
+                                            <label className="text-[9px] font-black uppercase text-slate-500 ml-1">Text / Link</label>
+                                            {draftTicker.type === 'api' ? <input required type="url" value={draftTicker.linkUrl} onChange={(e) => setDraftTicker({ ...draftTicker, linkUrl: e.target.value })} className="nexus-input bg-slate-50 border-slate-200" placeholder="https://api.stream.io/v1/live"/> : <textarea required value={draftTicker.text} onChange={(e) => setDraftTicker({ ...draftTicker, text: e.target.value })} className="nexus-input min-h-[140px] resize-none text-lg font-black bg-slate-50 border-slate-200" placeholder="Enter message..."/>}
                                         </div>
                                     </div>
                                 </section>
                                 <section>
-                                    <h4 className="text-[10px] font-black uppercase text-emerald-600 mb-6 flex items-center gap-3"><div className="w-6 h-px bg-emerald-600/30" /> Targeting Logic</h4>
+                                    <h4 className="text-[10px] font-black uppercase text-emerald-600 mb-6 flex items-center gap-3"><div className="w-6 h-px bg-emerald-600/30" /> screen</h4>
                                     <div className="grid grid-cols-2 gap-6">
-                                        <div className="space-y-2"><label className="text-[9px] font-black uppercase text-slate-500 ml-1">Cluster</label><select className="nexus-input bg-slate-50 border-slate-200" value={draftTicker.targetType} onChange={(e) => setDraftTicker({ ...draftTicker, targetType: e.target.value, targetIds: [] })}><option value="all">Global Broadcast</option><option value="group">Cluster Group</option><option value="screen">Specific Node</option></select></div>
+                                        <div className="space-y-2"><label className="text-[9px] font-black uppercase text-slate-500 ml-1">Group</label><select className="nexus-input bg-slate-50 border-slate-200" value={draftTicker.targetType} onChange={(e) => setDraftTicker({ ...draftTicker, targetType: e.target.value, targetIds: [] })}><option value="all">All Screens</option><option value="group">Group of Screens</option><option value="screen">Specific Screen</option></select></div>
                                         <div className="space-y-2">
                                            <label className="text-[9px] font-black uppercase text-slate-500 ml-1">Priority</label>
                                            <select 
@@ -133,35 +139,35 @@ const TickerManager = () => {
                                            </select>
                                         </div>                                    </div>
                                     {draftTicker.targetType !== 'all' && (
-                                        <div className="mt-6 space-y-2"><label className="text-[9px] font-black uppercase text-slate-500 ml-1">Identity Selection</label><select multiple className="nexus-input h-32 custom-scrollbar text-xs font-bold bg-slate-50 border-slate-200" value={draftTicker.targetIds} onChange={(e) => { const options = Array.from(e.target.options); setDraftTicker({ ...draftTicker, targetIds: options.filter(o => o.selected).map(o => o.value) }); }}>{draftTicker.targetType === 'screen' ? screens.map(s => <option key={s._id} value={s._id}>{s.name}</option>) : groups.map(g => <option key={g._id} value={g._id}>{g.name}</option>)}</select></div>
+                                        <div className="mt-6 space-y-2"><label className="text-[9px] font-black uppercase text-slate-500 ml-1">Select Screens</label><select multiple className="nexus-input h-32 custom-scrollbar text-xs font-bold bg-slate-50 border-slate-200" value={draftTicker.targetIds} onChange={(e) => { const options = Array.from(e.target.options); setDraftTicker({ ...draftTicker, targetIds: options.filter(o => o.selected).map(o => o.value) }); }}>{draftTicker.targetType === 'screen' ? screens.map(s => <option key={s._id} value={s._id}>{s.name}</option>) : groups.map(g => <option key={g._id} value={g._id}>{g.name}</option>)}</select></div>
                                     )}
                                 </section>
                             </div>
 
                             <div className="lg:w-1/2 overflow-y-auto custom-scrollbar p-10 space-y-10 bg-slate-50/50">
                                 <section>
-                                    <h4 className="text-[10px] font-black uppercase text-pink-600 mb-6 flex items-center gap-3"><div className="w-6 h-px bg-pink-600/30" /> Aesthetic Protocol</h4>
+                                    <h4 className="text-[10px] font-black uppercase text-pink-600 mb-6 flex items-center gap-3"><div className="w-6 h-px bg-pink-600/30" /> Appearance</h4>
                                     <div className="grid grid-cols-2 gap-8">
                                         <div className="space-y-4">
-                                            <div className="space-y-2"><label className="text-[9px] font-black uppercase text-slate-500 ml-1">Typography</label><select className="nexus-input bg-white border-slate-200" value={draftTicker.fontFamily} onChange={(e) => setDraftTicker({ ...draftTicker, fontFamily: e.target.value })}><option value="sans-serif">System Sans</option><option value="'Plus Jakarta Sans', sans-serif">Jakarta Sans</option><option value="'JetBrains Mono', monospace">Terminal Mono</option><option value="'Bebas Neue', sans-serif">Impact Neue</option></select></div>
-                                            <div className="space-y-2"><label className="text-[9px] font-black uppercase text-slate-500 ml-1">Scale</label><select className="nexus-input bg-white border-slate-200" value={draftTicker.fontSize} onChange={(e) => setDraftTicker({ ...draftTicker, fontSize: e.target.value })}>{['text-lg', 'text-xl', 'text-2xl', 'text-4xl', 'text-6xl'].map(s => <option key={s} value={s}>{s.toUpperCase()}</option>)}</select></div>
+                                            <div className="space-y-2"><label className="text-[9px] font-black uppercase text-slate-500 ml-1">Font style</label><select className="nexus-input bg-white border-slate-200" value={draftTicker.fontFamily} onChange={(e) => setDraftTicker({ ...draftTicker, fontFamily: e.target.value })}><option value="sans-serif">System Sans</option><option value="'Plus Jakarta Sans', sans-serif">Jakarta Sans</option><option value="'JetBrains Mono', monospace">Terminal Mono</option><option value="'Bebas Neue', sans-serif">Impact Neue</option></select></div>
+                                            <div className="space-y-2"><label className="text-[9px] font-black uppercase text-slate-500 ml-1">Size</label><select className="nexus-input bg-white border-slate-200" value={draftTicker.fontSize} onChange={(e) => setDraftTicker({ ...draftTicker, fontSize: e.target.value })}>{['text-lg', 'text-xl', 'text-2xl', 'text-4xl', 'text-6xl'].map(s => <option key={s} value={s}>{s.toUpperCase()}</option>)}</select></div>
                                         </div>
                                         <div className="space-y-4">
-                                            <div className="space-y-2"><label className="text-[9px] font-black uppercase text-slate-500 ml-1">Hue</label><input type="color" value={draftTicker.color} onChange={(e) => setDraftTicker({ ...draftTicker, color: e.target.value })} className="w-full h-12 bg-white rounded-2xl cursor-pointer border border-slate-200 p-1"/></div>
-                                            <div className="space-y-2"><label className="text-[9px] font-black uppercase text-slate-500 ml-1">Transmission Speed</label><input type="range" min="10" max="200" value={draftTicker.speed} onChange={(e) => setDraftTicker({ ...draftTicker, speed: Number(e.target.value) })} className="w-full h-12 accent-indigo-600 transition-opacity"/></div>
+                                            <div className="space-y-2"><label className="text-[9px] font-black uppercase text-slate-500 ml-1">Color</label><input type="color" value={draftTicker.color} onChange={(e) => setDraftTicker({ ...draftTicker, color: e.target.value })} className="w-full h-12 bg-white rounded-2xl cursor-pointer border border-slate-200 p-1"/></div>
+                                            <div className="space-y-2"><label className="text-[9px] font-black uppercase text-slate-500 ml-1">Speed</label><input type="range" min="10" max="200" value={draftTicker.speed} onChange={(e) => setDraftTicker({ ...draftTicker, speed: Number(e.target.value) })} className="w-full h-12 accent-indigo-600 transition-opacity"/></div>
                                         </div>
                                     </div>
                                 </section>
                                 <section>
-                                    <h4 className="text-[10px] font-black uppercase text-amber-600 mb-6 flex items-center gap-3"><div className="w-6 h-px bg-amber-600/30" /> temporal sync</h4>
+                                    <h4 className="text-[10px] font-black uppercase text-amber-600 mb-6 flex items-center gap-3"><div className="w-6 h-px bg-amber-600/30" /> Time Settings</h4>
                                     <div className="grid grid-cols-2 gap-6">
-                                        <div className="space-y-2"><label className="text-[9px] font-black uppercase text-slate-500 ml-1">Active From</label><input type="time" value={draftTicker.startTime} onChange={(e) => setDraftTicker({ ...draftTicker, startTime: e.target.value })} className="nexus-input bg-white border-slate-200"/></div>
-                                        <div className="space-y-2"><label className="text-[9px] font-black uppercase text-slate-500 ml-1">Active Until</label><input type="time" value={draftTicker.endTime} onChange={(e) => setDraftTicker({ ...draftTicker, endTime: e.target.value })} className="nexus-input bg-white border-slate-200"/></div>
+                                        <div className="space-y-2"><label className="text-[9px] font-black uppercase text-slate-500 ml-1">From time</label><input type="time" value={draftTicker.startTime} onChange={(e) => setDraftTicker({ ...draftTicker, startTime: e.target.value })} className="nexus-input bg-white border-slate-200"/></div>
+                                        <div className="space-y-2"><label className="text-[9px] font-black uppercase text-slate-500 ml-1">To time</label><input type="time" value={draftTicker.endTime} onChange={(e) => setDraftTicker({ ...draftTicker, endTime: e.target.value })} className="nexus-input bg-white border-slate-200"/></div>
                                     </div>
                                 </section>
                                 <div className="pt-10 flex gap-4">
-                                    <button type="submit" className="nexus-btn-primary flex-1 py-5 text-[10px] tracking-[6px] shadow-2xl shadow-indigo-200">{isEditing ? 'SYNC UPDATES' : 'LAUNCH BROADCAST'}</button>
-                                    {isEditing && <button type="button" onClick={handleCancel} className="px-10 py-5 rounded-2xl bg-slate-200 text-slate-600 text-[10px] font-black uppercase tracking-widest">Abort</button>}
+                                    <button type="submit" className="nexus-btn-primary flex-1 py-5 text-[10px] tracking-[6px] shadow-2xl shadow-indigo-200">{isEditing ? 'SAVE CHANGES' : 'START TICKER'}</button>
+                                    {isEditing && <button type="button" onClick={handleCancel} className="px-10 py-5 rounded-2xl bg-slate-200 text-slate-600 text-[10px] font-black uppercase tracking-widest">Cancel</button>}
                                 </div>
                             </div>
                         </form>
@@ -171,7 +177,7 @@ const TickerManager = () => {
                                 {tickers.map(t => (
                                     <div key={t._id} className={`p-8 bg-white border border-slate-200 rounded-[48px] transition-all hover:border-indigo-400 hover:shadow-2xl group relative ${!t.isActive ? 'opacity-40 grayscale' : ''}`}>
                                         <div className="flex justify-between items-start mb-6">
-                                            <div className="flex items-center gap-3"><div className={`w-3 h-3 rounded-full ${t.isActive ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} /><span className={`text-[10px] font-black uppercase tracking-widest ${t.isActive ? 'text-emerald-600' : 'text-slate-400'}`}>{t.isActive ? 'Broadcasting' : 'Suspended'}</span></div>
+                                            <div className="flex items-center gap-3"><div className={`w-3 h-3 rounded-full ${t.isActive ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} /><span className={`text-[10px] font-black uppercase tracking-widest ${t.isActive ? 'text-emerald-600' : 'text-slate-400'}`}>{t.isActive ? 'Live' : 'Off'}</span></div>
                                             <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
                                                 <button onClick={() => handleToggle(t._id, !t.isActive)} className="p-3 bg-slate-100 hover:bg-slate-900 hover:text-white rounded-xl transition-all"><Power size={14}/></button>
                                                 <button onClick={() => handleEdit(t)} className="p-3 bg-indigo-50 hover:bg-indigo-600 hover:text-white rounded-xl text-indigo-600 transition-all"><Edit2 size={14}/></button>
@@ -181,12 +187,12 @@ const TickerManager = () => {
                                         <p className="text-xl font-black text-slate-900 uppercase tracking-tighter line-clamp-2 mb-6 leading-none">{t.type === 'api' ? t.linkUrl : t.text}</p>
                                         <div className="flex flex-wrap gap-2 items-center border-t border-slate-100 pt-6">
                                             <div className="px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg text-[8px] font-black text-indigo-600 uppercase tracking-widest">{t.targetType}</div>
-                                            <div className="px-3 py-1.5 bg-amber-50 border border-amber-100 rounded-lg text-[8px] font-black text-amber-600 uppercase tracking-widest">Priority {t.priority}</div>
+                                            <div className="px-3 py-1.5 bg-amber-50 border border-amber-100 rounded-lg text-[8px] font-black text-amber-600 uppercase tracking-widest">{getPriorityLabel(t.priority)} Priority</div>
                                             <div className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[8px] font-black text-slate-500 uppercase tracking-widest">{t.startTime} - {t.endTime}</div>
                                         </div>
                                     </div>
                                 ))}
-                                {tickers.length === 0 && <div className="col-span-full py-40 text-center border-2 border-dashed border-slate-200 rounded-[60px] bg-white"><p className="text-[10px] font-black text-slate-300 uppercase tracking-[12px]">No Streams Online</p></div>}
+                                {tickers.length === 0 && <div className="col-span-full py-40 text-center border-2 border-dashed border-slate-200 rounded-[60px] bg-white"><p className="text-[10px] font-black text-slate-300 uppercase tracking-[12px]">No Tickers Found</p></div>}
                             </div>
                         </div>
                     )}

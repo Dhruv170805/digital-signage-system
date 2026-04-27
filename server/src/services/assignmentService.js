@@ -22,7 +22,7 @@ class AssignmentService {
     return await Assignment.findByIdAndDelete(id);
   }
 
-  async getActiveAssignmentsForScreen(screenId, groupId = null) {
+  async getActiveAssignmentsForScreen(screenId = null, groupId = null) {
     const now = new Date();
     const currentDay = now.getDay();
     const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
@@ -31,18 +31,20 @@ class AssignmentService {
       isActive: true,
       status: 'approved',
       startDate: { $lte: now },
-      endDate: { $gte: now },
-      $or: [
-        { screenId: screenId },
-        { isGlobal: true }
-      ]
+      endDate: { $gte: now }
     };
 
-    if (groupId && groupId !== "") {
-      query.$or.push({ groupId: groupId });
-    } else {
-      // If screen has no group, it can receive assignments specifically targeted to 'null' (ungrouped)
-      query.$or.push({ groupId: null });
+    // Only filter by ID if IDs are provided. If both null, it returns all active global/unassigned ones.
+    if (screenId || groupId) {
+      query.$or = [
+        { isGlobal: true }
+      ];
+      if (screenId) query.$or.push({ screenId: screenId });
+      if (groupId && groupId !== "") {
+        query.$or.push({ groupId: groupId });
+      } else {
+        query.$or.push({ groupId: null });
+      }
     }
 
     const assignments = await Assignment.find(query)

@@ -62,6 +62,56 @@ class ScreenController {
     }
   }
 
+  async getLiveStatus(req, res, next) {
+    try {
+      const assignmentService = require('../services/assignmentService');
+      const AuditLog = require('../models/AuditLog');
+      const Assignment = require('../models/Assignment');
+      const screens = await screenService.getAllScreens();
+      const now = new Date();
+      const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+
+      const liveStatus = await Promise.all(screens.map(async (s) => {
+        const active = await assignmentService.getActiveAssignmentsForScreen(s._id, s.groupId?._id || s.groupId);
+        
+        // Fetch upcoming (scheduled for later today or future)
+        const upcoming = await Assignment.find({
+          $or: [{ screenId: s._id }, { groupId: s.groupId?._id || s.groupId }, { isGlobal: true }],
+          isActive: true,
+          status: 'approved',
+          $or: [
+            { startDate: { $gt: now } },
+            { startDate: { $lte: now }, endDate: { $gte: now }, startTime: { $gt: currentTime } }
+          ]
+        }).populate('mediaId templateId tickerId').sort({ startDate: 1, startTime: 1 }).limit(5);
+
+        // History from AuditLog
+        const history = await AuditLog.find({
+          entity: 'Screen',
+          entityId: s._id.toString()
+        }).sort({ createdAt: -1 }).limit(5);
+
+        return {
+          screenId: s._id,
+          screenName: s.name,
+          location: s.location,
+          status: s.status,
+          lastSeen: s.lastSeen,
+          telemetry: s.telemetry,
+          deviceToken: s.deviceToken,
+          groupId: s.groupId?._id || s.groupId,
+          current: active,
+          queue: upcoming,
+          history: history
+        };
+      }));
+
+      res.json(liveStatus);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async getMe(req, res) {
     const { screenId, name, groupId } = req.screen;
     res.json({

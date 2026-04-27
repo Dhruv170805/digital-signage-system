@@ -18,7 +18,7 @@ const ScreenManager = ({ fetchData: parentFetchData }) => {
     try {
       const res = await api.get('/api/groups');
       setGroups(res.data);
-    } catch (err) { console.error('Failed to load clusters'); }
+    } catch (err) { console.error('Failed to load groups'); }
   }, []);
 
   useEffect(() => { fetchGroups(); }, [fetchGroups]);
@@ -27,7 +27,7 @@ const ScreenManager = ({ fetchData: parentFetchData }) => {
     e.preventDefault();
     try {
       const res = await api.post(`/api/screens/register`, newScreen);
-      toast.success('Node Authorized');
+      toast.success('Screen Authorized');
       setNewScreen({ name: '', location: '', resolution: '1920x1080', groupId: '', ipAddress: '', dns: '8.8.8.8', gateway: '', subnet: '255.255.255.0' });
       refetch();
       if (parentFetchData) parentFetchData();
@@ -42,7 +42,7 @@ const ScreenManager = ({ fetchData: parentFetchData }) => {
   const toggleScreenActive = async (screenId, currentStatus) => {
     try {
         await api.put(`/api/screens/${screenId}`, { isActive: !currentStatus });
-        toast.success(`Node ${!currentStatus ? 'Activated' : 'Suspended'}`);
+        toast.success(`Screen ${!currentStatus ? 'Activated' : 'Suspended'}`);
         refetch();
     } catch (err) { toast.error('State toggle failed'); }
   };
@@ -51,17 +51,17 @@ const ScreenManager = ({ fetchData: parentFetchData }) => {
     e.preventDefault();
     try {
       await api.post('/api/groups', newGroup);
-      toast.success('Cluster Protocol Established');
+      toast.success('Group Protocol Established');
       setNewGroup({ name: '', description: '' });
       fetchGroups();
-    } catch (err) { toast.error('Cluster initialization failed'); }
+    } catch (err) { toast.error('Group initialization failed'); }
   };
 
   const deleteGroup = async (id) => {
-    if (!window.confirm('Dissolve this cluster?')) return;
+    if (!window.confirm('Dissolve this group?')) return;
     try {
       await api.delete(`/api/groups/${id}`);
-      toast.success('Cluster Dissolved');
+      toast.success('Group Dissolved');
       fetchGroups();
       refetch();
     } catch (err) { toast.error('Dissolution failed'); }
@@ -70,16 +70,16 @@ const ScreenManager = ({ fetchData: parentFetchData }) => {
   const updateScreenGroup = async (screenId, groupId) => {
       try {
           await api.put(`/api/screens/${screenId}`, { groupId: groupId || null });
-          toast.success('Node Recalibrated');
+          toast.success('Screen Recalibrated');
           refetch();
       } catch (err) { toast.error('Target sync failed'); }
   };
 
   const deleteScreen = async (id) => {
-    if (!window.confirm('Terminate this node?')) return;
+    if (!window.confirm('Terminate this screen?')) return;
     try {
       await api.delete(`/api/screens/${id}`);
-      toast.success('Node Purged');
+      toast.success('Screen Purged');
       refetch();
       if (parentFetchData) parentFetchData();
     } catch (err) { toast.error('Termination failed'); }
@@ -118,7 +118,7 @@ const ScreenManager = ({ fetchData: parentFetchData }) => {
                 </div>
                 <div className="p-6 bg-slate-50 rounded-[32px] border border-slate-200 flex items-center justify-between group">
                     <div>
-                        <p className="text-[9px] font-black text-sky-600 uppercase tracking-widest mb-1">Clusters Defined</p>
+                        <p className="text-[9px] font-black text-sky-600 uppercase tracking-widest mb-1">Groups Defined</p>
                         <h4 className="text-2xl font-black text-slate-900 tabular-nums uppercase">{groups.length} <span className="text-xs text-slate-400 font-bold ml-1">ZONES</span></h4>
                     </div>
                     <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-slate-200 group-hover:rotate-12 transition-transform"><Layers className="text-sky-600" size={24} /></div>
@@ -138,17 +138,17 @@ const ScreenManager = ({ fetchData: parentFetchData }) => {
                 <div className="h-full flex flex-col lg:flex-row divide-x divide-slate-200">
                     <div className="lg:w-1/2 overflow-y-auto custom-scrollbar p-10 space-y-10 bg-white">
                         <section>
-                            <h4 className="text-[10px] font-black uppercase text-indigo-600 mb-8 flex items-center gap-3"><div className="w-6 h-px bg-indigo-600/30" /> Node Provisioning</h4>
+                            <h4 className="text-[10px] font-black uppercase text-indigo-600 mb-8 flex items-center gap-3"><div className="w-6 h-px bg-indigo-600/30" /> SCREEN SETUP</h4>
                             <form onSubmit={registerScreen} className="space-y-6">
                                 <div className="space-y-2">
-                                    <label className="text-[9px] font-black uppercase text-slate-500 ml-1">Terminal Identity</label>
+                                    <label className="text-[9px] font-black uppercase text-slate-500 ml-1">Screen Name</label>
                                     <input type="text" required className="nexus-input bg-slate-50 border-slate-200" placeholder="e.g. NORTH-DISPLAY-01" value={newScreen.name} onChange={(e) => setNewScreen({...newScreen, name: e.target.value})}/>
                                 </div>
                                 <div className="grid grid-cols-2 gap-6">
-                                    <div className="space-y-2"><label className="text-[9px] font-black uppercase text-slate-500 ml-1">Location Tag</label><div className="relative"><MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={14} /><input type="text" required className="nexus-input bg-slate-50 pl-11 border-slate-200" placeholder="e.g. Main Lobby" value={newScreen.location} onChange={(e) => setNewScreen({...newScreen, location: e.target.value})}/></div></div>
-                                    <div className="space-y-2"><label className="text-[9px] font-black uppercase text-slate-500 ml-1">Protocol Res</label><select className="nexus-input bg-slate-50 border-slate-200" value={newScreen.resolution} onChange={(e) => setNewScreen({...newScreen, resolution: e.target.value})}><option value="1920x1080">1080p Standard</option><option value="3840x2160">4K Ultra</option><option value="1080x1920">1080p Vertical</option></select></div>
+                                    <div className="space-y-2"><label className="text-[9px] font-black uppercase text-slate-500 ml-1">Location</label><div className="relative"><MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={14} /><input type="text" required className="nexus-input bg-slate-50 pl-11 border-slate-200" placeholder="e.g. Main Lobby" value={newScreen.location} onChange={(e) => setNewScreen({...newScreen, location: e.target.value})}/></div></div>
+                                    <div className="space-y-2"><label className="text-[9px] font-black uppercase text-slate-500 ml-1">resolutions</label><select className="nexus-input bg-slate-50 border-slate-200" value={newScreen.resolution} onChange={(e) => setNewScreen({...newScreen, resolution: e.target.value})}><option value="1920x1080">1080p Standard</option><option value="3840x2160">4K Ultra</option><option value="1080x1920">1080p Vertical</option></select></div>
                                 </div>
-                                <div className="space-y-2"><label className="text-[9px] font-black uppercase text-slate-500 ml-1">Cluster Assignment</label><select className="nexus-input bg-slate-50 border-slate-200" value={newScreen.groupId} onChange={(e) => setNewScreen({...newScreen, groupId: e.target.value})}><option value="">Unassigned Root</option>{groups.map(g => <option key={g._id} value={g._id}>{g.name}</option>)}</select></div>
+                                <div className="space-y-2"><label className="text-[9px] font-black uppercase text-slate-500 ml-1">Select Group</label><select className="nexus-input bg-slate-50 border-slate-200" value={newScreen.groupId} onChange={(e) => setNewScreen({...newScreen, groupId: e.target.value})}><option value="">Unassigned Root</option>{groups.map(g => <option key={g._id} value={g._id}>{g.name}</option>)}</select></div>
                                 
                                 <div className="pt-4 border-t border-slate-100">
                                     <h5 className="text-[8px] font-black uppercase text-slate-400 tracking-[3px] mb-6">Advanced Network Stack</h5>
@@ -166,11 +166,11 @@ const ScreenManager = ({ fetchData: parentFetchData }) => {
                     </div>
                     <div className="lg:w-1/2 overflow-y-auto custom-scrollbar p-10 space-y-10 bg-slate-50/50">
                         <section>
-                            <h4 className="text-[10px] font-black uppercase text-emerald-600 mb-8 flex items-center gap-3"><div className="w-6 h-px bg-emerald-600/30" /> Cluster Architecture</h4>
+                            <h4 className="text-[10px] font-black uppercase text-emerald-600 mb-8 flex items-center gap-3"><div className="w-6 h-px bg-emerald-600/30" /> Group</h4>
                             <form onSubmit={createGroup} className="p-8 bg-white border border-slate-200 rounded-[32px] shadow-sm space-y-4">
-                                <label className="text-[9px] font-black uppercase text-slate-400 ml-1">Cluster Identifier</label>
+                                <label className="text-[9px] font-black uppercase text-slate-400 ml-1">GROUP name</label>
                                 <div className="flex gap-2">
-                                    <input type="text" required className="nexus-input flex-1 border-slate-200" placeholder="New Cluster Name..." value={newGroup.name} onChange={(e) => setNewGroup({...newGroup, name: e.target.value})}/>
+                                    <input type="text" required className="nexus-input flex-1 border-slate-200" placeholder="New Group Name..." value={newGroup.name} onChange={(e) => setNewGroup({...newGroup, name: e.target.value})}/>
                                     <button type="submit" className="px-6 py-3 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all">Create</button>
                                 </div>
                             </form>
@@ -208,9 +208,9 @@ const ScreenManager = ({ fetchData: parentFetchData }) => {
                                 </div>
                                 <div className="grid grid-cols-2 gap-3 mb-8">
                                     <div className="p-4 bg-slate-50 border border-slate-100 rounded-[24px]">
-                                        <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Cluster</p>
+                                        <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Group</p>
                                         <select className="w-full bg-transparent border-none text-[10px] font-black uppercase text-indigo-600 outline-none p-0 cursor-pointer" value={s.groupId?._id || s.groupId || ''} onChange={(e) => updateScreenGroup(s._id, e.target.value)}>
-                                            <option value="">Root Hub</option>{groups.map(g => <option key={g._id} value={g._id}>{g.name}</option>)}
+                                            <option value="">Root Center</option>{groups.map(g => <option key={g._id} value={g._id}>{g.name}</option>)}
                                         </select>
                                     </div>
                                     <div className="p-4 bg-slate-50 border border-slate-100 rounded-[24px]"><p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Resolution</p><p className="text-[10px] font-black text-slate-700 tabular-nums">{s.resolution}</p></div>
@@ -222,7 +222,7 @@ const ScreenManager = ({ fetchData: parentFetchData }) => {
                                         <div className="bg-white p-2 rounded-2xl shadow-inner border border-slate-100">
                                             <img src={s.qrCode} alt="Registration QR" className="w-24 h-24" />
                                         </div>
-                                        <p className="text-[7px] font-bold text-slate-400 uppercase tracking-widest text-center">Scan to link physical node</p>
+                                        <p className="text-[7px] font-bold text-slate-400 uppercase tracking-widest text-center">Scan to link physical screen</p>
                                     </div>
                                 )}
                                 <div className="mt-auto pt-6 border-t border-slate-100 flex items-center justify-between">
