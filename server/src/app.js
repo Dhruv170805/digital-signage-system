@@ -91,7 +91,7 @@ app.get('/api', (req, res) => {
 });
 
 // React Fallback
-app.get('*', (req, res) => {
+app.get(/.*/, (req, res) => {
   res.sendFile(path.join(buildPath, 'index.html'));
 });
 
