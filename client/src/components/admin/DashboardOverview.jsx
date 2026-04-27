@@ -70,8 +70,8 @@ const DashboardOverview = ({ screens, schedules, pendingMedia, media, setActiveT
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                         {[
                             { label: 'Users', desc: 'Manage user access', tab: 'users', icon: Users, color: 'text-indigo-600', bg: 'bg-indigo-100/50' },
-                            { label: 'History', desc: 'Trace system signals', tab: 'history', icon: History, color: 'text-emerald-600', bg: 'bg-emerald-100/50' },
-                            { label: 'Templates', desc: 'Create layout protocols', tab: 'templates', icon: FileText, color: 'text-sky-600', bg: 'bg-sky-100/50' },
+                            { label: 'History', desc: 'View system activity', tab: 'history', icon: History, color: 'text-emerald-600', bg: 'bg-emerald-100/50' },
+                            { label: 'Templates', desc: 'Create screen designs', tab: 'templates', icon: FileText, color: 'text-sky-600', bg: 'bg-sky-100/50' },
                             { label: 'Tickers', desc: 'Configure live messages', tab: 'ticker', icon: TypeIcon, color: 'text-amber-600', bg: 'bg-amber-100/50' }
                         ].map(btn => (
                             <button 

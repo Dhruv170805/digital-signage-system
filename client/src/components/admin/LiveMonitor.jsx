@@ -165,7 +165,7 @@ const DetailPanel = ({ screen, isOpen, onClose }) => {
                     <Zap size={64} className="text-indigo-600" />
                 </div>
                 <div className="relative z-10">
-                    <p className="text-[8px] font-black text-indigo-400 uppercase tracking-[4px] mb-2">Active Protocol</p>
+                    <p className="text-[8px] font-black text-indigo-400 uppercase tracking-[4px] mb-2">Active Rule</p>
                     <h4 className="text-xl font-black text-indigo-900 uppercase tracking-tight mb-4">{screen.current[0].name}</h4>
                     
                     <div className="grid grid-cols-2 gap-4">
@@ -426,7 +426,7 @@ const LiveMonitor = () => {
             <div className="h-full flex items-center justify-center">
                 <div className="flex flex-col items-center gap-6">
                     <div className="w-16 h-16 border-4 border-indigo-600/20 border-t-indigo-600 rounded-full animate-spin" />
-                    <p className="text-[10px] font-black text-indigo-600 uppercase tracking-[6px]">Syncing Telemetry</p>
+                    <p className="text-[10px] font-black text-indigo-600 uppercase tracking-[6px]">Syncing Status</p>
                 </div>
             </div>
         ) : filteredScreens.length > 0 ? (

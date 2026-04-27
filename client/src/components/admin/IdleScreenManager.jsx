@@ -51,15 +51,15 @@ const IdleScreenManager = () => {
         e.preventDefault();
         try {
             await api.post('/api/idle', draft);
-            toast.success('Idle Protocol Deployed');
+            toast.success('Idle Mode Active');
             fetchConfigs(); setActiveTab('inventory');
             setDraft({ name: '', targetType: 'all', targetIds: [], contentType: 'image', content: { url: '', text: '', bgColor: '#000000' }, style: { fontSize: 4, color: '#ffffff', align: 'center', fontWeight: '900', background: 'transparent' }, priority: 10, isActive: true });
         } catch (err) { toast.error('Deployment failed'); }
     };
 
     const deleteConfig = async (id) => {
-        if (!window.confirm('Purge protocol?')) return;
-        try { await api.delete(`/api/idle/${id}`); toast.success('Protocol Purged'); fetchConfigs(); } catch (err) { toast.error('Purge failure'); }
+        if (!window.confirm('Delete this setting?')) return;
+        try { await api.delete(`/api/idle/${id}`); toast.success('Setting Deleted'); fetchConfigs(); } catch (err) { toast.error('Delete failure'); }
     };
 
     const getPriorityLabel = (p) => {
@@ -166,7 +166,7 @@ const IdleScreenManager = () => {
                                         <button onClick={() => deleteConfig(c._id)} className="p-3 bg-rose-50 text-rose-500 rounded-xl opacity-0 group-hover:opacity-100 hover:bg-rose-600 hover:text-white transition-all shadow-sm"><Trash2 size={16} /></button>
                                     </div>
                                     <div className="flex-1 space-y-2 mb-8">
-                                        <div className="flex items-center gap-2"><div className={`w-2 h-2 rounded-full ${c.isActive ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} /><p className="text-[10px] font-black text-slate-400 uppercase tracking-[2px]">{c.contentType} Protocol</p></div>
+                                        <div className="flex items-center gap-2"><div className={`w-2 h-2 rounded-full ${c.isActive ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} /><p className="text-[10px] font-black text-slate-400 uppercase tracking-[2px]">{c.contentType} Rule</p></div>
                                         <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter truncate leading-none" title={c.name}>{c.name}</h3>
                                     </div>
                                     <div className="grid grid-cols-2 gap-3 mb-8 border-t border-slate-100 pt-8">
@@ -176,7 +176,7 @@ const IdleScreenManager = () => {
                                     <div className="p-5 bg-slate-100 rounded-2xl flex items-center justify-between"><div className="flex items-center gap-2"><Layers className="text-slate-400" size={14} /><span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">{c.targetIds?.length || 0} Screens Connected</span></div><span className="text-[8px] font-bold text-slate-300 uppercase">{new Date(c.createdAt).toLocaleDateString()}</span></div>
                                 </div>
                             ))}
-                            {configs.length === 0 && <div className="col-span-full py-40 text-center border-2 border-dashed border-slate-200 rounded-[60px] bg-white"><p className="text-[10px] font-black text-slate-300 uppercase tracking-[16px]">No Protocols Active</p></div>}
+                            {configs.length === 0 && <div className="col-span-full py-40 text-center border-2 border-dashed border-slate-200 rounded-[60px] bg-white"><p className="text-[10px] font-black text-slate-300 uppercase tracking-[16px]">No Idle Settings Active</p></div>}
                         </div>
                     </div>
                 )}

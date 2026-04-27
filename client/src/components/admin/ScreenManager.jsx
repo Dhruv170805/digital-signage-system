@@ -27,7 +27,7 @@ const ScreenManager = ({ fetchData: parentFetchData }) => {
     e.preventDefault();
     try {
       const res = await api.post(`/api/screens/register`, newScreen);
-      toast.success('Screen Authorized');
+      toast.success('Screen Active');
       setNewScreen({ name: '', location: '', resolution: '1920x1080', groupId: '', ipAddress: '', dns: '8.8.8.8', gateway: '', subnet: '255.255.255.0' });
       refetch();
       if (parentFetchData) parentFetchData();
@@ -51,7 +51,7 @@ const ScreenManager = ({ fetchData: parentFetchData }) => {
     e.preventDefault();
     try {
       await api.post('/api/groups', newGroup);
-      toast.success('Group Protocol Established');
+      toast.success('Group Rule Established');
       setNewGroup({ name: '', description: '' });
       fetchGroups();
     } catch (err) { toast.error('Group initialization failed'); }
@@ -146,21 +146,21 @@ const ScreenManager = ({ fetchData: parentFetchData }) => {
                                 </div>
                                 <div className="grid grid-cols-2 gap-6">
                                     <div className="space-y-2"><label className="text-[9px] font-black uppercase text-slate-500 ml-1">Location</label><div className="relative"><MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={14} /><input type="text" required className="nexus-input bg-slate-50 pl-11 border-slate-200" placeholder="e.g. Main Lobby" value={newScreen.location} onChange={(e) => setNewScreen({...newScreen, location: e.target.value})}/></div></div>
-                                    <div className="space-y-2"><label className="text-[9px] font-black uppercase text-slate-500 ml-1">resolutions</label><select className="nexus-input bg-slate-50 border-slate-200" value={newScreen.resolution} onChange={(e) => setNewScreen({...newScreen, resolution: e.target.value})}><option value="1920x1080">1080p Standard</option><option value="3840x2160">4K Ultra</option><option value="1080x1920">1080p Vertical</option></select></div>
+                                    <div className="space-y-2"><label className="text-[9px] font-black uppercase text-slate-500 ml-1">Resolution</label><select className="nexus-input bg-slate-50 border-slate-200" value={newScreen.resolution} onChange={(e) => setNewScreen({...newScreen, resolution: e.target.value})}><option value="1920x1080">1080p Standard</option><option value="3840x2160">4K Ultra</option><option value="1080x1920">1080p Vertical</option></select></div>
                                 </div>
                                 <div className="space-y-2"><label className="text-[9px] font-black uppercase text-slate-500 ml-1">Select Group</label><select className="nexus-input bg-slate-50 border-slate-200" value={newScreen.groupId} onChange={(e) => setNewScreen({...newScreen, groupId: e.target.value})}><option value="">Unassigned Root</option>{groups.map(g => <option key={g._id} value={g._id}>{g.name}</option>)}</select></div>
                                 
                                 <div className="pt-4 border-t border-slate-100">
-                                    <h5 className="text-[8px] font-black uppercase text-slate-400 tracking-[3px] mb-6">Advanced Network Stack</h5>
+                                    <h5 className="text-[8px] font-black uppercase text-slate-400 tracking-[3px] mb-6">Network Settings</h5>
                                     <div className="grid grid-cols-2 gap-6">
-                                        <div className="space-y-2"><label className="text-[9px] font-black uppercase text-slate-500 ml-1">Static IPv4</label><input type="text" className="nexus-input bg-slate-50 border-slate-200" placeholder="e.g. 192.168.1.50" value={newScreen.ipAddress} onChange={(e) => setNewScreen({...newScreen, ipAddress: e.target.value})}/></div>
+                                        <div className="space-y-2"><label className="text-[9px] font-black uppercase text-slate-500 ml-1">IP Address</label><input type="text" className="nexus-input bg-slate-50 border-slate-200" placeholder="e.g. 192.168.1.50" value={newScreen.ipAddress} onChange={(e) => setNewScreen({...newScreen, ipAddress: e.target.value})}/></div>
                                         <div className="space-y-2"><label className="text-[9px] font-black uppercase text-slate-500 ml-1">Subnet Mask</label><input type="text" className="nexus-input bg-slate-50 border-slate-200" placeholder="255.255.255.0" value={newScreen.subnet} onChange={(e) => setNewScreen({...newScreen, subnet: e.target.value})}/></div>
                                         <div className="space-y-2"><label className="text-[9px] font-black uppercase text-slate-500 ml-1">Default Gateway</label><input type="text" className="nexus-input bg-slate-50 border-slate-200" placeholder="192.168.1.1" value={newScreen.gateway} onChange={(e) => setNewScreen({...newScreen, gateway: e.target.value})}/></div>
                                         <div className="space-y-2"><label className="text-[9px] font-black uppercase text-slate-500 ml-1">Primary DNS</label><input type="text" className="nexus-input bg-slate-50 border-slate-200" placeholder="8.8.8.8" value={newScreen.dns} onChange={(e) => setNewScreen({...newScreen, dns: e.target.value})}/></div>
                                     </div>
                                 </div>
 
-                                <button type="submit" className="nexus-btn-primary w-full py-5 text-[10px] tracking-[6px] uppercase shadow-2xl shadow-indigo-200">AUTHORIZE PROTOCOL</button>
+                                <button type="submit" className="nexus-btn-primary w-full py-5 text-[10px] tracking-[6px] uppercase shadow-2xl shadow-indigo-200">APPROVE RULE</button>
                             </form>
                         </section>
                     </div>

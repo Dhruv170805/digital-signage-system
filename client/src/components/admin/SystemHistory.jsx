@@ -66,7 +66,7 @@ const SystemHistory = ({ limit }) => {
           <div className="bg-white p-8 border-b border-slate-200 shrink-0">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8">
                 <div>
-                    <div className="flex items-center gap-3 mb-2"><History className="text-indigo-600" size={16} /><span className="text-[10px] font-black uppercase tracking-[4px] text-indigo-600">Audit Protocol</span></div>
+                    <div className="flex items-center gap-3 mb-2"><History className="text-indigo-600" size={16} /><span className="text-[10px] font-black uppercase tracking-[4px] text-indigo-600">Activity Log</span></div>
                     <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter">System History</h2>
                 </div>
                 {!limit && (
@@ -80,7 +80,7 @@ const SystemHistory = ({ limit }) => {
                 <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-2xl border border-slate-200 w-fit">
                     {['', 'UPLOAD', 'REJECT', 'COMPLETED', 'DELETE'].map(cat => (
                         <button key={cat} onClick={() => setFilters(p => ({ ...p, action: cat }))} className={`px-5 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${filters.action === cat ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
-                            {cat || 'ALL SIGNALS'}
+                            {cat || 'ALL ACTIVITY'}
                         </button>
                     ))}
                 </div>
@@ -91,10 +91,10 @@ const SystemHistory = ({ limit }) => {
             <div className="h-full overflow-y-auto custom-scrollbar p-10 bg-slate-50/30">
                 <div className="bg-white border border-slate-200 rounded-[40px] overflow-hidden shadow-sm">
                     <table className="w-full text-left">
-                        <thead className="bg-slate-50 border-b border-slate-200"><tr className="text-[9px] font-black uppercase text-slate-400 tracking-widest"><th className="py-6 px-10">Entity Target</th><th className="py-6 px-10">Protocol</th><th className="py-6 px-10">Operator</th><th className="py-6 px-10 text-right">Timestamp</th></tr></thead>
+                        <thead className="bg-slate-50 border-b border-slate-200"><tr className="text-[9px] font-black uppercase text-slate-400 tracking-widest"><th className="py-6 px-10">Entity Target</th><th className="py-6 px-10">Rule</th><th className="py-6 px-10">Operator</th><th className="py-6 px-10 text-right">Timestamp</th></tr></thead>
                         <tbody className="divide-y divide-slate-100">
                             {loading ? (
-                                <tr><td colSpan="4" className="py-32 text-center text-slate-300 font-black uppercase tracking-[12px] animate-pulse">Syncing...</td></tr>
+                                <tr><td colSpan="4" className="py-32 text-center text-slate-300 font-black uppercase tracking-[12px] animate-pulse">Saving...</td></tr>
                             ) : displayedLogs.length === 0 ? (
                                 <tr><td colSpan="4" className="py-32 text-center text-slate-300 font-black uppercase tracking-[12px]">No Data</td></tr>
                             ) : (

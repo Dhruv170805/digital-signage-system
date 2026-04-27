@@ -79,14 +79,14 @@ const LayoutArchitect = ({ fetchData }) => {
     setTemplateName(template.name);
     setFrames(parsedLayout);
     setActiveTab('editor');
-    toast.success(`Protocol ${template.name} Loaded`);
+    toast.success(`Layout ${template.name} Loaded`);
   };
 
   const deleteTemplate = async (id) => {
-    if (!window.confirm('Terminate this protocol permanently?')) return;
+    if (!window.confirm('Terminate this layout permanently?')) return;
     try {
       await api.delete(`/api/templates/${id}`);
-      toast.success('Protocol Terminated');
+      toast.success('Layout Terminated');
       refetch();
     } catch { toast.error('Termination failure'); }
   };
@@ -195,7 +195,7 @@ const LayoutArchitect = ({ fetchData }) => {
   };
 
   const saveTemplate = async () => {
-    if (!templateName) return toast.error('Protocol ID missing');
+    if (!templateName) return toast.error('Layout Name missing');
     if (frames.length === 0) return toast.error('Canvas empty');
     if (collisions.length > 0) return toast.error('Resolve spatial collisions');
     
@@ -211,13 +211,13 @@ const LayoutArchitect = ({ fetchData }) => {
         name: templateName.trim(), 
         layout: JSON.stringify(finalFrames) 
       });
-      toast.success('Protocol Synchronized');
+      toast.success('Layout Saved');
       resetBuilder();
       refetch();
       if (fetchData) fetchData();
       setActiveTab('inventory');
     } catch (err) { 
-      const msg = err.response?.data?.message || 'Sync failure';
+      const msg = err.response?.data?.message || 'Save failure';
       toast.error(msg); 
     }
   };
@@ -283,7 +283,7 @@ const LayoutArchitect = ({ fetchData }) => {
             {activeTab === 'editor' && (
                 <div className="flex items-center justify-between bg-slate-50 p-4 rounded-3xl border border-slate-200 shadow-inner">
                     <div className="flex gap-2">
-                        <button onClick={addFrame} className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase flex items-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200"><Plus size={14}/> Provision Zone</button>
+                        <button onClick={addFrame} className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase flex items-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200"><Plus size={14}/> Create Zone</button>
                         <div className="w-px h-8 bg-slate-300 mx-2" />
                         <button onClick={() => setFrames([{ i: 'Main', x: 0, y: 0, w: 100, h: 100, type: 'media', zIndex: 1 }])} className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase hover:bg-slate-100 transition-all text-slate-600 shadow-sm">Standard</button>
                         <button onClick={() => setFrames([{ i: 'Left', x: 0, y: 0, w: 50, h: 100, type: 'media', zIndex: 1 }, { i: 'Right', x: 50, y: 0, w: 50, h: 100, type: 'media', zIndex: 1 }])} className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase hover:bg-slate-100 transition-all text-slate-600 shadow-sm">Vertical Split</button>
@@ -368,7 +368,7 @@ const LayoutArchitect = ({ fetchData }) => {
                         <div className="flex-1 overflow-y-auto custom-scrollbar p-8 space-y-8 bg-slate-50/50">
                             <h4 className="text-[10px] font-black uppercase text-emerald-600 flex items-center gap-3"><div className="w-6 h-px bg-emerald-600/30" /> SAVE LAYOUT</h4>
                             <div className="space-y-6">
-                                <div className="space-y-2"><label className="text-[9px] font-black uppercase text-slate-400 ml-1">Identifier</label><input type="text" className="nexus-input bg-white border-slate-200 font-black text-lg" placeholder="SCHEDULE-ALPHA" value={templateName} onChange={(e) => setTemplateName(e.target.value)}/></div>
+                                <div className="space-y-2"><label className="text-[9px] font-black uppercase text-slate-400 ml-1">Name</label><input type="text" className="nexus-input bg-white border-slate-200 font-black text-lg" placeholder="SCHEDULE-ALPHA" value={templateName} onChange={(e) => setTemplateName(e.target.value)}/></div>
                                 {collisions.length > 0 && <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-start gap-3"><AlertTriangle className="text-rose-500 shrink-0" size={16} /><p className="text-[9px] font-bold text-rose-600 uppercase tracking-widest leading-relaxed">Spatial Collision: {collisions.join(', ')}</p></div>}
                                 <button onClick={saveTemplate} className="nexus-btn-primary w-full py-4 text-[10px] tracking-[6px] shadow-xl uppercase">SAVE LAYOUT</button>
                             </div>
