@@ -11,9 +11,15 @@ class MediaController {
     else if (media.mimeType && media.mimeType.includes('video')) fileType = 'video';
     else if (media.mimeType && media.mimeType.includes('text')) fileType = 'text';
 
+    // 🛡️ Ensure path is web-accessible (strip absolute server path if present)
+    let webPath = media.path || '';
+    if (webPath.includes('uploads/')) {
+        webPath = 'uploads/' + webPath.split('uploads/').pop();
+    }
+
     return {
       ...media.toObject(),
-      filePath: media.path,
+      filePath: webPath,
       fileName: media.originalName,
       fileType
     };

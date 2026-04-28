@@ -4,6 +4,19 @@ import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { usePendingMedia, usePendingAssignments, useScreens } from '../../hooks/useAdminData';
 
+const getMediaUrl = (filePath) => {
+  if (!filePath) return '';
+  const apiBase = (import.meta.env.VITE_API_URL || '').replace(/\/api\/?$/, '').replace(/\/$/, '');
+  const cleanPath = filePath.startsWith('/') ? filePath : `/${filePath}`;
+  return `${apiBase}${cleanPath}`.replace(/([^:]\/)\/+/g, "$1");
+};
+
+const getPriorityLabel = (p) => {
+  if (p >= 10) return 'High';
+  if (p >= 5) return 'Medium';
+  return 'Low';
+};
+
 const ModerationModal = ({ isOpen, onClose, item, type, onConfirm, screens, groups }) => {
   const [action, setAction] = useState('approve');
   const [reason, setReason] = useState('');
@@ -48,13 +61,6 @@ const ModerationModal = ({ isOpen, onClose, item, type, onConfirm, screens, grou
     onConfirm(item._id || item.id, action, action === 'approve' ? editData : { reason });
   };
 
-  const getMediaUrl = (filePath) => {
-    if (!filePath) return '';
-    const apiBase = (import.meta.env.VITE_API_URL || '').replace(/\/api\/?$/, '').replace(/\/$/, '');
-    const cleanPath = filePath.startsWith('/') ? filePath : `/${filePath}`;
-    return `${apiBase}${cleanPath}`.replace(/([^:]\/)\/+/g, "$1");
-  };
-
   const src = item.filePath ? getMediaUrl(item.filePath) : null;
 
   return (
@@ -90,7 +96,7 @@ const ModerationModal = ({ isOpen, onClose, item, type, onConfirm, screens, grou
                             <h5 className="text-[10px] font-black uppercase text-slate-400 tracking-[3px]">Requested Specs</h5>
                             <div className="space-y-4">
                                 <div className="flex justify-between items-center border-b border-slate-100 pb-3"><span className="text-[9px] font-bold text-slate-400 uppercase">Identity</span><span className="text-[10px] font-black text-slate-900 uppercase truncate max-w-[120px]">{item.fileName || item.name}</span></div>
-                                <div className="flex justify-between items-center border-b border-slate-100 pb-3"><span className="text-[9px] font-bold text-slate-400 uppercase">Priority</span><span className="text-[10px] font-black text-amber-600 uppercase">Level {type === 'media' ? (item.requestedPriority || 1) : (item.priority || 1)}</span></div>
+                                <div className="flex justify-between items-center border-b border-slate-100 pb-3"><span className="text-[9px] font-bold text-slate-400 uppercase">Priority</span><span className="text-[10px] font-black text-amber-600 uppercase">{getPriorityLabel(type === 'media' ? (item.requestedPriority || 1) : (item.priority || 1))} Priority</span></div>
                                 <div className="flex justify-between items-center"><span className="text-[9px] font-bold text-slate-400 uppercase">Cycle</span><span className="text-[10px] font-black text-sky-600 uppercase tabular-nums">{type === 'media' ? (item.requestedDuration || 10) : (item.duration || 10)} SEC</span></div>
                             </div>
                         </div>
@@ -168,12 +174,6 @@ const ModerationQueue = ({ fetchData, setPreviewFile, setShowPreview }) => {
       refetchMedia(); refetchSchedules();
       if (fetchData) fetchData();
     } catch { toast.error('Processing failed'); }
-  };
-
-  const getPriorityLabel = (p) => {
-    if (p >= 10) return 'High';
-    if (p >= 5) return 'Medium';
-    return 'Low';
   };
 
   const filterAndSort = (items, isMedia) => {

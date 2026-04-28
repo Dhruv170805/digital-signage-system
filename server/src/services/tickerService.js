@@ -20,7 +20,7 @@ class TickerService {
   }
 
   async update(id, data) {
-    return await Ticker.findByIdAndUpdate(id, data, { new: true });
+    return await Ticker.findByIdAndUpdate(id, data, { returnDocument: "after" });
   }
 
   async delete(id) {

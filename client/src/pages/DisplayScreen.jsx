@@ -10,6 +10,7 @@ import FrameManager from '../components/display/FrameManager';
 import WeatherWidget from '../components/display/WeatherWidget';
 import TickerEngine from '../components/display/TickerEngine';
 import LocalFramePlayer from '../components/display/LocalFramePlayer';
+import AudioEngine from '../components/display/AudioEngine';
 import useLayoutStore from '../store/useLayoutStore';
 
 // --- Adaptive Segment Component ---
@@ -44,9 +45,11 @@ const DisplayScreen = () => {
   
   const [tickers, setTickers] = useState([]);
   const [currentTickerIdx, setCurrentTickerIdx] = useState(0);
+  const [audioAssignments, setAudioAssignments] = useState([]);
 
   const [idleConfig, setIdleConfig] = useState(null);
   const [time, setTime] = useState(new Date());
+  const [settings, setSettings] = useState({});
   const [screenInfo, setScreenInfo] = useState(null);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
@@ -121,7 +124,9 @@ const DisplayScreen = () => {
         tickers: newTickers = [], 
         idleConfig: newIdle = null, 
         media: newMedia = [],
-        screen: newScreen = null
+        settings: newSettings = {},
+        screen: newScreen = null,
+        audioAssignments: newAudioAssignments = []
       } = res.data;
       
       setIsOffline(false);
@@ -139,6 +144,8 @@ const DisplayScreen = () => {
       setTickers(newTickers);
       setAllMedia(newMedia);
       setIdleConfig(newIdle);
+      setSettings(newSettings);
+      setAudioAssignments(newAudioAssignments);
     } catch (err) {
       if (err.response && (err.response.status === 401 || err.response.status === 403) && token) {
          localStorage.removeItem('screenToken');
@@ -358,6 +365,8 @@ useEffect(() => {
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(30,27,75,1)_0%,rgba(0,0,0,1)_100%)] opacity-60" />
           <div className="absolute inset-0 backdrop-blur-[150px]" />
       </div>
+
+      <AudioEngine assignments={audioAssignments} settings={settings} socket={socketRef.current} />
 
       {/* ⚡ SEGMENTED ADAPTIVE TOP BAR */}
       <div className="absolute top-12 left-12 right-12 z-50 flex items-center justify-between pointer-events-none">

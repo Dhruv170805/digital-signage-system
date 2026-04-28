@@ -32,7 +32,7 @@ class IdleService {
   }
 
   async update(id, data) {
-    return await IdleConfig.findByIdAndUpdate(id, data, { new: true });
+    return await IdleConfig.findByIdAndUpdate(id, data, { returnDocument: "after" });
   }
 
   async delete(id) {

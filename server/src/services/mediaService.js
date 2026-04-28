@@ -21,7 +21,7 @@ class MediaService {
 
   async updateStatus(id, updateData) {
     const update = typeof updateData === 'string' ? { status: updateData } : updateData;
-    return await Media.findByIdAndUpdate(id, update, { new: true });
+    return await Media.findByIdAndUpdate(id, update, { returnDocument: "after" });
   }
 
   async deleteMedia(id) {

@@ -76,7 +76,7 @@ class TemplateService {
 
   async update(id, data) {
     const preparedData = this._prepareData(data);
-    return await Template.findByIdAndUpdate(id, preparedData, { new: true, runValidators: true });
+    return await Template.findByIdAndUpdate(id, preparedData, { returnDocument: "after", runValidators: true });
   }
 
   async delete(id) {

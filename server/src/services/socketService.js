@@ -115,6 +115,23 @@ class SocketService {
       socket.on('disconnect', () => {
         console.log('Socket disconnected:', socket.id);
       });
+
+      // Real-time Audio Controls
+      socket.on('audio:volume', (data) => {
+        if (!socket.user || socket.user.role !== 'admin') return;
+        const { targetType, targetId, volume } = data;
+        if (targetType === 'all') this.broadcast('audio:volume', { volume });
+        else if (targetType === 'screen') this.notifyScreen(targetId, 'audio:volume', { volume });
+        else if (targetType === 'group') this.notifyGroup(targetId, 'audio:volume', { volume });
+      });
+
+      socket.on('audio:control', (data) => {
+        if (!socket.user || socket.user.role !== 'admin') return;
+        const { targetType, targetId, action } = data; // action: 'play', 'pause', 'stop'
+        if (targetType === 'all') this.broadcast('audio:control', { action });
+        else if (targetType === 'screen') this.notifyScreen(targetId, 'audio:control', { action });
+        else if (targetType === 'group') this.notifyGroup(targetId, 'audio:control', { action });
+      });
     });
   }
 

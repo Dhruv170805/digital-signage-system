@@ -39,13 +39,13 @@ const upload = multer({
   limits: { fileSize: 50 * 1024 * 1024 } // 50MB limit
 });
 
-router.get('/', protect, authorize('admin', 'operator', 'viewer'), mediaController.getAll);
-router.get('/me', protect, authorize('admin', 'operator', 'viewer'), mediaController.getMyMedia);
-router.get('/pending', protect, authorize('admin', 'operator'), mediaController.getPending);
-router.post('/upload', protect, authorize('admin', 'operator'), upload.single('media'), mediaController.upload);
-router.post('/:id/approve', protect, authorize('admin', 'operator'), mediaController.approve);
-router.post('/:id/reject', protect, authorize('admin', 'operator'), mediaController.reject);
-router.post('/:id/resubmit', protect, authorize('admin', 'operator'), mediaController.resubmit);
+router.get('/', protect, authorize('admin', 'user'), mediaController.getAll);
+router.get('/me', protect, authorize('admin', 'user'), mediaController.getMyMedia);
+router.get('/pending', protect, authorize('admin'), mediaController.getPending);
+router.post('/upload', protect, authorize('admin', 'user'), upload.single('media'), mediaController.upload);
+router.post('/:id/approve', protect, authorize('admin'), mediaController.approve);
+router.post('/:id/reject', protect, authorize('admin'), mediaController.reject);
+router.post('/:id/resubmit', protect, authorize('admin', 'user'), mediaController.resubmit);
 router.delete('/:id', protect, authorize('admin'), mediaController.delete);
 
 module.exports = router;

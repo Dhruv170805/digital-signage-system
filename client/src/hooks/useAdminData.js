@@ -99,6 +99,30 @@ export const useGroups = () => useQuery({
   }
 });
 
+export const useAudios = () => useQuery({
+  queryKey: ['audios'],
+  queryFn: async () => {
+    const res = await api.get('/api/audio');
+    return res.data;
+  }
+});
+
+export const useAudioPlaylists = () => useQuery({
+  queryKey: ['audioPlaylists'],
+  queryFn: async () => {
+    const res = await api.get('/api/audio-playlists');
+    return res.data;
+  }
+});
+
+export const useAudioAssignments = () => useQuery({
+  queryKey: ['audioAssignments'],
+  queryFn: async () => {
+    const res = await api.get('/api/audio-assignments');
+    return res.data;
+  }
+});
+
 export const useHistoryLogs = () => useQuery({
   queryKey: ['historyLogs'],
   queryFn: async () => {

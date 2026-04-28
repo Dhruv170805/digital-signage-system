@@ -18,11 +18,16 @@ const templateRoutes = require('./routes/templateRoutes');
 const auditRoutes = require('./routes/auditRoutes');
 const idleRoutes = require('./routes/idleRoutes');
 const groupRoutes = require('./routes/groupRoutes');
+const audioRoutes = require('./routes/audioRoutes');
+const audioPlaylistRoutes = require('./routes/audioPlaylistRoutes');
+const audioAssignmentRoutes = require('./routes/audioAssignmentRoutes');
 
 const app = express();
 
 // Security Middlewares
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
 
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -67,6 +72,7 @@ app.use(cookieParser());
 
 // Static files (uploads)
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+app.use('/uploads/audio', express.static(path.join(__dirname, '../uploads/audio')));
 app.use('/test_codes', express.static(path.join(__dirname, '../test_codes')));
 
 // Serve Frontend Build
@@ -84,6 +90,9 @@ app.use('/api/templates', templateRoutes);
 app.use('/api/history', auditRoutes);
 app.use('/api/idle', idleRoutes);
 app.use('/api/groups', groupRoutes);
+app.use('/api/audio', audioRoutes);
+app.use('/api/audio-playlists', audioPlaylistRoutes);
+app.use('/api/audio-assignments', audioAssignmentRoutes);
 
 // Base route
 app.get('/api', (req, res) => {

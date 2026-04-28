@@ -4,7 +4,7 @@ import useAuthStore from '../store/useAuthStore';
 import api from '../services/api';
 import { 
   BarChart3, CheckSquare, Calendar, Type, LayoutGrid, Users, 
-  Tv, MonitorPlay, LogOut, Upload, FileText, Activity, History, Shield, User, Settings
+  Tv, MonitorPlay, LogOut, Upload, FileText, Activity, History, Shield, User, Settings, Radio
 } from 'lucide-react';
 
 const Shell = ({ children, role, activeTab, setActiveTab }) => {
@@ -20,6 +20,7 @@ const Shell = ({ children, role, activeTab, setActiveTab }) => {
     { id: 'schedule', label: 'Schedules', icon: Calendar },
     { id: 'templates', label: 'Templates', icon: FileText },
     { id: 'ticker', label: 'Tickers', icon: Type },
+    { id: 'audio', label: 'Audio', icon: Radio },
     { id: 'screens', label: 'Screens', icon: Tv },
     { id: 'history', label: 'History', icon: History },
     { id: 'live', label: 'Live View', icon: Tv },

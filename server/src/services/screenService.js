@@ -29,7 +29,7 @@ class ScreenService {
   async updateScreen(id, data) {
     const updateData = { ...data };
     if (updateData.groupId === '') updateData.groupId = null;
-    return await Screen.findByIdAndUpdate(id, updateData, { new: true });
+    return await Screen.findByIdAndUpdate(id, updateData, { returnDocument: "after" });
   }
 
   async deleteScreen(id) {
@@ -44,7 +44,7 @@ class ScreenService {
         status: 'online',
         telemetry: { ...telemetry }
       },
-      { new: true }
+      { returnDocument: "after" }
     );
   }
 
@@ -57,7 +57,7 @@ class ScreenService {
         ipAddress,
         telemetry: { ...telemetry }
       },
-      { new: true }
+      { returnDocument: "after" }
     );
   }
 
@@ -78,13 +78,15 @@ class ScreenService {
     const configService = require('./configService');
     const mediaService = require('./mediaService');
     const idleService = require('./idleService');
+    const audioAssignmentService = require('./audioAssignmentService');
 
-    const [playlist, tickers, settings, media, idleConfig] = await Promise.all([
+    const [playlist, tickers, settings, media, idleConfig, audioAssignments] = await Promise.all([
       assignmentService.getActiveAssignmentsForScreen(screenId, groupId),
       tickerService.getActive(screenId, groupId),
       configService.getFullConfig(),
       mediaService.getAllApproved(),
-      idleService.getIdleContent(screenId, groupId)
+      idleService.getIdleContent(screenId, groupId),
+      audioAssignmentService.getActiveForScreen(screenId, groupId)
     ]);
 
     const manifest = {
@@ -92,7 +94,8 @@ class ScreenService {
       tickers,
       settings,
       media,
-      idleConfig
+      idleConfig,
+      audioAssignments
     };
 
     // 🧠 Intelligent Cache TTL Calculation

@@ -109,7 +109,7 @@ class AuthService {
 
   async updateStatus(id, status) {
     const { redisClient } = require('../config/redis');
-    const updatedUser = await User.findByIdAndUpdate(id, { status }, { new: true });
+    const updatedUser = await User.findByIdAndUpdate(id, { status }, { returnDocument: "after" });
     
     if (status === 'locked') {
       // Set locked status in Redis with a TTL of 7 days

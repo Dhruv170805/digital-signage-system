@@ -182,7 +182,7 @@ class AssignmentController {
       }
 
       const Assignment = require('../models/Assignment');
-      const assignment = await Assignment.findByIdAndUpdate(req.params.id, updateData, { new: true });
+      const assignment = await Assignment.findByIdAndUpdate(req.params.id, updateData, { returnDocument: "after" });
       if (!assignment) return res.status(404).json({ message: 'Assignment not found' });
 
       await loggerService.logAudit(req.user.id, 'APPROVE', 'Assignment', assignment._id, { 
@@ -216,7 +216,7 @@ class AssignmentController {
       const assignment = await Assignment.findByIdAndUpdate(req.params.id, { 
         status: 'rejected', 
         rejectionReason: req.body.reason 
-      }, { new: true });
+      }, { returnDocument: "after" });
       if (!assignment) return res.status(404).json({ success: false, message: 'Assignment not found' });
 
       await loggerService.logAudit(req.user.id, 'REJECT', 'Assignment', assignment._id, { name: assignment.name, reason: req.body.reason });

@@ -14,6 +14,7 @@ import LayoutArchitect from '../components/admin/LayoutArchitect';
 import ScreenManager from '../components/admin/ScreenManager';
 import UserDirectory from '../components/admin/UserDirectory';
 import TickerManager from '../components/admin/TickerManager';
+import AudioBroadcastManager from '../components/admin/AudioBroadcastManager';
 import IdleScreenManager from '../components/admin/IdleScreenManager';
 import SystemSettings from '../components/admin/SystemSettings';
 import SystemHistory from '../components/admin/SystemHistory';
@@ -128,6 +129,7 @@ const AdminDashboard = () => {
       case 'screens': return <ScreenManager fetchData={fetchData} />;
       case 'users': return <UserDirectory users={users} fetchData={fetchData} />;
       case 'ticker': return <TickerManager />;
+      case 'audio': return <AudioBroadcastManager />;
       case 'settings': return <IdleScreenManager />;
       case 'system': return <SystemSettings fetchData={fetchData} />;
       case 'history': return <SystemHistory />;

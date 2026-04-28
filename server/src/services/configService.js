@@ -18,7 +18,7 @@ class ConfigService {
     return await Setting.findOneAndUpdate(
       { key },
       { value: stringValue },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: "after" }
     );
   }
 }
